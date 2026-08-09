@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Luxe Studio - Booking</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-dim": "#dcdad5",
+                    "on-primary-container": "#57170a",
+                    "inverse-on-surface": "#f3f0eb",
+                    "on-secondary-fixed-variant": "#4c4638",
+                    "tertiary-container": "#899983",
+                    "on-background": "#1c1c19",
+                    "primary": "#964735",
+                    "inverse-surface": "#31302d",
+                    "surface-container-low": "#f6f3ee",
+                    "error": "#ba1a1a",
+                    "on-error-container": "#93000a",
+                    "tertiary-fixed-dim": "#bbcbb3",
+                    "tertiary": "#53624f",
+                    "surface-container-high": "#ebe8e3",
+                    "on-primary-fixed-variant": "#783020",
+                    "primary-fixed": "#ffdad3",
+                    "secondary-container": "#e8dfcc",
+                    "on-error": "#ffffff",
+                    "surface": "#fcf9f4",
+                    "on-secondary-container": "#696253",
+                    "surface-bright": "#fcf9f4",
+                    "on-tertiary-fixed": "#121f10",
+                    "on-secondary": "#ffffff",
+                    "on-primary-fixed": "#3d0600",
+                    "secondary": "#645e4f",
+                    "on-tertiary-container": "#233120",
+                    "on-secondary-fixed": "#1f1b10",
+                    "surface-container": "#f0ede9",
+                    "surface-container-lowest": "#ffffff",
+                    "surface-container-highest": "#e5e2dd",
+                    "secondary-fixed": "#ebe1cf",
+                    "on-surface": "#1c1c19",
+                    "inverse-primary": "#ffb4a4",
+                    "error-container": "#ffdad6",
+                    "on-tertiary-fixed-variant": "#3c4b38",
+                    "primary-container": "#d97b66",
+                    "primary-fixed-dim": "#ffb4a4",
+                    "outline-variant": "#dac1bb",
+                    "surface-tint": "#964735",
+                    "on-surface-variant": "#55433f",
+                    "on-primary": "#ffffff",
+                    "background": "#fcf9f4",
+                    "surface-variant": "#e5e2dd",
+                    "outline": "#87726e",
+                    "tertiary-fixed": "#d7e7cf",
+                    "on-tertiary": "#ffffff",
+                    "secondary-fixed-dim": "#cfc6b3"
+            },
+            "borderRadius": {
+                    "DEFAULT": "1rem",
+                    "lg": "2rem",
+                    "xl": "3rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "margin-desktop": "40px",
+                    "container-max": "1280px",
+                    "unit": "4px",
+                    "gutter": "24px",
+                    "margin-mobile": "16px"
+            },
+            "fontFamily": {
+                    "body-md": ["Space Grotesk"],
+                    "label-sm": ["Space Grotesk"],
+                    "label-md": ["Space Grotesk"],
+                    "headline-sm": ["Space Grotesk"],
+                    "display-lg": ["Space Grotesk"],
+                    "display-lg-mobile": ["Space Grotesk"],
+                    "body-lg": ["Space Grotesk"],
+                    "headline-md": ["Space Grotesk"]
+            },
+            "fontSize": {
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                    "label-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.02em", "fontWeight": "500"}],
+                    "headline-sm": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "display-lg-mobile": ["36px", {"lineHeight": "42px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "headline-md": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body { background-color: theme('colors.background'); color: theme('colors.on-background'); }
+        .glass-nav { background: rgba(252, 249, 244, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+        .soft-card { background: theme('colors.surface-container-lowest'); border: 1px solid theme('colors.surface-container-high'); transition: all 0.3s ease; }
+        .soft-card:hover { transform: translateY(-2px); box-shadow: 0 10px 30px -10px rgba(150, 71, 53, 0.08); }
+        .selected-card { border-color: theme('colors.primary'); background-color: theme('colors.surface-container-low'); box-shadow: 0 4px 20px -5px rgba(150, 71, 53, 0.15); }
+        
+        /* Step transitions */
+        .step-content { display: none; opacity: 0; transition: opacity 0.4s ease; }
+        .step-content.active { display: block; opacity: 1; }
+        
+        /* Custom radio styling */
+        input[type="radio"]:checked + div { border-color: theme('colors.primary'); background-color: theme('colors.surface-container-low'); }
+        input[type="radio"]:checked + div .radio-indicator { background-color: theme('colors.primary'); border-color: theme('colors.primary'); }
+        input[type="radio"]:checked + div .radio-indicator::after { content: ''; display: block; width: 8px; height: 8px; border-radius: 50%; background: white; margin: 3px auto; }
+    </style>
+</head>
+<body class="antialiased min-h-screen flex flex-col font-body-md text-body-md">
+<!-- TopNavBar -->
+<header class="glass-nav z-50 w-full top-0 sticky border-b border-outline-variant flat no shadows transition-all duration-200 ease-in-out">
+<div class="flex justify-between items-center h-20 px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto">
+<div class="flex items-center gap-8">
+<a class="font-headline-lg text-headline-lg text-primary font-bold tracking-tight" href="#">BarberOS</a>
+<nav class="hidden md:flex gap-6">
+<a class="text-secondary hover:text-primary transition-colors font-body-md text-body-md" href="#">Find a Shop</a>
+<a class="text-primary font-bold border-b-2 border-primary pb-1 font-body-md text-body-md" href="#">Services</a>
+<a class="text-secondary hover:text-primary transition-colors font-body-md text-body-md" href="#">Pricing</a>
+<a class="text-secondary hover:text-primary transition-colors font-body-md text-body-md" href="#">Contact</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<a class="hidden md:block text-secondary hover:text-primary transition-colors font-body-md text-body-md" href="#">Sign In</a>
+<a class="bg-primary text-on-primary px-6 py-2.5 rounded-full font-label-md text-label-md hover:bg-primary-container hover:text-on-primary-container transition-colors shadow-sm" href="#">Join as Shop</a>
+</div>
+</div>
+</header>
+<main class="flex-grow flex flex-col w-full">
+<!-- Hero Section -->
+<section class="relative w-full h-[40vh] md:h-[50vh] min-h-[400px] flex items-center justify-center overflow-hidden">
+<div class="absolute inset-0 bg-cover bg-center w-full h-full opacity-60" data-alt="A bright, airy, modern salon interior with soft natural light streaming through large windows. Minimalist styling stations with light wood accents, soft cream walls, and lush green potted plants. The aesthetic is Soft Kinetic light mode, featuring cream, champagne, and subtle terracotta tones, evoking a sense of calm luxury and professional beauty services." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBBPh8RSwTXVeZMTpwQ5RjoYt-tsr_aQP55DFQN_ecwXaDk7OLoH--MimGZ2crkI9OyBHGWJ_RdcqiXFEIvR9g-K_PSxO9EIEN2bGnaGU-enPtSCIy4EvzB0zQUS7YlimKrKnt7kWWXJrvCsUogOWKGi69uQve_Q4339Bq45iyeRRuq5mPtkYQj0autAhInZV1RNP82tWpZejrFE_KMlEBc8XGa676FR9YxmHY8IWMJNLJt5YbwvGpgog')"></div>
+<div class="absolute inset-0 bg-gradient-to-b from-background/30 via-background/60 to-background"></div>
+<div class="relative z-10 text-center px-margin-mobile md:px-margin-desktop max-w-3xl mx-auto flex flex-col items-center gap-6">
+<span class="bg-tertiary/10 text-tertiary px-4 py-1.5 rounded-full font-label-sm text-label-sm uppercase tracking-widest backdrop-blur-sm">Luxe Studio</span>
+<h1 class="font-display-lg-mobile md:font-display-lg text-display-lg-mobile md:text-display-lg text-on-background font-bold">Book Your Moment of Calm</h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant max-w-xl mx-auto">Experience tailored beauty in a serene, modern space. Select your service to begin.</p>
+</div>
+</section>
+<!-- Booking Flow Container -->
+<section class="w-full max-w-4xl mx-auto px-margin-mobile md:px-margin-desktop py-12 -mt-16 relative z-20 mb-24">
+<!-- Progress Tracker -->
+<div class="flex justify-between items-center mb-12 relative px-4 md:px-12">
+<div class="absolute left-12 right-12 top-1/2 -translate-y-1/2 h-[2px] bg-surface-container-high z-0"></div>
+<div class="absolute left-12 right-12 top-1/2 -translate-y-1/2 h-[2px] bg-primary z-0 w-1/3 transition-all duration-500" id="progress-bar"></div>
+<div class="relative z-10 flex flex-col items-center gap-2 cursor-pointer" onclick="goToStep(1)">
+<div class="w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center font-label-md shadow-sm transition-colors" id="step1-dot">1</div>
+<span class="font-label-sm text-label-sm text-primary font-bold">Service</span>
+</div>
+<div class="relative z-10 flex flex-col items-center gap-2 cursor-pointer" onclick="goToStep(2)">
+<div class="w-8 h-8 rounded-full bg-surface-container-lowest border-2 border-surface-container-high text-on-surface-variant flex items-center justify-center font-label-md transition-colors" id="step2-dot">2</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Stylist</span>
+</div>
+<div class="relative z-10 flex flex-col items-center gap-2 cursor-pointer" onclick="goToStep(3)">
+<div class="w-8 h-8 rounded-full bg-surface-container-lowest border-2 border-surface-container-high text-on-surface-variant flex items-center justify-center font-label-md transition-colors" id="step3-dot">3</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Time</span>
+</div>
+</div>
+<div class="bg-surface-container-lowest rounded-xl shadow-[0_20px_60px_-15px_rgba(150,71,53,0.05)] border border-surface-container-high p-6 md:p-10 relative overflow-hidden">
+<!-- Step 1: Services -->
+<div class="step-content active" id="step-1">
+<div class="flex justify-between items-end mb-8">
+<div>
+<h2 class="font-headline-md text-headline-md text-on-background">Select Service</h2>
+<p class="font-body-md text-body-md text-on-surface-variant mt-2">Choose your desired treatment.</p>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<label class="cursor-pointer relative">
+<input checked="" class="peer sr-only" name="service" type="radio" value="restyle"/>
+<div class="soft-card rounded-lg p-6 flex flex-col h-full gap-4">
+<div class="flex justify-between items-start">
+<div class="w-12 h-12 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">content_cut</span>
+</div>
+<div class="w-5 h-5 rounded-full border-2 border-outline-variant radio-indicator transition-colors"></div>
+</div>
+<div>
+<h3 class="font-headline-sm text-headline-sm text-on-background">Signature Restyle</h3>
+<p class="font-body-sm text-sm text-on-surface-variant mt-1 line-clamp-2">A complete transformation consultation followed by our signature tailored cut and styling.</p>
+</div>
+<div class="mt-auto pt-4 flex justify-between items-center border-t border-surface-container-high">
+<span class="font-label-md text-label-md text-secondary">75 mins</span>
+<span class="font-label-md text-label-md text-primary font-bold">From $120</span>
+</div>
+</div>
+</label>
+<label class="cursor-pointer relative">
+<input class="peer sr-only" name="service" type="radio" value="balayage"/>
+<div class="soft-card rounded-lg p-6 flex flex-col h-full gap-4">
+<div class="flex justify-between items-start">
+<div class="w-12 h-12 rounded-full bg-tertiary-container/30 text-tertiary flex items-center justify-center">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">brush</span>
+</div>
+<div class="w-5 h-5 rounded-full border-2 border-outline-variant radio-indicator transition-colors"></div>
+</div>
+<div>
+<h3 class="font-headline-sm text-headline-sm text-on-background">Balayage</h3>
+<p class="font-body-sm text-sm text-on-surface-variant mt-1 line-clamp-2">Hand-painted highlights tailored to enhance your natural movement and bone structure.</p>
+</div>
+<div class="mt-auto pt-4 flex justify-between items-center border-t border-surface-container-high">
+<span class="font-label-md text-label-md text-secondary">180 mins</span>
+<span class="font-label-md text-label-md text-primary font-bold">From $250</span>
+</div>
+</div>
+</label>
+<label class="cursor-pointer relative">
+<input class="peer sr-only" name="service" type="radio" value="treatment"/>
+<div class="soft-card rounded-lg p-6 flex flex-col h-full gap-4">
+<div class="flex justify-between items-start">
+<div class="w-12 h-12 rounded-full bg-surface-container text-on-surface-variant flex items-center justify-center">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">spa</span>
+</div>
+<div class="w-5 h-5 rounded-full border-2 border-outline-variant radio-indicator transition-colors"></div>
+</div>
+<div>
+<h3 class="font-headline-sm text-headline-sm text-on-background">Deep Repair Treatment</h3>
+<p class="font-body-sm text-sm text-on-surface-variant mt-1 line-clamp-2">Intensive botanical mask designed to restore moisture and shine to stressed hair.</p>
+</div>
+<div class="mt-auto pt-4 flex justify-between items-center border-t border-surface-container-high">
+<span class="font-label-md text-label-md text-secondary">45 mins</span>
+<span class="font-label-md text-label-md text-primary font-bold">$85</span>
+</div>
+</div>
+</label>
+</div>
+<div class="mt-8 flex justify-end">
+<button class="bg-primary hover:bg-primary-container text-on-primary hover:text-on-primary-container px-8 py-3 rounded-full font-label-md text-label-md transition-colors shadow-sm flex items-center gap-2" onclick="goToStep(2)">
+                            Continue <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</button>
+</div>
+</div>
+<!-- Step 2: Stylist (Hidden initially) -->
+<div class="step-content" id="step-2">
+<button class="text-secondary hover:text-primary transition-colors flex items-center gap-2 mb-6 font-label-md text-label-md" onclick="goToStep(1)">
+<span class="material-symbols-outlined text-[18px]">arrow_back</span> Back
+                    </button>
+<div class="mb-8">
+<h2 class="font-headline-md text-headline-md text-on-background">Choose Stylist</h2>
+<p class="font-body-md text-body-md text-on-surface-variant mt-2">Select a professional or choose 'Any available'.</p>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+<label class="cursor-pointer relative">
+<input checked="" class="peer sr-only" name="stylist" type="radio" value="any"/>
+<div class="soft-card rounded-lg p-6 flex flex-col items-center text-center h-full gap-4">
+<div class="absolute top-4 right-4 w-5 h-5 rounded-full border-2 border-outline-variant radio-indicator transition-colors"></div>
+<div class="w-20 h-20 rounded-full bg-surface-container flex items-center justify-center text-on-surface-variant mt-2">
+<span class="material-symbols-outlined text-4xl" style="font-variation-settings: 'FILL' 0;">groups</span>
+</div>
+<div>
+<h3 class="font-body-lg text-body-lg text-on-background font-medium">Any Available</h3>
+<p class="font-label-sm text-label-sm text-secondary mt-1">First available slot</p>
+</div>
+</div>
+</label>
+<label class="cursor-pointer relative">
+<input class="peer sr-only" name="stylist" type="radio" value="stylist1"/>
+<div class="soft-card rounded-lg p-6 flex flex-col items-center text-center h-full gap-4">
+<div class="absolute top-4 right-4 w-5 h-5 rounded-full border-2 border-outline-variant radio-indicator transition-colors"></div>
+<img class="w-20 h-20 rounded-full object-cover border-2 border-surface" data-alt="Portrait of a female hair stylist in a modern salon setting. She is wearing a soft cream apron, smiling warmly, holding styling shears. The lighting is bright and natural, fitting the Soft Kinetic light mode aesthetic with subtle champagne and terracotta tones." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDfbCL11l5Bs8b_QkRgE3Nd9xhEAH7jQLwrG0Xc7J4GcEgAb3OODDNzPo9HGgrrG1Zy029JGW1E5kp8GzhhRMSQaon3r-YBpFWCqOQ8iDfsqTgykOasbaOLqcyOZGXI2TnOv6q3K1wcjK9z6hVVWAGP3khFfFa-WSknsIZ9zFk6RQH_0-b9ZQ1hI10sk7c30QSufZw0BeUUjlkjjxFwnzWzGr0VJq7Js5giPlToqmrveKwruGzS5CjFMA"/>
+<div>
+<h3 class="font-body-lg text-body-lg text-on-background font-medium">Elena R.</h3>
+<p class="font-label-sm text-label-sm text-secondary mt-1">Senior Stylist</p>
+</div>
+</div>
+</label>
+<label class="cursor-pointer relative">
+<input class="peer sr-only" name="stylist" type="radio" value="stylist2"/>
+<div class="soft-card rounded-lg p-6 flex flex-col items-center text-center h-full gap-4">
+<div class="absolute top-4 right-4 w-5 h-5 rounded-full border-2 border-outline-variant radio-indicator transition-colors"></div>
+<img class="w-20 h-20 rounded-full object-cover border-2 border-surface" data-alt="Portrait of a male hair stylist in a chic salon. He has a neat beard, wearing a minimalist dark green shirt. He looks professional and approachable. The background is a soft blur of a salon interior with cream walls and natural light, aligning with the Soft Kinetic light mode style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDmgafElz_pt8dNpGYciXcy1pUJ3xJ9GRG6vRNZeGiQqLIo6fmpObVovuolAUfciNTWEXQfB5eGxOWrV9hP05-WyMdKTZT94AtLBDRiB5GR9mLm9OU6fLmi1P0h3PEUZOuWU7vkHfbeQ_YFtJEhbR6ns7HjRpEVmabrZ48RT2q3dBZz11fJLiCd-r-I1r_EisbNBVt6n4RB2dCrLSZnG-wEc27ALjPalAWdjtvDv_VopbFj6waedgqoBQ"/>
+<div>
+<h3 class="font-body-lg text-body-lg text-on-background font-medium">Marcus T.</h3>
+<p class="font-label-sm text-label-sm text-secondary mt-1">Color Specialist</p>
+</div>
+</div>
+</label>
+</div>
+<div class="mt-8 flex justify-end">
+<button class="bg-primary hover:bg-primary-container text-on-primary hover:text-on-primary-container px-8 py-3 rounded-full font-label-md text-label-md transition-colors shadow-sm flex items-center gap-2" onclick="goToStep(3)">
+                            Continue <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</button>
+</div>
+</div>
+<!-- Step 3: Time (Hidden initially) -->
+<div class="step-content" id="step-3">
+<button class="text-secondary hover:text-primary transition-colors flex items-center gap-2 mb-6 font-label-md text-label-md" onclick="goToStep(2)">
+<span class="material-symbols-outlined text-[18px]">arrow_back</span> Back
+                    </button>
+<div class="mb-8">
+<h2 class="font-headline-md text-headline-md text-on-background">Select Time</h2>
+<p class="font-body-md text-body-md text-on-surface-variant mt-2">Pick a date and time that works for you.</p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-12 gap-8">
+<!-- Mini Calendar visually -->
+<div class="md:col-span-5">
+<div class="soft-card rounded-lg p-4">
+<div class="flex justify-between items-center mb-4">
+<button class="text-secondary hover:text-primary"><span class="material-symbols-outlined">chevron_left</span></button>
+<span class="font-label-md text-label-md text-on-background font-bold">October 2024</span>
+<button class="text-secondary hover:text-primary"><span class="material-symbols-outlined">chevron_right</span></button>
+</div>
+<div class="grid grid-cols-7 gap-1 text-center font-label-sm text-label-sm text-secondary mb-2">
+<div>S</div><div>M</div><div>T</div><div>W</div><div>T</div><div>F</div><div>S</div>
+</div>
+<div class="grid grid-cols-7 gap-1 text-center font-body-sm text-body-sm">
+<div class="text-outline/30 p-2">29</div><div class="text-outline/30 p-2">30</div>
+<div class="p-2 hover:bg-surface-container rounded-full cursor-pointer">1</div>
+<div class="p-2 hover:bg-surface-container rounded-full cursor-pointer">2</div>
+<div class="p-2 hover:bg-surface-container rounded-full cursor-pointer">3</div>
+<div class="p-2 hover:bg-surface-container rounded-full cursor-pointer">4</div>
+<div class="p-2 hover:bg-surface-container rounded-full cursor-pointer">5</div>
+<div class="p-2 hover:bg-surface-container rounded-full cursor-pointer">6</div>
+<div class="p-2 hover:bg-surface-container rounded-full cursor-pointer">7</div>
+<div class="p-2 hover:bg-surface-container rounded-full cursor-pointer">8</div>
+<div class="p-2 bg-primary text-on-primary rounded-full cursor-pointer font-medium shadow-sm">9</div>
+<div class="p-2 hover:bg-surface-container rounded-full cursor-pointer">10</div>
+<div class="p-2 hover:bg-surface-container rounded-full cursor-pointer">11</div>
+<div class="p-2 hover:bg-surface-container rounded-full cursor-pointer">12</div>
+</div>
+</div>
+</div>
+<!-- Time Slots -->
+<div class="md:col-span-7">
+<h3 class="font-label-md text-label-md text-on-background mb-4 font-medium flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px] text-tertiary">calendar_today</span>
+                                Wednesday, Oct 9
+                            </h3>
+<div class="grid grid-cols-3 sm:grid-cols-4 gap-3">
+<label class="cursor-pointer">
+<input class="peer sr-only" name="time" type="radio" value="0900"/>
+<div class="text-center py-2 px-1 border border-outline-variant rounded-md text-secondary hover:border-primary peer-checked:bg-primary peer-checked:text-on-primary peer-checked:border-primary transition-colors font-body-sm text-sm">
+                                        9:00 AM
+                                    </div>
+</label>
+<label class="cursor-pointer">
+<input class="peer sr-only" name="time" type="radio" value="1000"/>
+<div class="text-center py-2 px-1 border border-outline-variant rounded-md text-secondary hover:border-primary peer-checked:bg-primary peer-checked:text-on-primary peer-checked:border-primary transition-colors font-body-sm text-sm">
+                                        10:00 AM
+                                    </div>
+</label>
+<label class="cursor-pointer">
+<input checked="" class="peer sr-only" name="time" type="radio" value="1130"/>
+<div class="text-center py-2 px-1 border border-outline-variant rounded-md text-secondary hover:border-primary peer-checked:bg-primary peer-checked:text-on-primary peer-checked:border-primary transition-colors font-body-sm text-sm">
+                                        11:30 AM
+                                    </div>
+</label>
+<label class="cursor-pointer">
+<input class="peer sr-only" name="time" type="radio" value="1300"/>
+<div class="text-center py-2 px-1 border border-outline-variant rounded-md text-secondary hover:border-primary peer-checked:bg-primary peer-checked:text-on-primary peer-checked:border-primary transition-colors font-body-sm text-sm">
+                                        1:00 PM
+                                    </div>
+</label>
+<label class="cursor-pointer">
+<input class="peer sr-only" name="time" type="radio" value="1430"/>
+<div class="text-center py-2 px-1 border border-outline-variant rounded-md text-secondary hover:border-primary peer-checked:bg-primary peer-checked:text-on-primary peer-checked:border-primary transition-colors font-body-sm text-sm">
+                                        2:30 PM
+                                    </div>
+</label>
+<label class="cursor-pointer opacity-50 cursor-not-allowed">
+<input class="peer sr-only" disabled="" name="time" type="radio" value="1500"/>
+<div class="text-center py-2 px-1 border border-surface-container-high bg-surface-container-low rounded-md text-outline font-body-sm text-sm">
+                                        3:00 PM
+                                    </div>
+</label>
+</div>
+</div>
+</div>
+<div class="mt-8 pt-8 border-t border-surface-container-high flex flex-col sm:flex-row justify-between items-center gap-4">
+<div class="text-center sm:text-left">
+<p class="font-label-sm text-label-sm text-secondary">Total Due Today</p>
+<p class="font-headline-sm text-headline-sm text-primary font-bold">Deposit: $50</p>
+</div>
+<button class="w-full sm:w-auto bg-primary hover:bg-primary-container text-on-primary hover:text-on-primary-container px-8 py-3 rounded-full font-label-md text-label-md transition-colors shadow-sm flex justify-center items-center gap-2">
+                            Confirm Booking <span class="material-symbols-outlined text-[18px]">check_circle</span>
+</button>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Footer -->
+<footer class="bg-surface-container-lowest w-full py-12 border-t border-outline-variant flat no shadows">
+<div class="flex flex-col md:flex-row justify-between items-center px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto gap-8">
+<div class="font-headline-lg text-headline-lg text-primary text-center md:text-left">BarberOS</div>
+<div class="flex flex-wrap justify-center gap-6 font-body-sm text-body-sm">
+<a class="text-secondary hover:text-primary transition-opacity duration-200" href="#">Privacy Policy</a>
+<a class="text-secondary hover:text-primary transition-opacity duration-200" href="#">Terms of Service</a>
+<a class="text-secondary hover:text-primary transition-opacity duration-200" href="#">Cookie Policy</a>
+<a class="text-secondary hover:text-primary transition-opacity duration-200" href="#">Status</a>
+</div>
+<div class="text-secondary font-body-sm text-body-sm text-center md:text-right">
+                © 2024 BarberOS Technologies Inc. All rights reserved.
+            </div>
+</div>
+</footer>
+<script>
+        function goToStep(stepNumber) {
+            // Hide all steps
+            document.querySelectorAll('.step-content').forEach(el => {
+                el.classList.remove('active');
+            });
+            
+            // Show target step
+            document.getElementById('step-' + stepNumber).classList.add('active');
+            
+            // Update progress bar
+            const progressWidths = ['33%', '66%', '100%'];
+            document.getElementById('progress-bar').style.width = progressWidths[stepNumber - 1];
+            
+            // Update dots
+            for (let i = 1; i <= 3; i++) {
+                const dot = document.getElementById('step' + i + '-dot');
+                if (i <= stepNumber) {
+                    dot.className = 'w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center font-label-md shadow-sm transition-colors';
+                } else {
+                    dot.className = 'w-8 h-8 rounded-full bg-surface-container-lowest border-2 border-surface-container-high text-on-surface-variant flex items-center justify-center font-label-md transition-colors';
+                }
+            }
+        }
+    </script>
+</body></html>

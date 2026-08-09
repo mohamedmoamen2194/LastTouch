@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>The Cut Lab - Public Booking</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Space+Grotesk:wght@600;700&amp;family=JetBrains+Mono:wght@600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-tertiary-container": "#8291a6",
+                      "tertiary-fixed": "#d4e4fa",
+                      "on-primary-container": "#8590a6",
+                      "on-background": "#191c1e",
+                      "on-primary-fixed": "#111c2d",
+                      "background": "#f7f9fb",
+                      "on-primary": "#ffffff",
+                      "on-primary-fixed-variant": "#3c475a",
+                      "on-secondary-fixed": "#0d1c2e",
+                      "outline": "#75777d",
+                      "secondary": "#515f74",
+                      "on-tertiary-fixed": "#0d1c2d",
+                      "on-tertiary": "#ffffff",
+                      "error": "#ba1a1a",
+                      "primary-fixed": "#d8e3fb",
+                      "surface-tint": "#545f73",
+                      "surface-container-highest": "#e0e3e5",
+                      "secondary-fixed-dim": "#b9c7df",
+                      "on-surface-variant": "#45474c",
+                      "inverse-surface": "#2d3133",
+                      "on-tertiary-fixed-variant": "#39485a",
+                      "on-surface": "#191c1e",
+                      "surface-container-high": "#e6e8ea",
+                      "surface-bright": "#f7f9fb",
+                      "surface-variant": "#e0e3e5",
+                      "on-secondary-fixed-variant": "#3a485b",
+                      "on-secondary-container": "#57657a",
+                      "surface": "#f7f9fb",
+                      "tertiary-container": "#1b2a3b",
+                      "inverse-on-surface": "#eff1f3",
+                      "surface-container-low": "#f2f4f6",
+                      "on-error": "#ffffff",
+                      "surface-container": "#eceef0",
+                      "surface-container-lowest": "#ffffff",
+                      "tertiary": "#061525",
+                      "secondary-fixed": "#d5e3fc",
+                      "surface-dim": "#d8dadc",
+                      "inverse-primary": "#bcc7de",
+                      "primary": "#091426",
+                      "primary-fixed-dim": "#bcc7de",
+                      "on-error-container": "#93000a",
+                      "tertiary-fixed-dim": "#b9c8de",
+                      "secondary-container": "#d5e3fc",
+                      "primary-container": "#1e293b",
+                      "error-container": "#ffdad6",
+                      "outline-variant": "#c5c6cd",
+                      "on-secondary": "#ffffff"
+              },
+              "borderRadius": {
+                      "DEFAULT": "1rem",
+                      "lg": "2rem",
+                      "xl": "3rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "gutter": "24px",
+                      "container-max": "1280px",
+                      "base": "8px",
+                      "margin-desktop": "40px",
+                      "margin-mobile": "16px"
+              },
+              "fontFamily": {
+                      "body-md": [
+                              "Inter"
+                      ],
+                      "headline-lg-mobile": [
+                              "Space Grotesk"
+                      ],
+                      "label-caps": [
+                              "JetBrains Mono"
+                      ],
+                      "body-sm": [
+                              "Inter"
+                      ],
+                      "display-lg": [
+                              "Space Grotesk"
+                      ],
+                      "headline-lg": [
+                              "Space Grotesk"
+                      ]
+              },
+              "fontSize": {
+                      "body-md": [
+                              "16px",
+                              {
+                                      "lineHeight": "1.6",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "headline-lg-mobile": [
+                              "24px",
+                              {
+                                      "lineHeight": "1.2",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "label-caps": [
+                              "12px",
+                              {
+                                      "lineHeight": "1.0",
+                                      "letterSpacing": "0.05em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-sm": [
+                              "14px",
+                              {
+                                      "lineHeight": "1.5",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "display-lg": [
+                              "48px",
+                              {
+                                      "lineHeight": "1.1",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "headline-lg": [
+                              "32px",
+                              {
+                                      "lineHeight": "1.2",
+                                      "letterSpacing": "-0.01em",
+                                      "fontWeight": "600"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+      </script>
+</head>
+<body class="bg-background text-on-background font-body-md min-h-screen flex flex-col">
+<!-- TopNavBar -->
+<nav class="bg-surface/80 dark:bg-surface-dim/80 backdrop-blur-md shadow-sm fixed top-0 w-full z-50 bg-surface-container-low/50">
+<div class="flex justify-between items-center h-16 px-margin-desktop max-w-container-max mx-auto">
+<div class="font-headline-sm text-headline-sm font-bold text-primary dark:text-primary-fixed-dim">
+                BarberOS
+            </div>
+<div class="hidden md:flex gap-8">
+<a class="text-primary font-bold border-b-2 border-primary pb-1 font-body-md text-body-md hover:text-primary transition-colors duration-300 transition-all active:scale-95" href="#">Find a Stylist</a>
+<a class="text-on-surface-variant font-medium font-body-md text-body-md hover:text-primary transition-colors duration-300 transition-all active:scale-95" href="#">Our Services</a>
+<a class="text-on-surface-variant font-medium font-body-md text-body-md hover:text-primary transition-colors duration-300 transition-all active:scale-95" href="#">Pricing</a>
+<a class="text-on-surface-variant font-medium font-body-md text-body-md hover:text-primary transition-colors duration-300 transition-all active:scale-95" href="#">About</a>
+</div>
+<div class="flex items-center gap-4">
+<button class="font-body-md text-body-md text-primary font-medium hover:text-primary/80 transition-colors hidden md:block">Login</button>
+<button class="bg-primary text-on-primary font-body-md text-body-md px-6 py-2 rounded-full hover:bg-primary/90 transition-all active:scale-95 shadow-sm">Book Now</button>
+</div>
+</div>
+</nav>
+<!-- Main Content -->
+<main class="flex-grow pt-24 pb-16 px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto w-full">
+<!-- Hero Section -->
+<section class="mb-16 grid grid-cols-1 md:grid-cols-2 gap-gutter items-center min-h-[60vh]">
+<div class="flex flex-col gap-6 pr-0 md:pr-12">
+<h1 class="font-display-lg text-display-lg text-primary">The Cut Lab</h1>
+<p class="font-body-md text-body-md text-on-surface-variant text-lg">Precision grooming for the modern gentleman. Experience unmatched technical skill in a refined, minimalist environment.</p>
+<div class="flex gap-4 pt-4">
+<button class="bg-primary text-on-primary font-body-md text-body-md px-8 py-3 rounded-full hover:bg-primary/90 transition-all active:scale-95 shadow-sm">Start Booking</button>
+<button class="border border-outline text-primary font-body-md text-body-md px-8 py-3 rounded-full hover:border-primary transition-all active:scale-95">View Gallery</button>
+</div>
+</div>
+<div class="h-full min-h-[400px] w-full rounded-lg overflow-hidden border border-outline-variant relative">
+<div class="bg-cover bg-center w-full h-full absolute inset-0" data-alt="A high-end modern barbershop interior with a sleek, minimalist aesthetic. The space features brushed steel fixtures, dark slate accents, and pristine white surfaces. A professional barber is meticulously working on a client's fade in soft, natural daylight. The mood is sophisticated, clean, and highly professional, reflecting a premium grooming experience." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAUF03VZR0v39l0vGeJuppydlilrBqps8eon-hF4-CSSWdz_NJDje_oaMESeuah2DqWQs7R--6CoFxNLjdIjdULEksABfh831J_Y-lp-zZ_wfKevpnw7rjpHFE7yo8-oelLBalk5ol-Et2MDk2UgKSdfAEZtNMtP08hlnAdB1JbRwHhrGrxo7H3Rv4qtPMQWWuMok9Uy6657KT48q37ZksMbG4iADs8VswM7uJr8pLseNmBOdwarIy0Xw')"></div>
+</div>
+</section>
+</main>
+<!-- Footer -->
+<footer class="bg-surface-container-highest dark:bg-surface-container w-full py-8 mt-auto">
+<div class="flex flex-col md:flex-row justify-between items-center px-margin-desktop max-w-container-max mx-auto">
+<div class="font-headline-sm text-headline-sm text-primary mb-4 md:mb-0">
+                BarberOS
+            </div>
+<div class="flex gap-6 mb-4 md:mb-0">
+<a class="text-on-surface-variant font-label-sm text-label-sm hover:text-primary transition-colors" href="#">Privacy Policy</a>
+<a class="text-on-surface-variant font-label-sm text-label-sm hover:text-primary transition-colors" href="#">Terms of Service</a>
+<a class="text-on-surface-variant font-label-sm text-label-sm hover:text-primary transition-colors" href="#">Cookies</a>
+</div>
+<div class="text-on-surface-variant font-label-sm text-label-sm">
+                © 2024 BarberOS. All rights reserved.
+            </div>
+</div>
+</footer>
+</body></html>

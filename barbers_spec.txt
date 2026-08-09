@@ -1,0 +1,6991 @@
+# LASTTOUCH
+## Development Specification
+### Version 1.0
+
+> This document is the single source of truth for the LastTouch platform.
+>
+> Any AI coding agent or developer working on this project **must read this document completely before implementing any feature.**
+>
+> This specification defines the architecture, engineering standards, business rules, database design, user roles, coding conventions, and development philosophy of the platform.
+>
+> If implementation details conflict with this document, this document takes precedence.
+
+---
+
+# 1. Project Overview
+
+## 1.1 Introduction
+
+LastTouch is an AI-powered Business Operating System (Business OS) built for beauty and grooming businesses.
+
+Unlike simple booking systems, LastTouch manages every aspect of operating a modern beauty business including:
+
+- Online Booking
+- Customer CRM
+- Employee Management
+- Scheduling
+- Services
+- Analytics
+- Business Insights
+- AI Receptionist
+- Marketing Automation
+- Subscription Management
+- Multi-location support (future)
+- Marketplace (future)
+
+The platform is designed as a multi-tenant SaaS application where thousands of independent businesses operate securely within a shared infrastructure while maintaining complete data isolation.
+
+The first supported business types are:
+
+- Men's Barber Shops
+- Women's Hair Salons
+
+The architecture must be generic enough to support additional business types without major code changes.
+
+Examples include:
+
+- Beauty Centers
+- Nail Studios
+- Makeup Artists
+- Spas
+- Massage Centers
+- Clinics
+- Wellness Centers
+
+The backend must never be tightly coupled to any specific business type.
+
+---
+
+# 2. Vision
+
+Our vision is to become the operating system for appointment-based businesses in the Middle East.
+
+Instead of being known as a booking application, LastTouch should become the daily workspace where business owners manage their entire business.
+
+Booking is only one feature.
+
+The platform should help owners:
+
+- Save time
+- Increase revenue
+- Reduce missed appointments
+- Improve customer retention
+- Understand their business through analytics
+- Automate repetitive work using AI
+
+---
+
+# 3. Product Philosophy
+
+The platform follows six core principles.
+
+## Principle 1
+
+### Self-Service First
+
+Every tenant manages their own business.
+
+Platform administrators should never edit:
+
+- Services
+- Employees
+- Prices
+- Working hours
+- Branding
+- Gallery
+- Business information
+- Promotions
+
+Everything must be configurable by the tenant.
+
+The platform only manages infrastructure.
+
+---
+
+## Principle 2
+
+### Configuration Over Customization
+
+The application should be driven by configuration.
+
+Business Type determines:
+
+- terminology
+- colors
+- homepage
+- default services
+- employee naming
+- AI prompts
+- icons
+
+No duplicate applications should exist.
+
+There is only one application.
+
+Everything changes through configuration.
+
+---
+
+## Principle 3
+
+### Multi-Tenant By Default
+
+Every feature must support multiple tenants.
+
+Every database query must always be scoped by:
+
+tenant_id
+
+No exception.
+
+---
+
+## Principle 4
+
+### AI Native
+
+AI is part of the platform architecture.
+
+Not an afterthought.
+
+Every module should be designed with future AI integrations in mind.
+
+Examples
+
+CRM
+
+↓
+
+AI summarizes customer history.
+
+Appointments
+
+↓
+
+AI predicts busy days.
+
+Marketing
+
+↓
+
+AI generates campaigns.
+
+---
+
+## Principle 5
+
+### Mobile First
+
+Most business owners will use LastTouch from mobile devices.
+
+Every page must be responsive.
+
+No desktop-only workflows.
+
+---
+
+## Principle 6
+
+### Premium Simplicity
+
+The product should feel:
+
+- fast
+- clean
+- modern
+- premium
+
+Inspired by:
+
+- Stripe
+- Linear
+- Shopify
+- Vercel
+- Notion
+
+Avoid visual clutter.
+
+---
+
+# 4. Business Model
+
+LastTouch is a subscription SaaS.
+
+Revenue comes from recurring monthly subscriptions.
+
+No one-time license.
+
+Three subscription tiers are supported.
+
+## Free
+
+Intended for small businesses evaluating the platform.
+
+Includes:
+
+- 1 employee
+- booking page
+- basic appointments
+- customer list
+- basic dashboard
+
+Limitations:
+
+- no AI
+- no WhatsApp automation
+- limited analytics
+- no custom domain
+- no advanced branding
+
+---
+
+## Pro
+
+Designed for growing businesses.
+
+Includes everything in Free plus:
+
+- unlimited employees
+- customer CRM
+- advanced reports
+- WhatsApp reminders
+- promotions
+- advanced branding
+- gallery
+- review requests
+- exports
+
+---
+
+## AI
+
+Premium plan.
+
+Includes everything in Pro plus:
+
+- AI receptionist
+- AI assistant
+- AI business insights
+- AI customer summaries
+- AI marketing suggestions
+- AI review replies
+- AI campaign generation
+- AI FAQ
+
+Future AI features automatically belong to this tier unless explicitly configured otherwise.
+
+---
+
+# 5. Technology Stack
+
+The platform must use the following technologies.
+
+## Frontend
+
+- Next.js 15 (App Router)
+- TypeScript
+- Tailwind CSS
+- shadcn/ui
+- Radix UI
+- Framer Motion
+- React Hook Form
+- Zod
+- TanStack Query
+
+---
+
+## Backend
+
+Next.js Route Handlers
+
+Server Actions where appropriate.
+
+Business logic should execute on the server whenever possible.
+
+---
+
+## Database
+
+Neon PostgreSQL
+
+ORM
+
+Drizzle ORM
+
+All schema definitions must be written using Drizzle.
+
+No raw SQL except where absolutely necessary.
+
+---
+
+## Authentication
+
+Clerk
+
+Supported providers
+
+- Email
+- Google
+
+Future
+
+Phone Authentication
+
+---
+
+## Payments
+
+Paymob
+
+Future
+
+Stripe
+
+---
+
+## Storage
+
+Cloudflare R2
+
+Used for
+
+- logos
+- galleries
+- employee photos
+- service photos
+
+---
+
+## Email
+
+Resend
+
+---
+
+## Localization
+
+next-intl
+
+Languages
+
+- English
+- Arabic
+
+Everything must support:
+
+LTR
+
+RTL
+
+No hardcoded user-facing strings.
+
+---
+
+# 6. Existing UI
+
+The user interface has already been created using Stitch.
+
+The existing UI is considered the visual source of truth.
+
+AI coding agents must not redesign the interface unless explicitly instructed.
+
+Responsibilities of the coding agent:
+
+- implement business logic
+- connect APIs
+- implement authentication
+- implement database
+- implement permissions
+- implement state management
+- implement localization
+- implement responsiveness fixes if needed
+
+Do not replace existing UI components.
+
+Do not introduce a new design system.
+
+---
+
+# 7. Engineering Principles
+
+The following engineering rules are mandatory.
+
+## TypeScript
+
+Strict mode enabled.
+
+Avoid `any`.
+
+Prefer inferred types.
+
+Use interfaces only when extension is required.
+
+Prefer type aliases elsewhere.
+
+---
+
+## Components
+
+Components should remain small.
+
+Business logic belongs outside UI components.
+
+UI components should not perform database operations.
+
+---
+
+## Validation
+
+Every input must be validated using Zod.
+
+Validation must occur:
+
+- client side
+- server side
+
+Never trust client input.
+
+---
+
+## Error Handling
+
+Never expose internal errors.
+
+Return standardized error responses.
+
+Every mutation should return:
+
+- success
+- message
+- optional payload
+
+---
+
+## Database
+
+Use UUIDs.
+
+Use timestamps.
+
+Use foreign keys.
+
+Soft delete where appropriate.
+
+Never permanently delete business-critical records.
+
+---
+
+## Security
+
+Never trust client permissions.
+
+Every API route must verify:
+
+- authenticated user
+- tenant membership
+- role
+- subscription
+- feature access
+
+on the server.
+
+---
+
+## Performance
+
+Prefer Server Components.
+
+Use Client Components only when interactivity requires them.
+
+Avoid unnecessary hydration.
+
+Optimize images.
+
+Lazy load heavy modules.
+
+---
+
+## Code Quality
+
+Follow SOLID principles.
+
+Favor composition over inheritance.
+
+Avoid duplicated logic.
+
+Extract reusable utilities.
+
+Build for long-term maintainability rather than short-term speed.
+
+
+---
+
+# 8. System Architecture
+
+LastTouch is a **multi-tenant SaaS platform** built using a modular, domain-driven architecture.
+
+The application consists of a single codebase serving multiple independent businesses (tenants).
+
+Each tenant has complete data isolation while sharing the same infrastructure.
+
+The platform should be horizontally scalable without requiring architectural changes.
+
+The application consists of three logical layers:
+
+```text
+Presentation Layer
+│
+├── Public Booking Website
+├── Business Dashboard
+├── Employee Dashboard
+└── Platform Dashboard
+
+↓
+
+Application Layer
+
+├── Authentication
+├── Authorization
+├── Booking Engine
+├── CRM
+├── Employees
+├── Customers
+├── Notifications
+├── AI
+├── Billing
+├── Analytics
+
+↓
+
+Infrastructure Layer
+
+├── PostgreSQL (Neon)
+├── Drizzle ORM
+├── Clerk
+├── Cloudflare R2
+├── Resend
+├── Paymob
+├── Vercel
+```
+
+Each domain must be isolated.
+
+Avoid coupling unrelated modules together.
+
+Example:
+
+The Booking module must never directly manipulate Billing.
+
+Instead, communication should occur through service methods.
+
+---
+
+# 9. Project Folder Structure
+
+The project should follow a domain-driven architecture.
+
+```
+src/
+
+├── app/
+│
+│   ├── (marketing)
+│   ├── (auth)
+│   ├── (dashboard)
+│   ├── (employee)
+│   ├── (platform)
+│   ├── api/
+│   └── [locale]/
+│
+├── components/
+│
+│   ├── ui/
+│   ├── shared/
+│   ├── booking/
+│   ├── dashboard/
+│   ├── crm/
+│   ├── analytics/
+│   └── marketing/
+│
+├── modules/
+│
+│   ├── booking/
+│   ├── customers/
+│   ├── employees/
+│   ├── services/
+│   ├── appointments/
+│   ├── analytics/
+│   ├── billing/
+│   ├── ai/
+│   ├── notifications/
+│   ├── marketplace/
+│   ├── tenants/
+│   └── auth/
+│
+├── db/
+│
+│   ├── schema/
+│   ├── migrations/
+│   ├── relations.ts
+│   └── index.ts
+│
+├── lib/
+│
+│   ├── auth/
+│   ├── tenant/
+│   ├── permissions/
+│   ├── localization/
+│   ├── storage/
+│   ├── payments/
+│   └── ai/
+│
+├── hooks/
+├── providers/
+├── types/
+├── config/
+├── constants/
+└── utils/
+```
+
+Business logic belongs inside `modules`.
+
+UI belongs inside `components`.
+
+Database definitions belong inside `db`.
+
+Never place business logic inside React components.
+
+---
+
+# 10. Multi-Tenant Architecture
+
+Multi-tenancy is the foundation of LastTouch.
+
+Every business is a Tenant.
+
+Examples:
+
+- Fade Zone
+- Kings Barber
+- Luxury Salon
+- Golden Touch
+
+Internally:
+
+```
+Tenant
+
+↓
+
+Employees
+
+↓
+
+Customers
+
+↓
+
+Appointments
+
+↓
+
+Services
+
+↓
+
+Reports
+```
+
+Every tenant owns:
+
+- employees
+- customers
+- appointments
+- services
+- gallery
+- branding
+- settings
+- analytics
+- AI configuration
+
+No tenant can access another tenant's data.
+
+Tenant isolation is mandatory.
+
+---
+
+## Tenant Identification
+
+Each tenant has:
+
+- UUID
+- Slug
+- Display Name
+
+Example
+
+```
+lasttouch.app/fade-zone
+
+lasttouch.app/luxury-salon
+```
+
+Future support:
+
+```
+fadezone.com
+```
+
+or
+
+```
+book.fadezone.com
+```
+
+The architecture must support custom domains without major refactoring.
+
+---
+
+## Tenant Resolution
+
+Every request must resolve the tenant before any business logic executes.
+
+Resolution order:
+
+1. Custom Domain
+2. Subdomain (future)
+3. URL Slug
+4. Tenant Context
+
+If a tenant cannot be resolved:
+
+Return 404.
+
+Never fallback to another tenant.
+
+---
+
+## Tenant Context
+
+Every authenticated request must have access to:
+
+- tenantId
+- userId
+- membership
+- role
+- subscription
+- enabledFeatures
+- businessType
+
+This context should be created once and reused throughout the request lifecycle.
+
+---
+
+# 11. Business Types
+
+LastTouch is **not** a barber platform.
+
+It is a Beauty Business Platform.
+
+Business types are configuration-driven.
+
+The backend must never contain logic specific to "barbers".
+
+Supported business types:
+
+### Men's Barber Shop
+
+Employee Label:
+
+Barber
+
+Homepage Theme:
+
+Modern Men
+
+Default Services:
+
+- Haircut
+- Beard Trim
+- Fade
+- Kids Cut
+- Hair Wash
+
+---
+
+### Women's Hair Salon
+
+Employee Label:
+
+Stylist
+
+Homepage Theme:
+
+Luxury Women
+
+Default Services:
+
+- Haircut
+- Hair Color
+- Balayage
+- Keratin
+- Blow Dry
+- Hair Treatment
+
+---
+
+Future:
+
+- Nail Studio
+- Beauty Center
+- Spa
+- Makeup Studio
+- Wellness Center
+
+Adding a new business type should require configuration, not architectural changes.
+
+---
+
+## Business Type Configuration
+
+Each tenant stores:
+
+```
+business_type
+
+theme
+
+employee_label
+
+service_categories
+
+default_homepage
+
+icon_pack
+```
+
+The UI adapts automatically.
+
+No duplicated pages should exist.
+
+---
+
+# 12. Themes
+
+Themes affect only presentation.
+
+Business logic must never depend on theme.
+
+Initial themes:
+
+### Modern Men
+
+- Black
+- White
+- Gold
+
+### Luxury Women
+
+- White
+- Beige
+- Rose Gold
+
+Future:
+
+- Scandinavian
+- Minimal
+- Elegant White
+- Premium Black
+- Coffee
+- Emerald
+
+Every tenant may customize:
+
+- Primary Color
+- Accent Color
+- Logo
+- Cover Image
+- Typography (future)
+
+---
+
+# 13. Feature Flags
+
+Every premium capability should be controlled using feature flags.
+
+Examples:
+
+```
+booking
+
+crm
+
+employees
+
+gallery
+
+reviews
+
+analytics
+
+exports
+
+whatsapp
+
+custom_domain
+
+ai_receptionist
+
+ai_insights
+
+marketplace
+
+loyalty
+
+coupons
+
+marketing
+```
+
+The application must never check subscription plans directly.
+
+Instead:
+
+```
+hasFeature("ai_receptionist")
+```
+
+This allows plans to evolve without changing business logic.
+
+---
+
+# 14. Subscription Middleware
+
+Every request requiring premium functionality must verify feature availability.
+
+Example:
+
+```
+Owner opens AI Dashboard
+
+↓
+
+Check Feature
+
+↓
+
+Enabled
+
+↓
+
+Continue
+
+Disabled
+
+↓
+
+403 Forbidden
+```
+
+Never hide unauthorized routes only in the frontend.
+
+Enforcement must occur on the server.
+
+---
+
+# 15. Roles & Permissions
+
+The platform supports role-based access control (RBAC).
+
+Roles exist within the scope of a tenant.
+
+The same user may belong to multiple tenants with different roles.
+
+Example:
+
+```
+Ahmed
+
+Owner
+
+↓
+
+Fade Zone
+
+Manager
+
+↓
+
+Luxury Salon
+```
+
+This must be supported.
+
+---
+
+## Platform Roles
+
+### Platform Admin
+
+Can:
+
+- Manage tenants
+- Manage subscriptions
+- View platform analytics
+- Suspend tenants
+- Moderate marketplace
+- Access support tools
+
+Cannot modify tenant business data unless acting through support tools.
+
+---
+
+## Business Roles
+
+### Owner
+
+Full control of the tenant.
+
+Can:
+
+- Manage employees
+- Manage customers
+- Manage appointments
+- Manage branding
+- Manage subscription
+- Manage settings
+- Configure AI
+- View analytics
+
+---
+
+### Manager
+
+Can:
+
+- Manage appointments
+- Manage employees
+- Manage customers
+- View analytics
+
+Cannot:
+
+- Delete tenant
+- Manage billing
+- Change subscription
+- Transfer ownership
+
+---
+
+### Employee
+
+Can:
+
+- View own schedule
+- Manage own appointments
+- Mark appointments complete
+- Add appointment notes
+- View assigned customers
+
+Cannot:
+
+- Change prices
+- Access billing
+- View financial reports
+- Edit business settings
+
+---
+
+### Customer
+
+Can:
+
+- Create bookings
+- View upcoming bookings
+- Cancel bookings
+- Reschedule (if allowed)
+- Leave reviews
+- Manage profile
+
+Customers never access the business dashboard.
+
+---
+
+## Permission Model
+
+Permissions should be granular.
+
+Examples:
+
+```
+appointments.read
+
+appointments.create
+
+appointments.update
+
+appointments.delete
+
+customers.read
+
+customers.update
+
+employees.manage
+
+billing.manage
+
+analytics.read
+
+settings.update
+
+ai.use
+```
+
+Never rely solely on role names.
+
+Permissions should be extensible for future custom roles.
+
+# 9. System Flows & Entity Relationships
+
+This section describes how the platform components interact.
+
+These flows are the authoritative reference for relationships between modules.
+
+Whenever implementation details appear ambiguous, these flows take precedence.
+
+---
+
+## Business Hierarchy
+
+Platform
+
+↓
+
+Organizations (Future)
+
+↓
+
+Tenants (Businesses)
+
+↓
+
+Locations
+
+↓
+
+Employees
+
+↓
+
+Appointments
+
+↓
+
+Customers
+
+Every business operates independently.
+
+No data may cross tenant boundaries.
+
+---
+
+## Authentication Flow
+
+Visitor
+
+↓
+
+Clerk Authentication
+
+↓
+
+Resolve Membership
+
+↓
+
+Resolve Tenant
+
+↓
+
+Resolve Permissions
+
+↓
+
+Resolve Subscription
+
+↓
+
+Grant Access
+
+Every authenticated request follows this flow.
+
+---
+
+## Booking Flow
+
+Customer
+
+↓
+
+Public Website / AI Receptionist / Dashboard
+
+↓
+
+Availability Engine
+
+↓
+
+Business Rules
+
+↓
+
+Employee Schedule
+
+↓
+
+Conflict Detection
+
+↓
+
+Appointment Service Builder
+
+↓
+
+Appointment Creation
+
+↓
+
+Event Bus
+
+↓
+
+CRM Update
+
+↓
+
+Notifications
+
+↓
+
+Audit Log
+
+↓
+
+Success Response
+
+No appointment may bypass the Availability Engine.
+
+---
+
+## AI Request Flow
+
+User
+
+↓
+
+AI Assistant
+
+↓
+
+Prompt Builder
+
+↓
+
+Context Builder
+
+↓
+
+Permission Validation
+
+↓
+
+Tool Registry
+
+↓
+
+Application Service
+
+↓
+
+Database
+
+↓
+
+Structured Response
+
+↓
+
+LLM
+
+↓
+
+Formatted Response
+
+The AI never communicates directly with the database.
+
+All actions are performed through tools.
+
+---
+
+## Appointment Lifecycle
+
+Pending
+
+↓
+
+Confirmed
+
+↓
+
+Completed
+
+or
+
+Cancelled
+
+or
+
+No Show
+
+Only Completed appointments may
+
+Generate Reviews
+
+Award Loyalty Points
+
+Update Customer Statistics
+
+Trigger AI Insights
+
+---
+
+## Availability Calculation
+
+Business Hours
+
+↓
+
+Employee Schedule
+
+↓
+
+Breaks
+
+↓
+
+Time Off
+
+↓
+
+Existing Appointments
+
+↓
+
+Appointment Buffers
+
+↓
+
+Business Rules
+
+↓
+
+Available Time Slots
+
+Availability is calculated dynamically.
+
+It is never stored in the database.
+
+---
+
+## Customer Lifecycle
+
+Visitor
+
+↓
+
+Booking
+
+↓
+
+Customer Created
+
+↓
+
+Appointment History
+
+↓
+
+CRM Timeline
+
+↓
+
+Reviews
+
+↓
+
+Loyalty
+
+↓
+
+AI Summary
+
+↓
+
+Retention Campaigns
+
+Customer information continuously evolves through platform usage.
+
+---
+
+## Service Relationship
+
+Catalog
+
+├── Categories
+
+├── Services
+
+├── Packages
+
+├── Add-ons
+
+├── Memberships (Future)
+
+└── Products (Future)
+
+The Catalog is the parent domain.
+
+Services are only one type of catalog item.
+
+---
+
+## Employee Relationship
+
+Employee
+
+↓
+
+Services
+
+↓
+
+Working Hours
+
+↓
+
+Breaks
+
+↓
+
+Time Off
+
+↓
+
+Appointments
+
+↓
+
+Performance Metrics
+
+↓
+
+Reviews
+
+↓
+
+Commission (Future)
+
+Employees are the operational resource of the business.
+
+---
+
+## Analytics Flow
+
+Appointments
+
+↓
+
+Payments
+
+↓
+
+CRM
+
+↓
+
+Events
+
+↓
+
+Analytics Engine
+
+↓
+
+AI Insights
+
+↓
+
+Dashboard
+
+Analytics should always be derived from operational data.
+
+---
+
+## Notification Flow
+
+Business Event
+
+↓
+
+Event Bus
+
+↓
+
+Notification Engine
+
+↓
+
+Localization
+
+↓
+
+Provider
+
+↓
+
+Delivery
+
+↓
+
+Tracking
+
+↓
+
+Analytics
+
+Notifications should never be sent directly by business modules.
+
+---
+
+## Billing Flow
+
+Tenant
+
+↓
+
+Subscription
+
+↓
+
+Usage Engine
+
+↓
+
+Feature Validation
+
+↓
+
+Payment Provider
+
+↓
+
+Invoice
+
+↓
+
+Audit Log
+
+↓
+
+Feature Access
+
+Feature access is always determined by subscription and usage validation.
+
+---
+
+## Marketplace Flow
+
+Business
+
+↓
+
+Marketplace Visibility
+
+↓
+
+SEO Index
+
+↓
+
+Search
+
+↓
+
+Discovery
+
+↓
+
+Business Page
+
+↓
+
+Booking
+
+Marketplace booking uses the same Booking Engine.
+
+No duplicate booking logic should exist.
+
+---
+
+## Tenant Isolation
+
+Request
+
+↓
+
+Resolve Tenant
+
+↓
+
+Validate Membership
+
+↓
+
+Apply Tenant Scope
+
+↓
+
+Execute Query
+
+↓
+
+Return Tenant Data
+
+Every query involving tenant-owned data must be scoped by tenant_id.
+
+No exceptions.
+
+---
+
+## Event-Driven Architecture
+
+Business Event
+
+↓
+
+Event Bus
+
+↓
+
+Subscribers
+
+Examples
+
+Appointment Created
+
+↓
+
+CRM
+
+↓
+
+Notifications
+
+↓
+
+Analytics
+
+↓
+
+AI
+
+↓
+
+Loyalty
+
+↓
+
+Audit Logs
+
+Business modules should publish events rather than directly invoking downstream modules.
+
+
+---
+
+# 16. Database Design
+
+The database is designed around a multi-tenant architecture.
+
+Every business operates independently while sharing the same PostgreSQL database.
+
+Business-specific data must always be scoped using `tenant_id`.
+
+The schema must be normalized, indexed, and designed for long-term scalability.
+
+---
+
+## Database Rules
+
+The following rules apply to every table unless otherwise specified.
+
+Every table must contain:
+
+- id (UUID Primary Key)
+- created_at
+- updated_at
+
+Business-related tables additionally contain:
+
+- tenant_id
+
+Never use auto-increment integers.
+
+Always use UUIDs.
+
+---
+
+## Timestamp Rules
+
+created_at
+
+Automatically populated.
+
+Never modified.
+
+updated_at
+
+Automatically updated on every modification.
+
+---
+
+## Soft Deletes
+
+Business-critical data must never be permanently deleted.
+
+Instead use
+
+deleted_at
+
+Examples:
+
+Customers
+
+Employees
+
+Services
+
+Appointments
+
+Business Settings
+
+Historical records must remain intact.
+
+---
+
+## Naming Convention
+
+Tables
+
+snake_case
+
+Columns
+
+snake_case
+
+Typescript
+
+camelCase
+
+Enums
+
+PascalCase
+
+---
+
+# 17. Core Tables
+
+The platform consists of the following core entities.
+
+Organization (future)
+
+↓
+
+Tenant
+
+↓
+
+Location
+
+↓
+
+Employees
+
+↓
+
+Customers
+
+↓
+
+Services
+
+↓
+
+Appointments
+
+↓
+
+Payments
+
+↓
+
+Analytics
+
+---
+
+# organizations
+
+Future-proof grouping entity.
+
+Fields
+
+- id
+- name
+- slug
+- logo_url
+- owner_user_id
+- created_at
+- updated_at
+
+Initially every tenant belongs to one organization.
+
+---
+
+# tenants
+
+Represents one business.
+
+Examples
+
+Fade Zone
+
+Luxury Salon
+
+Kings Barber
+
+Fields
+
+- id
+- organization_id
+- slug
+- business_name
+- business_type
+- subscription_plan
+- theme
+- logo_url
+- cover_url
+- phone
+- email
+- whatsapp
+- website
+- description
+- timezone
+- locale
+- currency
+- marketplace_enabled
+- active
+- created_at
+- updated_at
+
+Relationships
+
+Tenant
+
+↓
+
+Locations
+
+Employees
+
+Customers
+
+Services
+
+Appointments
+
+Settings
+
+Analytics
+
+Notifications
+
+---
+
+# locations
+
+Represents a physical branch.
+
+Fields
+
+- id
+- tenant_id
+- name
+- address
+- latitude
+- longitude
+- city
+- governorate
+- postal_code
+- phone
+- active
+
+Initially
+
+One location is created automatically.
+
+Future
+
+Unlimited locations.
+
+---
+
+# memberships
+
+Maps users to tenants.
+
+Supports multi-business ownership.
+
+Fields
+
+- id
+- tenant_id
+- user_id
+- role
+- active
+- invited_by
+- joined_at
+
+A user may belong to multiple tenants.
+
+---
+
+# employees
+
+Generic employee table.
+
+Never use "barber".
+
+Fields
+
+- id
+- tenant_id
+- location_id
+- first_name
+- last_name
+- display_name
+- bio
+- image_url
+- phone
+- email
+- years_experience
+- active
+
+Future
+
+commission_percentage
+
+Relationships
+
+Employee
+
+↓
+
+Working Hours
+
+Appointments
+
+Reviews
+
+Employee Services
+
+Time Off
+
+---
+
+# employee_services
+
+Many-to-many relationship.
+
+One employee
+
+↓
+
+Many services
+
+One service
+
+↓
+
+Many employees
+
+Fields
+
+- employee_id
+- service_id
+
+Composite Primary Key.
+
+---
+
+# customers
+
+Fields
+
+- id
+- tenant_id
+- first_name
+- last_name
+- phone
+- email
+- birthday
+- gender
+- notes
+- marketing_consent
+- loyalty_points
+- preferred_employee_id
+- total_spent
+- visit_count
+- last_visit_at
+- created_at
+- updated_at
+
+Customer history must never be lost.
+
+---
+
+# service_categories
+
+Owner-defined categories.
+
+Examples
+
+Hair
+
+Beard
+
+Color
+
+Treatments
+
+Packages
+
+Fields
+
+- id
+- tenant_id
+- name
+- icon
+- sort_order
+
+---
+
+# services
+
+Every service is created by the tenant.
+
+Nothing is hardcoded.
+
+Fields
+
+- id
+- tenant_id
+- category_id
+- name
+- description
+- image_url
+- duration_minutes
+- price
+- active
+- sort_order
+
+Deleting services is prohibited if appointments exist.
+
+Instead
+
+active = false
+
+---
+
+# working_hours
+
+Weekly schedule.
+
+Fields
+
+- id
+- employee_id
+- weekday
+- start_time
+- end_time
+
+One record per weekday.
+
+---
+
+# breaks
+
+Unlimited daily breaks.
+
+Fields
+
+- id
+- employee_id
+- weekday
+- start_time
+- end_time
+
+Allows lunch breaks.
+
+---
+
+# time_off
+
+Vacation
+
+Sick leave
+
+Holiday
+
+Fields
+
+- id
+- employee_id
+- start_date
+- end_date
+- reason
+
+Appointments cannot be booked during time off.
+
+---
+
+# appointments
+
+The heart of the platform.
+
+Fields
+
+- id
+- tenant_id
+- location_id
+- customer_id
+- employee_id
+- service_id
+- appointment_date
+- start_time
+- end_time
+- duration_minutes
+- status
+- price
+- notes
+- source
+
+Status
+
+Pending
+
+Confirmed
+
+Completed
+
+Cancelled
+
+No Show
+
+Source
+
+Dashboard
+
+Website
+
+WhatsApp
+
+AI
+
+Marketplace
+
+Relationships
+
+Appointment
+
+↓
+
+Customer
+
+Employee
+
+Service
+
+Location
+
+Payments
+
+Notifications
+
+
+
+---
+
+# 18. Appointment Engine
+
+The appointment engine is the heart of LastTouch.
+
+Every booking must pass through the scheduling engine.
+
+The scheduling engine is responsible for determining:
+
+- availability
+- conflicts
+- buffers
+- employee schedule
+- breaks
+- vacations
+- business hours
+- booking rules
+
+No appointment may bypass this validation.
+
+---
+
+# Appointment Lifecycle
+
+Appointment
+
+↓
+
+Pending
+
+↓
+
+Confirmed
+
+↓
+
+Completed
+
+or
+
+Cancelled
+
+or
+
+No Show
+
+---
+
+Status definitions
+
+Pending
+
+Created but awaiting confirmation.
+
+Confirmed
+
+Accepted by the business.
+
+Completed
+
+Finished successfully.
+
+Cancelled
+
+Cancelled by customer or business.
+
+No Show
+
+Customer did not arrive.
+
+---
+
+# Appointment Services
+
+One appointment may contain multiple services.
+
+Example
+
+Appointment
+
+↓
+
+Haircut
+
+↓
+
+Beard
+
+↓
+
+Hair Wash
+
+Each service stores its own snapshot.
+
+appointment_services
+
+Fields
+
+- id
+- appointment_id
+- service_id
+- service_name_snapshot
+- duration_snapshot
+- price_snapshot
+- sort_order
+
+The original service may later change.
+
+Historical appointments must remain unchanged.
+
+---
+
+# Scheduling Rules
+
+Before creating an appointment the engine must validate:
+
+✓ Business is open
+
+✓ Employee is working
+
+✓ Employee is not on leave
+
+✓ Requested slot is not inside a break
+
+✓ Appointment does not overlap another
+
+✓ Minimum notice is respected
+
+✓ Maximum booking window is respected
+
+✓ Feature is enabled
+
+If any validation fails
+
+Return validation error.
+
+Never automatically adjust appointments.
+
+---
+
+# Availability Algorithm
+
+Available slots are generated dynamically.
+
+Inputs
+
+Business Hours
+
+↓
+
+Employee Working Hours
+
+↓
+
+Breaks
+
+↓
+
+Time Off
+
+↓
+
+Existing Appointments
+
+↓
+
+Buffer Time
+
+↓
+
+Service Duration
+
+↓
+
+Available Slots
+
+No slots should ever be stored in the database.
+
+Generate on demand.
+
+---
+
+# Booking Rules
+
+Every tenant controls:
+
+Minimum booking notice
+
+Maximum booking window
+
+Cancellation window
+
+Late arrival grace period
+
+Maximum appointments per customer per day
+
+Allow walk-ins
+
+Require confirmation
+
+Require deposit (future)
+
+Automatically confirm bookings
+
+All settings are editable by the owner.
+
+---
+
+# Walk-in Appointments
+
+Employees may create walk-in bookings.
+
+Source
+
+Walk-in
+
+Walk-in appointments bypass customer registration if desired.
+
+A temporary customer profile should be created.
+
+---
+
+# Rescheduling
+
+Rescheduling creates a new schedule entry while preserving history.
+
+Track
+
+Original Time
+
+↓
+
+New Time
+
+Store
+
+Rescheduled By
+
+Rescheduled At
+
+Reason
+
+---
+
+# Cancellation
+
+Cancellation never deletes appointments.
+
+Store
+
+Cancelled By
+
+Cancelled At
+
+Reason
+
+---
+
+# No Show
+
+No Shows affect customer statistics.
+
+Increase
+
+no_show_count
+
+Future AI can identify unreliable customers.
+
+---
+
+# Appointment Notes
+
+Employees may add notes.
+
+Examples
+
+Customer prefers scissors.
+
+Customer requested shorter beard.
+
+All notes remain inside CRM history.
+
+---
+
+# Payments (Future Ready)
+
+Appointment
+
+↓
+
+Payment
+
+Support
+
+Cash
+
+Card
+
+Wallet
+
+Online
+
+Split Payment
+
+Store
+
+Payment Status
+
+Paid Amount
+
+Remaining Amount
+
+Discount
+
+Tax
+
+Tip
+
+---
+
+# Coupons
+
+Coupons may apply to appointments.
+
+Support
+
+Fixed Amount
+
+Percentage
+
+Expiration
+
+Maximum Uses
+
+Minimum Spend
+
+Tenant controlled.
+
+---
+
+# Loyalty
+
+Customers earn points.
+
+Owner defines
+
+Rules
+
+Examples
+
+Every appointment
+
+Every 100 EGP
+
+Specific services
+
+Redeeming points is optional.
+
+---
+
+# Reviews
+
+Completed appointments automatically become review eligible.
+
+Rules
+
+Only completed appointments.
+
+One review per appointment.
+
+Store
+
+Rating
+
+Comment
+
+Employee
+
+Service
+
+Owner Reply
+
+Review Requests may be sent automatically.
+
+---
+
+# 19. CRM
+
+LastTouch includes a built-in CRM.
+
+Every customer automatically becomes part of CRM.
+
+No external CRM required.
+
+---
+
+# Customer Profile
+
+Each customer contains
+
+Personal Information
+
+↓
+
+Contact Information
+
+↓
+
+Appointment History
+
+↓
+
+Preferred Employee
+
+↓
+
+Favorite Services
+
+↓
+
+Lifetime Value
+
+↓
+
+Loyalty
+
+↓
+
+Notes
+
+↓
+
+AI Summary
+
+---
+
+Customer statistics include
+
+Visit Count
+
+Average Spend
+
+Lifetime Value
+
+Last Visit
+
+Average Visit Interval
+
+Cancellation Count
+
+No Show Count
+
+Favorite Day
+
+Favorite Time
+
+Preferred Employee
+
+Preferred Services
+
+---
+
+# Timeline
+
+Every customer has a timeline.
+
+Example
+
+Created
+
+↓
+
+Booked Haircut
+
+↓
+
+Completed
+
+↓
+
+Left Review
+
+↓
+
+Purchased Package
+
+↓
+
+Redeemed Coupon
+
+↓
+
+AI Campaign Sent
+
+↓
+
+Returned
+
+Everything appears chronologically.
+
+---
+
+# Customer Notes
+
+Employees may create notes.
+
+Visibility
+
+Private
+
+Manager Only
+
+Owner Only
+
+Future
+
+AI generated summaries.
+
+---
+
+# Tags
+
+Owners may create tags.
+
+Examples
+
+VIP
+
+Student
+
+Bride
+
+Frequent Visitor
+
+High Value
+
+Inactive
+
+Tags are completely customizable.
+
+---
+
+# Marketing Consent
+
+Store
+
+Email Consent
+
+SMS Consent
+
+WhatsApp Consent
+
+Only opted-in customers may receive campaigns.
+
+---
+
+# Loyalty Profile
+
+Track
+
+Current Points
+
+Lifetime Points
+
+Redeemed Points
+
+Current Tier (future)
+
+---
+
+# AI Summary
+
+Every customer eventually contains
+
+AI Summary
+
+Example
+
+Visits monthly.
+
+Prefers Ahmed.
+
+Usually books beard + haircut.
+
+Average spend 320 EGP.
+
+Often books Friday evenings.
+
+Generated automatically.
+
+
+
+---
+
+# 20. Employee Management
+
+Employees are one of the core resources of LastTouch.
+
+Employees represent the people performing appointments.
+
+Examples:
+
+- Barber
+- Stylist
+- Hair Color Specialist
+- Nail Technician
+- Makeup Artist
+- Therapist
+
+The system must never hardcode employee titles.
+
+Titles are determined by the selected Business Type.
+
+---
+
+## Employee Profile
+
+Each employee contains the following information.
+
+### Identity
+
+- First Name
+- Last Name
+- Display Name
+- Profile Image
+- Biography
+
+---
+
+### Contact
+
+- Phone
+- Email
+
+---
+
+### Professional Information
+
+- Years of Experience
+- Hire Date
+- Active Status
+
+Future
+
+- Certificates
+- Languages
+- Instagram
+- Portfolio
+
+---
+
+### Scheduling
+
+Every employee owns an independent schedule.
+
+Each schedule consists of:
+
+Weekly Availability
+
+↓
+
+Breaks
+
+↓
+
+Time Off
+
+↓
+
+Appointments
+
+↓
+
+Calculated Availability
+
+The employee schedule always overrides the business default schedule.
+
+---
+
+## Employee Services
+
+Employees may only perform services assigned to them.
+
+Example
+
+Ahmed
+
+✓ Haircut
+
+✓ Beard
+
+✓ Kids Cut
+
+✗ Hair Coloring
+
+Sara
+
+✓ Hair Coloring
+
+✓ Keratin
+
+✓ Balayage
+
+✗ Beard
+
+This relationship is managed through the employee_services table.
+
+---
+
+## Employee Dashboard
+
+Employees have access to a dedicated dashboard.
+
+Available Modules:
+
+- Today's Appointments
+- Calendar
+- Customer Details
+- Appointment Notes
+- Profile
+- Availability
+
+Future
+
+- Commission
+- Revenue
+- Performance
+- Goals
+
+Employees cannot access tenant settings.
+
+---
+
+## Employee Availability
+
+Availability is calculated dynamically.
+
+Inputs:
+
+Business Hours
+
+↓
+
+Employee Schedule
+
+↓
+
+Breaks
+
+↓
+
+Time Off
+
+↓
+
+Existing Appointments
+
+↓
+
+Appointment Buffers
+
+↓
+
+Available Slots
+
+Available slots are never persisted.
+
+They are generated on demand.
+
+---
+
+## Time Off
+
+Employees may request or owners may assign time off.
+
+Supported Types:
+
+- Vacation
+- Sick Leave
+- Holiday
+- Training
+- Personal
+
+Appointments cannot overlap time off.
+
+---
+
+## Performance Metrics
+
+Each employee maintains statistics.
+
+Examples:
+
+Completed Appointments
+
+Revenue Generated
+
+Average Rating
+
+Returning Customers
+
+No Shows
+
+Cancellation Rate
+
+Future
+
+Commission
+
+Product Sales
+
+Average Appointment Value
+
+---
+
+# 21. Business Management
+
+Every tenant fully manages their own business.
+
+Platform administrators never modify business-specific information.
+
+---
+
+## Business Profile
+
+Owner may update:
+
+- Business Name
+- Description
+- Phone
+- Email
+- WhatsApp
+- Website
+- Address
+- Google Maps
+- Social Media
+- Logo
+- Cover Image
+
+Changes apply immediately.
+
+---
+
+## Branding
+
+Each tenant controls:
+
+Primary Color
+
+Accent Color
+
+Logo
+
+Cover
+
+Gallery
+
+Homepage Theme
+
+Future
+
+Custom Fonts
+
+Business branding must never affect business logic.
+
+---
+
+## Business Hours
+
+Business hours define the default operating schedule.
+
+Example
+
+Sunday
+
+09:00 → 22:00
+
+Monday
+
+09:00 → 22:00
+
+Friday
+
+14:00 → 23:00
+
+Employees may override these hours.
+
+---
+
+## Booking Rules
+
+Owner controls:
+
+Minimum Notice
+
+Maximum Booking Window
+
+Late Arrival Grace Period
+
+Cancellation Window
+
+Auto Confirmation
+
+Maximum Daily Bookings
+
+Walk-in Support
+
+Future
+
+Deposit Required
+
+Online Payments Required
+
+---
+
+## Gallery
+
+Businesses manage their own gallery.
+
+Supported Types:
+
+Interior
+
+Exterior
+
+Team
+
+Work
+
+Before / After
+
+Uploaded images are stored in Cloudflare R2.
+
+---
+
+## Reviews
+
+Owners can:
+
+Reply
+
+Pin
+
+Report
+
+Hide
+
+Review deletion is prohibited.
+
+---
+
+## Service Categories
+
+Categories are tenant-managed.
+
+Examples
+
+Hair
+
+Beard
+
+Packages
+
+Color
+
+Treatments
+
+Kids
+
+Owners may reorder categories.
+
+---
+
+## Services
+
+Services are entirely dynamic.
+
+Each service contains:
+
+- Name
+- Description
+- Category
+- Duration
+- Buffer Before
+- Buffer After
+- Price
+- Optional Image
+- Visibility
+- Active Status
+
+Owners may:
+
+Create
+
+Edit
+
+Archive
+
+Duplicate
+
+Reorder
+
+Services with historical appointments cannot be deleted.
+
+---
+
+## Packages
+
+Packages combine multiple services.
+
+Example
+
+Premium Package
+
+↓
+
+Haircut
+
+↓
+
+Beard
+
+↓
+
+Hair Wash
+
+↓
+
+Hot Towel
+
+Package price may differ from the combined service prices.
+
+Packages are first-class entities.
+
+---
+
+## Add-ons
+
+Add-ons are optional extras.
+
+Examples
+
+Hot Towel
+
+Hair Wash
+
+Eyebrow Trim
+
+Face Mask
+
+Customers may add them during booking.
+
+---
+
+## Coupons
+
+Coupons support:
+
+Fixed Discount
+
+Percentage Discount
+
+Expiration Date
+
+Maximum Usage
+
+Per Customer Limit
+
+Minimum Spend
+
+Coupons are tenant-specific.
+
+---
+
+## Loyalty Program
+
+Businesses define their own loyalty rules.
+
+Examples
+
+Every Appointment
+
+↓
+
+10 Points
+
+Every 100 EGP
+
+↓
+
+15 Points
+
+Customers redeem points for rewards.
+
+Future
+
+Tier System
+
+Silver
+
+Gold
+
+Platinum
+
+---
+
+# 22. Analytics
+
+Analytics should provide actionable insights rather than raw numbers.
+
+The dashboard should answer business questions.
+
+Examples:
+
+How much revenue did I generate?
+
+Which employee performs best?
+
+Which services are most popular?
+
+Which customers stopped visiting?
+
+Which hours are busiest?
+
+---
+
+## Revenue Metrics
+
+Track:
+
+Daily Revenue
+
+Weekly Revenue
+
+Monthly Revenue
+
+Yearly Revenue
+
+Average Ticket
+
+Revenue Per Employee
+
+Revenue Per Service
+
+---
+
+## Appointment Metrics
+
+Track:
+
+Completed
+
+Cancelled
+
+Pending
+
+No Shows
+
+Rescheduled
+
+Average Duration
+
+Occupancy Rate
+
+---
+
+## Customer Metrics
+
+Track:
+
+New Customers
+
+Returning Customers
+
+Retention Rate
+
+Lifetime Value
+
+Visit Frequency
+
+Average Spend
+
+Top Customers
+
+Inactive Customers
+
+---
+
+## Employee Metrics
+
+Track:
+
+Appointments Completed
+
+Revenue Generated
+
+Average Rating
+
+Cancellation Rate
+
+No Show Rate
+
+Returning Customer Rate
+
+---
+
+## Service Metrics
+
+Track:
+
+Most Popular Services
+
+Least Popular Services
+
+Highest Revenue Services
+
+Average Duration
+
+Average Price
+
+Package Performance
+
+---
+
+## Business Health
+
+Generate a Business Health Score.
+
+Factors include:
+
+Revenue Trend
+
+Retention
+
+Occupancy
+
+Review Rating
+
+No Shows
+
+Growth Rate
+
+Future AI modules may use this score to generate recommendations.
+
+---
+
+## Exporting
+
+Owners may export reports.
+
+Supported formats:
+
+CSV
+
+Excel
+
+PDF (Future)
+
+Exports respect tenant permissions.
+
+---
+
+# 23. Internal Notification Center
+
+The platform includes an internal notification system.
+
+Recipients:
+
+Owner
+
+Managers
+
+Employees
+
+Examples:
+
+New Booking
+
+Appointment Cancelled
+
+Schedule Updated
+
+Employee Added
+
+Subscription Expiring
+
+Review Received
+
+AI Insight Generated
+
+Notifications support:
+
+Read Status
+
+Priority
+
+Category
+
+Deep Links
+
+Future
+
+Push Notifications
+
+
+
+---
+
+# 24. Public Website
+
+Each tenant automatically receives a fully functional public website.
+
+No coding knowledge is required.
+
+The website acts as the public identity of the business.
+
+Primary goals:
+
+- Build trust
+- Showcase services
+- Convert visitors into bookings
+- Improve SEO
+- Support online marketing campaigns
+
+Every tenant website is generated dynamically from tenant data.
+
+Example:
+
+https://lasttouch.app/fade-zone
+
+Future:
+
+https://book.fadezone.com
+
+https://fadezone.com
+
+---
+
+## Website Structure
+
+Every tenant website contains the following pages.
+
+Home
+
+About
+
+Services
+
+Team
+
+Gallery
+
+Reviews
+
+Book Now
+
+Contact
+
+Policies
+
+Privacy Policy
+
+Terms
+
+404
+
+The owner may disable pages they do not use.
+
+---
+
+## Homepage
+
+Homepage sections are configurable.
+
+Supported sections:
+
+Hero
+
+About
+
+Services
+
+Featured Employees
+
+Gallery
+
+Testimonials
+
+Statistics
+
+Instagram Feed (Future)
+
+FAQ
+
+Location
+
+Call To Action
+
+Footer
+
+Owners may reorder homepage sections.
+
+---
+
+## Hero Section
+
+Contains
+
+Business Name
+
+Tagline
+
+Primary CTA
+
+Secondary CTA
+
+Background Image or Video
+
+Business Rating
+
+Years in Business
+
+Buttons:
+
+Book Appointment
+
+Contact
+
+WhatsApp
+
+---
+
+## About
+
+Displays
+
+Business Story
+
+Mission
+
+Photos
+
+Experience
+
+Achievements
+
+---
+
+## Services Page
+
+Displays
+
+Categories
+
+↓
+
+Services
+
+↓
+
+Price
+
+↓
+
+Duration
+
+↓
+
+Book Button
+
+Filters:
+
+Category
+
+Price
+
+Duration
+
+Search
+
+---
+
+## Employee Page
+
+Displays
+
+Photo
+
+Biography
+
+Years of Experience
+
+Rating
+
+Specialties
+
+Available Services
+
+Working Days
+
+Book Appointment
+
+Future
+
+Instagram
+
+Certificates
+
+Portfolio
+
+---
+
+## Gallery
+
+Supports
+
+Images
+
+Before / After
+
+Interior
+
+Team
+
+Videos (Future)
+
+Images should be optimized automatically.
+
+---
+
+## Reviews
+
+Displays
+
+Average Rating
+
+Review Count
+
+Customer Reviews
+
+Owner Replies
+
+Pinned Reviews
+
+Sorting:
+
+Newest
+
+Highest Rated
+
+---
+
+## Contact
+
+Displays
+
+Phone
+
+WhatsApp
+
+Email
+
+Address
+
+Google Maps
+
+Opening Hours
+
+Social Media
+
+---
+
+## SEO
+
+Every tenant website must be SEO optimized.
+
+Generate
+
+Meta Title
+
+Meta Description
+
+OpenGraph
+
+Twitter Cards
+
+Structured Data
+
+Canonical URL
+
+robots.txt
+
+sitemap.xml
+
+Every page must be indexable unless explicitly disabled.
+
+---
+
+## Localization
+
+Public websites support
+
+English
+
+Arabic
+
+RTL
+
+LTR
+
+URLs should be localized.
+
+Example
+
+/en/services
+
+/ar/services
+
+---
+
+# 25. Booking Experience
+
+Booking should require as few steps as possible.
+
+Ideal Flow
+
+Select Service(s)
+
+↓
+
+Select Employee
+
+↓
+
+Select Date
+
+↓
+
+Select Time
+
+↓
+
+Enter Customer Details
+
+↓
+
+Confirm
+
+↓
+
+Success
+
+Maximum booking time:
+
+Less than 60 seconds.
+
+---
+
+## Service Selection
+
+Customers may select:
+
+Single Service
+
+Multiple Services
+
+Packages
+
+Add-ons
+
+The scheduling engine automatically calculates total duration.
+
+---
+
+## Employee Selection
+
+Options
+
+Any Available Employee
+
+Specific Employee
+
+Recommended Employee (Future AI)
+
+---
+
+## Calendar
+
+Displays
+
+Available Days
+
+Unavailable Days
+
+Public Holidays
+
+Special Events
+
+Days without availability are disabled.
+
+---
+
+## Time Slots
+
+Time slots are generated dynamically.
+
+Each slot respects:
+
+Working Hours
+
+Breaks
+
+Vacations
+
+Existing Appointments
+
+Buffers
+
+Business Rules
+
+---
+
+## Customer Information
+
+Collect only necessary information.
+
+Required
+
+Name
+
+Phone
+
+Optional
+
+Email
+
+Notes
+
+Marketing Consent
+
+Future
+
+Login
+
+Guest Checkout
+
+---
+
+## Confirmation
+
+Confirmation page displays
+
+Appointment Summary
+
+Services
+
+Employee
+
+Location
+
+Date
+
+Time
+
+Duration
+
+Price
+
+Cancellation Policy
+
+Buttons
+
+Add to Calendar (Future)
+
+Directions
+
+Reschedule
+
+Cancel
+
+---
+
+## Booking Success
+
+After booking
+
+Create Appointment
+
+↓
+
+Create Customer (if needed)
+
+↓
+
+Send Notifications
+
+↓
+
+Update CRM
+
+↓
+
+Generate Timeline Event
+
+↓
+
+Return Confirmation
+
+---
+
+# 26. Marketplace Architecture
+
+Marketplace is not part of the MVP.
+
+However, the architecture must fully support it.
+
+The Marketplace allows customers to discover businesses.
+
+Examples
+
+Nearby Barbers
+
+Top Rated Salons
+
+Hair Coloring Specialists
+
+Trending Businesses
+
+---
+
+## Marketplace Visibility
+
+Each tenant chooses:
+
+Public
+
+Private
+
+Hidden
+
+Public businesses become searchable.
+
+Private businesses are accessible only through direct links.
+
+---
+
+## Marketplace Profile
+
+Generated automatically.
+
+Displays
+
+Logo
+
+Rating
+
+Gallery
+
+Services
+
+Employees
+
+Business Hours
+
+Location
+
+Book Button
+
+---
+
+## Search
+
+Support
+
+Business Name
+
+Service
+
+Category
+
+City
+
+Governorate
+
+Rating
+
+Price
+
+Availability (Future)
+
+---
+
+## Filters
+
+Distance
+
+Rating
+
+Business Type
+
+Open Now
+
+Verified
+
+Offers
+
+Featured
+
+---
+
+## Ranking
+
+Initial ranking factors
+
+Rating
+
+Review Count
+
+Booking Conversion
+
+Profile Completeness
+
+Subscription Tier
+
+Future AI ranking may be introduced.
+
+---
+
+## Featured Businesses
+
+Platform Admin may feature businesses.
+
+Featured businesses appear higher in search results.
+
+Sponsored listings should be clearly identified.
+
+---
+
+## Verification
+
+Businesses may become verified.
+
+Verification criteria are controlled by Platform Admin.
+
+Verified businesses display a badge.
+
+---
+
+## Favorites
+
+Customers may save favorite businesses.
+
+Favorites synchronize across devices.
+
+---
+
+# 27. Customer Accounts
+
+Customers may create an account.
+
+Guest booking remains supported.
+
+Customer Dashboard includes
+
+Upcoming Appointments
+
+Appointment History
+
+Favorite Businesses
+
+Favorite Employees
+
+Saved Services
+
+Reviews
+
+Profile
+
+Settings
+
+Notification Preferences
+
+Future
+
+Memberships
+
+Wallet
+
+Subscriptions
+
+
+
+---
+
+# 28. Artificial Intelligence Architecture
+
+Artificial Intelligence is a first-class module within LastTouch.
+
+AI should never exist as a standalone chatbot.
+
+Instead, AI capabilities are distributed throughout the platform to assist business owners, employees, and customers.
+
+Every AI capability must use the same AI infrastructure while exposing different specialized assistants.
+
+The AI layer must be modular so that models, prompts, tools, and providers can evolve independently.
+
+---
+
+# AI Philosophy
+
+The AI should function as another member of the business.
+
+Examples:
+
+• Receptionist
+
+• Marketing Assistant
+
+• CRM Assistant
+
+• Analytics Assistant
+
+• Business Consultant
+
+Every assistant has a different responsibility while sharing the same business knowledge.
+
+---
+
+# AI Layer
+
+The AI architecture consists of five layers.
+
+```
+User
+
+↓
+
+Assistant
+
+↓
+
+Prompt Builder
+
+↓
+
+Context Builder
+
+↓
+
+Tool Executor
+
+↓
+
+LLM
+
+↓
+
+Structured Response
+```
+
+The AI should never communicate directly with the database.
+
+All data access must occur through predefined tools.
+
+---
+
+# AI Context
+
+Every AI request receives context.
+
+Context includes:
+
+Tenant
+
+↓
+
+Business Settings
+
+↓
+
+Current User
+
+↓
+
+Permissions
+
+↓
+
+Subscription
+
+↓
+
+Conversation History
+
+↓
+
+Relevant Business Data
+
+↓
+
+Current Time
+
+↓
+
+Current Language
+
+The AI should always know which business it is serving.
+
+Cross-tenant information is strictly prohibited.
+
+---
+
+# AI Providers
+
+The provider must be configurable.
+
+Supported providers should implement a common interface.
+
+Initial providers:
+
+OpenAI
+
+Anthropic
+
+Google Gemini
+
+Future:
+
+OpenRouter
+
+Local Models
+
+Azure OpenAI
+
+Switching providers should require configuration only.
+
+---
+
+# AI Tool System
+
+The AI does not execute SQL.
+
+Instead, it calls internal tools.
+
+Examples:
+
+Find Customer
+
+Create Appointment
+
+Cancel Appointment
+
+Reschedule Appointment
+
+Search Services
+
+Calculate Revenue
+
+Generate Campaign
+
+List Employees
+
+Find Availability
+
+Create Coupon
+
+Generate Report
+
+The tool layer validates permissions before execution.
+
+---
+
+# AI Memory
+
+AI memory exists at multiple levels.
+
+Global
+
+Platform-wide instructions.
+
+Tenant
+
+Business-specific knowledge.
+
+Conversation
+
+Temporary context.
+
+Customer
+
+Future personalization.
+
+The AI should never permanently remember information outside its allowed scope.
+
+---
+
+# AI Logging
+
+Every AI interaction stores:
+
+Request
+
+Response
+
+Model
+
+Token Usage
+
+Latency
+
+Tool Calls
+
+Errors
+
+User
+
+Tenant
+
+Timestamp
+
+Logs are used for monitoring, billing, and debugging.
+
+---
+
+# AI Rate Limits
+
+AI usage depends on subscription.
+
+Free
+
+No AI.
+
+Pro
+
+Limited AI requests.
+
+AI Plan
+
+Higher monthly quota.
+
+Future
+
+Usage-based billing.
+
+---
+
+# 29. AI Receptionist
+
+The AI Receptionist replaces the first interaction between customers and the business.
+
+Responsibilities:
+
+Answer questions
+
+Recommend services
+
+Recommend employees
+
+Book appointments
+
+Reschedule appointments
+
+Cancel appointments
+
+Explain policies
+
+Provide opening hours
+
+Share pricing
+
+Share location
+
+Escalate to humans when necessary.
+
+---
+
+## Receptionist Knowledge
+
+The receptionist knows:
+
+Business information
+
+↓
+
+Services
+
+↓
+
+Employees
+
+↓
+
+Working Hours
+
+↓
+
+Policies
+
+↓
+
+Pricing
+
+↓
+
+FAQs
+
+↓
+
+Availability
+
+↓
+
+Promotions
+
+It never invents information.
+
+If uncertain, it politely states that it does not know.
+
+---
+
+## Receptionist Personality
+
+The business owner selects a tone.
+
+Examples:
+
+Friendly
+
+Luxury
+
+Professional
+
+Minimal
+
+Modern
+
+The selected tone influences responses.
+
+---
+
+## Supported Channels
+
+Website Chat
+
+WhatsApp
+
+Instagram (Future)
+
+Facebook Messenger (Future)
+
+Voice (Future)
+
+All channels use the same AI engine.
+
+---
+
+## Booking Through AI
+
+Example:
+
+Customer:
+
+"I want a haircut tomorrow evening."
+
+↓
+
+AI searches availability.
+
+↓
+
+Finds employees.
+
+↓
+
+Suggests times.
+
+↓
+
+Books appointment.
+
+↓
+
+Confirms booking.
+
+No manual dashboard interaction required.
+
+---
+
+## Escalation
+
+The receptionist should escalate when:
+
+Customer is angry.
+
+Payment issue.
+
+Unsupported request.
+
+Repeated failures.
+
+Business-specific exception.
+
+Escalation transfers the conversation to a human.
+
+---
+
+# 30. CRM Assistant
+
+The CRM Assistant helps owners understand customers.
+
+Examples:
+
+Who hasn't visited recently?
+
+↓
+
+List inactive customers.
+
+Which customers spend the most?
+
+↓
+
+Top customers.
+
+Who usually books Ahmed?
+
+↓
+
+Customer list.
+
+The assistant always returns structured data.
+
+---
+
+# Customer Insights
+
+Examples
+
+"This customer visits every 28 days."
+
+"They usually book Hair Color."
+
+"They spend around 650 EGP per visit."
+
+"They have cancelled three appointments."
+
+Insights should be generated automatically.
+
+---
+
+# 31. Analytics Assistant
+
+Owners may ask natural language questions.
+
+Examples
+
+"How much revenue did I make this month?"
+
+"Which employee performs best?"
+
+"What is my busiest day?"
+
+"Which service is growing fastest?"
+
+The assistant converts questions into internal tool calls.
+
+Never raw SQL.
+
+---
+
+# Forecasting
+
+Future AI should predict:
+
+Busy periods.
+
+Quiet periods.
+
+Expected revenue.
+
+Staff shortages.
+
+Retention risks.
+
+Demand by service.
+
+Predictions should clearly indicate confidence levels.
+
+---
+
+# 32. Marketing Assistant
+
+The Marketing Assistant helps businesses grow.
+
+Capabilities:
+
+Generate promotions.
+
+Create Instagram captions.
+
+Generate Facebook posts.
+
+Generate WhatsApp campaigns.
+
+Create SMS campaigns.
+
+Generate email newsletters.
+
+Suggest seasonal offers.
+
+All content should respect the business tone.
+
+---
+
+## Campaign Suggestions
+
+AI should analyze:
+
+Season
+
+Business performance
+
+Popular services
+
+Inactive customers
+
+Upcoming holidays
+
+Recent reviews
+
+Examples
+
+"Offer 15% off Hair Color before Eid."
+
+"Friday evenings are fully booked. Promote Tuesday appointments."
+
+---
+
+## Review Assistant
+
+Generate suggested owner replies.
+
+Professional.
+
+Friendly.
+
+Luxury.
+
+Short.
+
+The owner always approves before publishing.
+
+---
+
+## AI Business Consultant
+
+This assistant behaves like a business advisor.
+
+Examples:
+
+"You lost 14% of returning customers this month."
+
+"Hair Color revenue increased 23%."
+
+"Friday evenings are consistently overbooked."
+
+"Consider hiring another stylist."
+
+Recommendations should be actionable.
+
+---
+
+# AI Safety
+
+AI must never:
+
+Invent appointments.
+
+Modify bookings without confirmation.
+
+Expose customer information from another tenant.
+
+Bypass permissions.
+
+Perform irreversible actions without explicit approval.
+
+Every destructive action requires user confirmation.
+
+
+
+---
+
+# 33. Platform Administration
+
+The Platform Dashboard is exclusively used by LastTouch administrators.
+
+Business owners never access this dashboard.
+
+Platform administrators manage the SaaS platform itself rather than individual businesses.
+
+Primary responsibilities:
+
+- Tenant Management
+- Subscription Management
+- Revenue Monitoring
+- AI Usage
+- Marketplace Moderation
+- Customer Support
+- Platform Analytics
+- Feature Flags
+- System Health
+
+---
+
+# Platform Dashboard
+
+Modules
+
+Dashboard
+
+Tenants
+
+Subscriptions
+
+Revenue
+
+Marketplace
+
+Support
+
+AI
+
+Users
+
+Feature Flags
+
+Announcements
+
+Settings
+
+Audit Logs
+
+Monitoring (Future)
+
+---
+
+# Dashboard Overview
+
+Display
+
+Total Tenants
+
+Active Businesses
+
+Trial Businesses
+
+Cancelled Businesses
+
+Monthly Revenue
+
+MRR
+
+ARR
+
+Total AI Requests
+
+Average Daily Bookings
+
+Marketplace Listings
+
+Active Users
+
+Storage Usage
+
+Platform Health
+
+---
+
+# Tenant Management
+
+Every business is represented as a Tenant.
+
+Platform Admin may
+
+View
+
+Search
+
+Suspend
+
+Restore
+
+Verify
+
+Transfer Ownership
+
+Reset Subscription
+
+Reset Trial
+
+Export Data
+
+View Usage
+
+The Platform Admin should never modify operational business data.
+
+Examples
+
+Do NOT edit
+
+Services
+
+Appointments
+
+Customers
+
+Employees
+
+Prices
+
+The owner is responsible for those.
+
+---
+
+# Tenant Details
+
+Each tenant page displays
+
+Basic Information
+
+Subscription
+
+Usage
+
+Employees
+
+Bookings
+
+Storage
+
+AI Usage
+
+Marketplace Status
+
+Billing History
+
+Support History
+
+Audit Logs
+
+Future
+
+Performance Score
+
+---
+
+# Subscription Management
+
+The platform manages
+
+Trials
+
+Renewals
+
+Upgrades
+
+Downgrades
+
+Expired Plans
+
+Cancelled Plans
+
+Grace Period
+
+Each subscription stores
+
+Current Plan
+
+Status
+
+Renewal Date
+
+Expiration Date
+
+Trial End
+
+Auto Renewal
+
+Payment Provider
+
+---
+
+# Revenue Dashboard
+
+Track
+
+MRR
+
+ARR
+
+Revenue Growth
+
+Plan Distribution
+
+Average Revenue Per Tenant
+
+Failed Payments
+
+Refunds
+
+Discount Usage
+
+Coupon Usage
+
+Revenue Forecast
+
+Charts should support
+
+Daily
+
+Weekly
+
+Monthly
+
+Yearly
+
+---
+
+# Platform Users
+
+Track
+
+Owners
+
+Managers
+
+Employees
+
+Customers
+
+New Registrations
+
+Daily Active Users
+
+Monthly Active Users
+
+Retention
+
+---
+
+# AI Dashboard
+
+Display
+
+Total Requests
+
+Requests Per Tenant
+
+Average Latency
+
+Average Cost
+
+Provider Usage
+
+Failure Rate
+
+Most Used Assistant
+
+Token Consumption
+
+Estimated Monthly Cost
+
+This dashboard helps optimize AI costs.
+
+---
+
+# Marketplace Administration
+
+Platform Admin can
+
+Feature Businesses
+
+Verify Businesses
+
+Remove Listings
+
+Suspend Listings
+
+Moderate Reviews
+
+Moderate Images
+
+Handle Reports
+
+Marketplace ranking should never be manually manipulated except for featured businesses.
+
+---
+
+# Support Dashboard
+
+Support agents can
+
+Search Tenant
+
+View Logs
+
+View Subscription
+
+View AI Logs
+
+View Errors
+
+Generate Support Tokens
+
+Impersonate Owner (with audit log)
+
+Support access must always be logged.
+
+---
+
+# Feature Flags
+
+Platform Admin controls platform-wide features.
+
+Examples
+
+AI Receptionist
+
+Marketplace
+
+Gift Cards
+
+Memberships
+
+Inventory
+
+Voice AI
+
+Beta Features
+
+Feature flags should support
+
+Global
+
+Per Plan
+
+Per Tenant
+
+---
+
+# Announcements
+
+Admins can publish announcements.
+
+Examples
+
+Maintenance
+
+New Features
+
+Billing Updates
+
+Holiday Promotions
+
+Announcements appear inside tenant dashboards.
+
+---
+
+# Audit Logs
+
+Every important platform action must be recorded.
+
+Examples
+
+Subscription Changed
+
+Tenant Suspended
+
+Plan Upgraded
+
+Feature Enabled
+
+Support Login
+
+Settings Updated
+
+Audit entries contain
+
+Actor
+
+Action
+
+Entity
+
+Timestamp
+
+Previous Value
+
+New Value
+
+IP Address
+
+---
+
+# 34. Billing & Subscription System
+
+LastTouch is a subscription-first SaaS.
+
+Every premium feature is controlled through subscriptions.
+
+Billing logic should remain isolated from business logic.
+
+---
+
+# Subscription Plans
+
+Free
+
+Pro
+
+AI
+
+Enterprise (Future)
+
+Each plan is configuration-driven.
+
+Never hardcode plans.
+
+---
+
+# Plan Configuration
+
+Each plan defines
+
+Monthly Price
+
+Yearly Price
+
+AI Credits
+
+Employee Limit
+
+Storage Limit
+
+Location Limit
+
+Marketplace Access
+
+Branding Options
+
+Export Options
+
+Custom Domain
+
+Analytics Level
+
+Available Features
+
+Changing plan capabilities should require configuration only.
+
+---
+
+# Trials
+
+New businesses may receive a free trial.
+
+Configuration
+
+Trial Length
+
+Default Plan
+
+Automatic Downgrade
+
+Reminder Schedule
+
+Trial status should be visible throughout the application.
+
+---
+
+# Upgrades
+
+Plan upgrades should
+
+Apply immediately
+
+Recalculate billing
+
+Enable features
+
+Preserve existing data
+
+No migrations required.
+
+---
+
+# Downgrades
+
+Downgrades should never delete data.
+
+If a feature exceeds new limits
+
+Mark as inactive
+
+Example
+
+Pro
+
+10 Employees
+
+↓
+
+Free
+
+1 Employee
+
+Nine employees become inactive.
+
+No data loss.
+
+---
+
+# Grace Period
+
+Expired subscriptions enter a configurable grace period.
+
+During grace period
+
+Dashboard remains available.
+
+Bookings continue.
+
+AI may become disabled.
+
+After grace period
+
+Platform enters read-only mode.
+
+---
+
+# Read-Only Mode
+
+Owners may
+
+View data
+
+Export data
+
+Renew subscription
+
+Owners may NOT
+
+Create appointments
+
+Modify services
+
+Edit employees
+
+Access premium features
+
+This prevents business disruption while encouraging renewal.
+
+---
+
+# Payment Providers
+
+Primary
+
+Paymob
+
+Future
+
+Stripe
+
+Moyasar
+
+PayPal
+
+Providers implement a common payment interface.
+
+---
+
+# Invoices
+
+Store
+
+Invoice Number
+
+Tenant
+
+Plan
+
+Amount
+
+Tax
+
+Discount
+
+Status
+
+Payment Method
+
+Issue Date
+
+Due Date
+
+Invoices remain permanently accessible.
+
+---
+
+# Coupons
+
+Coupons may be
+
+Platform-wide
+
+Plan-specific
+
+Tenant-specific
+
+Support
+
+Percentage
+
+Fixed Amount
+
+Trial Extension
+
+Free AI Credits
+
+---
+
+# Usage Limits
+
+Limits should be measurable.
+
+Examples
+
+Employees
+
+Locations
+
+Storage
+
+AI Requests
+
+Exports
+
+Marketplace Listings
+
+Notifications
+
+Limits are validated by middleware.
+
+---
+
+# AI Credits
+
+AI plans include monthly credits.
+
+Each AI request deducts credits based on
+
+Tokens
+
+Model
+
+Assistant Type
+
+Tool Usage
+
+Future
+
+Pay-as-you-go AI.
+
+---
+
+# Billing Events
+
+Every billing event creates an audit record.
+
+Examples
+
+Subscription Created
+
+Subscription Renewed
+
+Invoice Paid
+
+Payment Failed
+
+Trial Started
+
+Trial Ended
+
+Refund Issued
+
+Coupon Applied
+
+---
+
+# 35. Notification System
+
+Notifications are event-driven.
+
+Events trigger notifications through different channels.
+
+Channels
+
+Email
+
+In-App
+
+WhatsApp
+
+Future
+
+SMS
+
+Push Notifications
+
+Voice Calls
+
+---
+
+# Notification Architecture
+
+Event
+
+↓
+
+Notification Engine
+
+↓
+
+Template
+
+↓
+
+Localization
+
+↓
+
+Provider
+
+↓
+
+Delivery
+
+Each step is isolated.
+
+---
+
+# Supported Events
+
+Booking Created
+
+Booking Confirmed
+
+Booking Cancelled
+
+Reminder
+
+Review Request
+
+Coupon Created
+
+Payment Successful
+
+Payment Failed
+
+Subscription Expiring
+
+Trial Ending
+
+Employee Invited
+
+Owner Invited
+
+Feature Released
+
+Announcement Published
+
+---
+
+# Templates
+
+Templates exist in
+
+Arabic
+
+English
+
+Variables
+
+Business Name
+
+Customer Name
+
+Employee Name
+
+Date
+
+Time
+
+Price
+
+Every template supports localization.
+
+---
+
+# Notification Preferences
+
+Every user may configure
+
+Email
+
+WhatsApp
+
+Marketing
+
+Reminders
+
+Product Updates
+
+Owners may configure business defaults.
+
+---
+
+# Reminder Engine
+
+Automatically send reminders
+
+24 Hours Before
+
+2 Hours Before
+
+30 Minutes Before
+
+Intervals should be configurable.
+
+---
+
+# Delivery Tracking
+
+Every notification stores
+
+Channel
+
+Status
+
+Delivered At
+
+Opened At
+
+Failed At
+
+Retry Count
+
+Provider Response
+
+Delivery analytics should be available to owners.
+
+
+
+---
+
+# 36. API Architecture
+
+All APIs must follow a consistent standard across the platform.
+
+Business logic must never depend on transport.
+
+Whether a request originates from:
+
+- Dashboard
+- Public Website
+- Mobile App (Future)
+- AI Assistant
+- Marketplace
+
+the same application services should be executed.
+
+The API layer is responsible only for:
+
+- Authentication
+- Authorization
+- Validation
+- Calling Application Services
+- Returning Standard Responses
+
+Business rules belong inside the domain modules.
+
+---
+
+# API Style
+
+Internal APIs should use Route Handlers.
+
+Mutations should prefer Server Actions where appropriate.
+
+Public APIs should remain versioned.
+
+Example
+
+/api/v1/...
+
+Future
+
+/api/v2/...
+
+Breaking changes must never affect existing clients.
+
+---
+
+# Standard Response
+
+Every endpoint returns the same structure.
+
+Success
+
+```json
+{
+  "success": true,
+  "message": "Appointment created successfully.",
+  "data": {}
+}
+```
+
+Failure
+
+```json
+{
+  "success": false,
+  "message": "Selected time is unavailable.",
+  "errors": []
+}
+```
+
+Never return inconsistent response formats.
+
+---
+
+# Pagination
+
+Every list endpoint supports
+
+page
+
+limit
+
+sort
+
+order
+
+search
+
+filters
+
+Response
+
+```json
+{
+    "items": [],
+    "pagination": {
+        "page": 1,
+        "limit": 20,
+        "total": 348,
+        "pages": 18
+    }
+}
+```
+
+---
+
+# Filtering
+
+Filtering should be generic.
+
+Example
+
+Appointments
+
+Employee
+
+Status
+
+Date
+
+Service
+
+Customer
+
+Location
+
+Search
+
+The same filtering conventions should exist throughout the platform.
+
+---
+
+# Sorting
+
+Every table should support
+
+Ascending
+
+Descending
+
+Multi-column sorting (future)
+
+---
+
+# Validation
+
+Every endpoint validates input using Zod.
+
+Validation occurs before any business logic executes.
+
+Never trust client-side validation.
+
+---
+
+# Authorization
+
+Authorization occurs in three stages.
+
+Authentication
+
+↓
+
+Tenant Resolution
+
+↓
+
+Permission Validation
+
+↓
+
+Subscription Validation
+
+↓
+
+Business Logic
+
+The request must fail immediately if any step fails.
+
+---
+
+# Rate Limiting
+
+Protect all public endpoints.
+
+Examples
+
+Authentication
+
+AI
+
+Booking
+
+Review Submission
+
+Contact Forms
+
+Prevent abuse before it reaches business logic.
+
+---
+
+# 37. Security
+
+Security is part of the architecture.
+
+Not an afterthought.
+
+Every feature should be designed assuming hostile input.
+
+---
+
+# Authentication
+
+Authentication handled by Clerk.
+
+Every request must verify
+
+Authenticated User
+
+Session
+
+Tenant Membership
+
+Expired sessions should never access protected routes.
+
+---
+
+# Authorization
+
+Permissions are evaluated on every request.
+
+Never trust
+
+Frontend
+
+Cookies
+
+Hidden Buttons
+
+Always verify permissions server-side.
+
+---
+
+# Tenant Isolation
+
+Tenant isolation is the most important security rule.
+
+Every query must include
+
+tenant_id
+
+No exceptions.
+
+Never expose another tenant's information.
+
+Even Platform Admin actions should explicitly choose the tenant context.
+
+---
+
+# Secrets
+
+Never expose
+
+API Keys
+
+Database Credentials
+
+Private Tokens
+
+Webhook Secrets
+
+Environment variables should only be accessed server-side.
+
+---
+
+# File Uploads
+
+Validate
+
+File Type
+
+File Size
+
+Virus Scan (future)
+
+Image uploads should be optimized automatically.
+
+Never trust uploaded file names.
+
+Generate unique names.
+
+---
+
+# Audit Logging
+
+Sensitive operations generate audit entries.
+
+Examples
+
+Login
+
+Password Reset
+
+Role Change
+
+Subscription Update
+
+Business Settings Update
+
+Employee Deleted
+
+Service Updated
+
+Permission Changed
+
+AI Configuration Changed
+
+Every audit log includes
+
+Actor
+
+Target
+
+Action
+
+Timestamp
+
+IP Address
+
+Device (future)
+
+---
+
+# Data Privacy
+
+Customers own their personal data.
+
+Businesses own their business data.
+
+LastTouch stores data only to provide the service.
+
+Future GDPR and regional privacy compliance should be supported.
+
+---
+
+# 38. Localization
+
+Localization is built into the architecture.
+
+Every user-facing string must be translatable.
+
+Hardcoded text is prohibited.
+
+---
+
+Supported Languages
+
+English
+
+Arabic
+
+Future languages should require configuration only.
+
+---
+
+# RTL Support
+
+Arabic requires
+
+RTL Layout
+
+RTL Icons
+
+RTL Tables
+
+RTL Forms
+
+The UI should automatically adapt.
+
+---
+
+# Localization Files
+
+Organize translations by domain.
+
+Example
+
+appointments.json
+
+crm.json
+
+employees.json
+
+billing.json
+
+settings.json
+
+Avoid one massive translation file.
+
+---
+
+# Dates
+
+Display dates according to user locale.
+
+Internally
+
+Store UTC.
+
+Convert only during presentation.
+
+---
+
+# Currency
+
+Store values as numeric amounts.
+
+Display according to tenant currency.
+
+Default
+
+EGP
+
+Future
+
+SAR
+
+AED
+
+USD
+
+EUR
+
+---
+
+# Time Zones
+
+Each tenant defines a timezone.
+
+Scheduling calculations always use tenant timezone.
+
+Never rely on browser timezone.
+
+---
+
+# 39. Performance
+
+Performance is a feature.
+
+Every decision should prioritize responsiveness.
+
+---
+
+# Rendering
+
+Prefer
+
+Server Components
+
+Use Client Components only when necessary.
+
+Avoid unnecessary hydration.
+
+---
+
+# Database
+
+Every foreign key should be indexed.
+
+Large tables require composite indexes.
+
+Example
+
+tenant_id
+
+appointment_date
+
+status
+
+Optimize for common queries.
+
+---
+
+# Images
+
+Automatically
+
+Compress
+
+Resize
+
+Generate thumbnails
+
+Serve responsive sizes
+
+Use Next.js Image.
+
+---
+
+# Caching
+
+Cache
+
+Business Settings
+
+Services
+
+Categories
+
+Homepage Data
+
+Avoid caching frequently changing booking availability.
+
+---
+
+# Lazy Loading
+
+Lazy load
+
+Charts
+
+Analytics
+
+Gallery
+
+AI Modules
+
+Heavy editors
+
+---
+
+# Monitoring
+
+Track
+
+API Latency
+
+Database Queries
+
+Page Load Time
+
+AI Latency
+
+Error Rate
+
+Payment Failures
+
+Notification Failures
+
+Use structured logging.
+
+---
+
+# 40. Deployment
+
+Deployment targets
+
+Frontend
+
+Vercel
+
+Database
+
+Neon PostgreSQL
+
+Storage
+
+Cloudflare R2
+
+Email
+
+Resend
+
+Authentication
+
+Clerk
+
+Payments
+
+Paymob
+
+The application should support
+
+Development
+
+Staging
+
+Production
+
+through environment configuration.
+
+---
+
+# CI/CD
+
+Every pull request should
+
+Run TypeScript checks
+
+Run ESLint
+
+Run Tests (future)
+
+Run Drizzle checks
+
+Build Next.js
+
+Deployment should fail if any critical check fails.
+
+---
+
+# Environment Variables
+
+Separate variables into
+
+Authentication
+
+Database
+
+Storage
+
+Payments
+
+AI
+
+Email
+
+Marketplace
+
+Never hardcode secrets.
+
+---
+
+# Backups
+
+Database backups should be automated.
+
+Recovery procedures should be documented.
+
+Future point-in-time recovery should be supported.
+
+---
+
+# Disaster Recovery
+
+Platform should recover from
+
+Database failure
+
+Storage failure
+
+Email provider failure
+
+AI provider failure
+
+Payment provider failure
+
+Fallback strategies should exist whenever possible.
+
+---
+
+# 41. Development Rules
+
+This section defines mandatory engineering standards.
+
+These rules apply to every contributor and every AI coding agent.
+
+---
+
+## General Rules
+
+Treat the existing Stitch UI as the visual source of truth.
+
+Never redesign pages unless explicitly requested.
+
+Do not introduce unnecessary dependencies.
+
+Prefer extending existing components over creating duplicates.
+
+Write production-ready code from the beginning.
+
+Avoid temporary implementations.
+
+Avoid TODO comments unless explicitly approved.
+
+---
+
+## Code Organization
+
+Business logic belongs inside domain modules.
+
+React components should focus on rendering.
+
+Database access should remain isolated behind repositories or service layers.
+
+Avoid circular dependencies.
+
+Prefer composition over inheritance.
+
+---
+
+## TypeScript
+
+Strict mode is mandatory.
+
+Avoid `any`.
+
+Use discriminated unions where appropriate.
+
+Keep shared types centralized.
+
+Infer types from Zod schemas when possible.
+
+---
+
+## Database
+
+Never execute unscoped queries against tenant-owned tables.
+
+Every write operation should validate tenant ownership.
+
+Use transactions for multi-step operations.
+
+Preserve historical records whenever possible.
+
+---
+
+## Error Handling
+
+Return user-friendly messages.
+
+Log technical details internally.
+
+Never expose stack traces to clients.
+
+---
+
+## Testing (Future)
+
+Critical business logic should be covered by automated tests.
+
+Priority areas:
+
+Booking Engine
+
+Availability Engine
+
+Subscription Middleware
+
+RBAC
+
+Usage Engine
+
+AI Tool Layer
+
+Payments
+
+---
+
+## Accessibility
+
+Support keyboard navigation.
+
+Maintain sufficient color contrast.
+
+Provide labels for form controls.
+
+Ensure screen reader compatibility where practical.
+
+Accessibility is not optional.
+
+---
+
+# 42. Definition of Done
+
+A feature is complete only when all of the following are true.
+
+- Business logic is implemented.
+- Tenant isolation is enforced.
+- Permissions are verified server-side.
+- Subscription limits are respected.
+- Validation exists on both client and server.
+- Arabic and English translations are included.
+- Mobile responsiveness is verified.
+- Errors are handled gracefully.
+- Audit logs are written where required.
+- Existing Stitch UI is preserved.
+- Documentation is updated if architecture changes.
+- Code passes linting and type checking.
+- Performance impact has been considered.
+- Security implications have been reviewed.
+
+A feature that does not satisfy these requirements is considered incomplete.
+
+---
+
+# Closing Statement
+
+LastTouch is designed as an AI-powered, multi-tenant SaaS platform for appointment-based beauty businesses.
+
+The objective is not simply to digitize bookings, but to provide a complete operating system that enables business owners to manage, grow, and understand their businesses through automation, analytics, and artificial intelligence.
+
+All implementation decisions should prioritize:
+
+- Scalability
+- Maintainability
+- Security
+- Performance
+- Extensibility
+- Developer Experience
+- Excellent User Experience
+
+When ambiguity exists, choose the solution that best supports long-term product evolution rather than short-term implementation convenience.
+
+This document is the authoritative engineering specification for the platform and should be treated as the primary reference for all development work.
+
+
+
+
+# 43. Domain Architecture
+
+The project follows a Domain-Driven Design (DDD) inspired architecture.
+
+Every business capability exists as an independent module.
+
+Modules should communicate through application services and events rather than importing each other's internal implementation.
+
+Each module owns its:
+
+- Domain
+- Application
+- Infrastructure
+- UI
+- Validation
+- Types
+
+Modules should be loosely coupled.
+
+---
+
+Core Domains
+
+Identity
+
+Tenant
+
+Catalog
+
+Booking
+
+Availability
+
+CRM
+
+Employee
+
+Analytics
+
+Marketplace
+
+Billing
+
+Notification
+
+AI
+
+Platform
+
+Audit
+
+Search (Future)
+
+Inventory (Future)
+
+Commission (Future)
+
+---
+
+Dependency Rules
+
+Identity
+
+↓
+
+Tenant
+
+↓
+
+Everything else
+
+Booking
+
+↓
+
+Availability
+
+Catalog
+
+CRM
+
+Notification
+
+Analytics
+
+Audit
+
+AI
+
+Billing
+
+↓
+
+Usage
+
+Tenant
+
+Platform
+
+↓
+
+Everything
+
+No cyclic dependencies are allowed.
+
+
+
+# 44. Folder Structure
+
+src/
+
+app/
+
+modules/
+
+identity/
+
+tenant/
+
+booking/
+
+availability/
+
+catalog/
+
+crm/
+
+employee/
+
+analytics/
+
+billing/
+
+notification/
+
+marketplace/
+
+platform/
+
+ai/
+
+audit/
+
+shared/
+
+components/
+
+lib/
+
+config/
+
+hooks/
+
+types/
+
+drizzle/
+
+public/
+
+styles/
+
+Each module follows the same internal structure.
+
+booking/
+
+application/
+
+domain/
+
+infrastructure/
+
+repository/
+
+server/
+
+validation/
+
+ui/
+
+types/
+
+tests/
+
+The same convention applies to every domain.
+
+
+# 45. Coding Standards
+
+Never place business logic inside React components.
+
+Never access Drizzle directly from UI components.
+
+Every mutation passes through an Application Service.
+
+Repositories only communicate with the database.
+
+Business rules belong to Domain Services.
+
+Server Actions should call Application Services.
+
+Never duplicate validation.
+
+Prefer composition over inheritance.
+
+Avoid global state whenever possible.
+
+Keep components small and reusable.
+
+Prefer Server Components.
+
+Client Components should only exist when interactivity is required.
+
+Always infer TypeScript types from Zod schemas.
+
+Every module should expose a public API.
+
+Avoid importing deep internal files from another module.
+
+Prefer dependency injection over singleton patterns.
+
+Never create helper files with unrelated utilities.
+
+Keep utility functions close to the domain that owns them.
+
+
+# 46. Database Index Strategy
+
+Every foreign key must be indexed.
+
+Appointments
+
+tenant_id
+
+employee_id
+
+customer_id
+
+appointment_date
+
+status
+
+Composite Indexes
+
+tenant_id + appointment_date
+
+tenant_id + employee_id
+
+tenant_id + customer_id
+
+Customers
+
+tenant_id + phone
+
+tenant_id + email
+
+Employees
+
+tenant_id + active
+
+Services
+
+tenant_id + category_id
+
+Notifications
+
+tenant_id + created_at
+
+Audit Logs
+
+tenant_id + created_at
+
+Analytics
+
+tenant_id + period
+
+Indexes should reflect expected query patterns rather than table structure.
+
+
+
+# 47. Background Jobs
+
+Long-running tasks should never block user requests.
+
+Background Jobs include
+
+Email Sending
+
+WhatsApp Sending
+
+Image Processing
+
+Thumbnail Generation
+
+AI Summary Generation
+
+AI Marketing Suggestions
+
+Analytics Aggregation
+
+Review Requests
+
+Loyalty Updates
+
+Scheduled Reminders
+
+Expired Trial Checks
+
+Subscription Renewal
+
+Database Cleanup
+
+Search Index Updates
+
+Future
+
+Video Processing
+
+OCR
+
+Voice Processing
+
+Jobs should be idempotent.
+
+Every job stores
+
+Status
+
+Attempts
+
+Started At
+
+Finished At
+
+Last Error
+
+Jobs may be retried automatically.
+
+
+
+# 48. Search
+
+Search exists in multiple domains.
+
+Marketplace
+
+Customers
+
+Employees
+
+Appointments
+
+Services
+
+Notifications
+
+Audit Logs
+
+Search should support
+
+Fuzzy Matching
+
+Partial Matching
+
+Arabic
+
+English
+
+Future
+
+Semantic Search
+
+AI Search
+
+Search implementation should be replaceable.
+
+Do not tightly couple the application to PostgreSQL full-text search.
+
+
+
+# 49. Roadmap
+
+Phase 1
+
+Booking
+
+CRM
+
+Analytics
+
+Marketplace
+
+AI Receptionist
+
+Subscriptions
+
+Phase 2
+
+Inventory
+
+Commission
+
+Gift Cards
+
+Memberships
+
+Payments
+
+Phase 3
+
+Voice AI
+
+Mobile Apps
+
+POS
+
+Smart Mirrors
+
+AI Pricing
+
+Forecasting
+
+Phase 4
+
+Franchise Management
+
+Enterprise Dashboard
+
+Multi-country Support
+
+White Label
+
+API Marketplace
+
+
+
+# 50. Engineering Principles
+
+Every engineering decision should satisfy the following priorities.
+
+Correctness over cleverness.
+
+Maintainability over short-term speed.
+
+Explicit code over implicit behavior.
+
+Configuration over hardcoding.
+
+Composition over duplication.
+
+Scalability over convenience.
+
+Security over assumptions.
+
+Tenant isolation over optimization.
+
+Consistency over personal preference.
+
+Developer experience is a product feature.
+
+Artificial Intelligence augments business workflows rather than replacing business rules.
+
+Business logic should remain deterministic even when AI is involved.
+
+The system should be easy to understand by a new engineer joining the project.
+
+If multiple solutions exist, choose the one that minimizes future maintenance while preserving flexibility.
+
+
+
+

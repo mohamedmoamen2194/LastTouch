@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Luxe Studio - Owner Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-dim": "#dcdad5",
+                        "on-primary-container": "#57170a",
+                        "inverse-on-surface": "#f3f0eb",
+                        "on-secondary-fixed-variant": "#4c4638",
+                        "tertiary-container": "#899983",
+                        "on-background": "#1c1c19",
+                        "primary": "#964735",
+                        "inverse-surface": "#31302d",
+                        "surface-container-low": "#f6f3ee",
+                        "error": "#ba1a1a",
+                        "on-error-container": "#93000a",
+                        "tertiary-fixed-dim": "#bbcbb3",
+                        "tertiary": "#53624f",
+                        "surface-container-high": "#ebe8e3",
+                        "on-primary-fixed-variant": "#783020",
+                        "primary-fixed": "#ffdad3",
+                        "secondary-container": "#e8dfcc",
+                        "on-error": "#ffffff",
+                        "surface": "#fcf9f4",
+                        "on-secondary-container": "#696253",
+                        "surface-bright": "#fcf9f4",
+                        "on-tertiary-fixed": "#121f10",
+                        "on-secondary": "#ffffff",
+                        "on-primary-fixed": "#3d0600",
+                        "secondary": "#645e4f",
+                        "on-tertiary-container": "#233120",
+                        "on-secondary-fixed": "#1f1b10",
+                        "surface-container": "#f0ede9",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-container-highest": "#e5e2dd",
+                        "secondary-fixed": "#ebe1cf",
+                        "on-surface": "#1c1c19",
+                        "inverse-primary": "#ffb4a4",
+                        "error-container": "#ffdad6",
+                        "on-tertiary-fixed-variant": "#3c4b38",
+                        "primary-container": "#d97b66",
+                        "primary-fixed-dim": "#ffb4a4",
+                        "outline-variant": "#dac1bb",
+                        "surface-tint": "#964735",
+                        "on-surface-variant": "#55433f",
+                        "on-primary": "#ffffff",
+                        "background": "#fcf9f4",
+                        "surface-variant": "#e5e2dd",
+                        "outline": "#87726e",
+                        "tertiary-fixed": "#d7e7cf",
+                        "on-tertiary": "#ffffff",
+                        "secondary-fixed-dim": "#cfc6b3"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "margin-desktop": "40px",
+                        "container-max": "1280px",
+                        "unit": "4px",
+                        "gutter": "24px",
+                        "margin-mobile": "16px"
+                    },
+                    "fontFamily": {
+                        "body-md": ["Space Grotesk"],
+                        "label-sm": ["Space Grotesk"],
+                        "label-md": ["Space Grotesk"],
+                        "headline-sm": ["Space Grotesk"],
+                        "display-lg": ["Space Grotesk"],
+                        "display-lg-mobile": ["Space Grotesk"],
+                        "body-lg": ["Space Grotesk"],
+                        "headline-md": ["Space Grotesk"]
+                    },
+                    "fontSize": {
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "label-sm": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "label-md": ["14px", { "lineHeight": "20px", "letterSpacing": "0.02em", "fontWeight": "500" }],
+                        "headline-sm": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "display-lg-mobile": ["36px", { "lineHeight": "42px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "headline-md": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-background text-on-background font-body-md min-h-screen flex selection:bg-primary-container selection:text-on-primary-container">
+<!-- SideNavBar (Shared Component) -->
+<nav class="hidden md:flex bg-surface-container-low dark:bg-tertiary-container h-screen w-64 fixed left-0 top-0 border-r border-outline-variant dark:border-outline flex flex-col p-6 space-y-4 z-50">
+<div class="flex items-center gap-4 mb-8">
+<img class="w-12 h-12 rounded-full object-cover" data-alt="A modern, minimalist logo for a luxury barber shop named 'The Classic Cut', featuring soft metallic copper tones against a crisp white background. The logo emphasizes elegance, precision, and high-end grooming services in a soft kinetic light-mode aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAk22G9usTMRY-vSF5A06tKyGnu7xYj1JO36APWMbVjpSG1Es-zqRgytVanwIDDYh4PYtRvZ20HSTIGAHxMiyfTrLL2xNzrQY0NhyUj_eWTxk9EOqOhlDrrBBx_Peb3eQHrK_u3WGQG1qxepTdBVLJr0WF_dPiSOwAhlRnCCCoCeRr73hFZ-Nnq2cJBhISVxt0MjqzbW8OcNybpzejP8JmAVNJ8NcCug43oL2R6jhZzESEm5FacCT7vqw"/>
+<div>
+<h2 class="font-headline-lg text-headline-lg text-primary">The Classic Cut</h2>
+<p class="font-label-sm text-label-sm text-on-surface-variant">Executive Suite</p>
+</div>
+</div>
+<button class="bg-primary text-on-primary hover:bg-surface-tint rounded-full py-4 px-6 mb-6 w-full font-label-md text-label-md transition-all duration-200 ease-in-out shadow-sm flex items-center justify-center gap-2">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">add</span>
+            New Appointment
+        </button>
+<div class="flex-1 flex flex-col gap-2">
+<a class="bg-secondary-container text-on-secondary-container dark:bg-secondary dark:text-on-secondary rounded-full font-label-caps text-label-caps px-4 py-3 flex items-center gap-3 transition-colors" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">dashboard</span>
+                Dashboard
+            </a>
+<a class="text-secondary dark:text-secondary-fixed-dim hover:bg-surface-container-high hover:bg-surface-container-highest dark:hover:bg-tertiary rounded-full font-label-caps text-label-caps px-4 py-3 flex items-center gap-3 transition-colors scale-95 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">calendar_month</span>
+                Appointments
+            </a>
+<a class="text-secondary dark:text-secondary-fixed-dim hover:bg-surface-container-high hover:bg-surface-container-highest dark:hover:bg-tertiary rounded-full font-label-caps text-label-caps px-4 py-3 flex items-center gap-3 transition-colors scale-95 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">groups</span>
+                Clients
+            </a>
+<a class="text-secondary dark:text-secondary-fixed-dim hover:bg-surface-container-high hover:bg-surface-container-highest dark:hover:bg-tertiary rounded-full font-label-caps text-label-caps px-4 py-3 flex items-center gap-3 transition-colors scale-95 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">content_cut</span>
+                Staff
+            </a>
+<a class="text-secondary dark:text-secondary-fixed-dim hover:bg-surface-container-high hover:bg-surface-container-highest dark:hover:bg-tertiary rounded-full font-label-caps text-label-caps px-4 py-3 flex items-center gap-3 transition-colors scale-95 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">inventory_2</span>
+                Inventory
+            </a>
+<a class="text-secondary dark:text-secondary-fixed-dim hover:bg-surface-container-high hover:bg-surface-container-highest dark:hover:bg-tertiary rounded-full font-label-caps text-label-caps px-4 py-3 flex items-center gap-3 transition-colors scale-95 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">settings</span>
+                Settings
+            </a>
+</div>
+<div class="mt-auto border-t border-outline-variant pt-4 flex flex-col gap-2">
+<a class="text-secondary dark:text-secondary-fixed-dim hover:bg-surface-container-high hover:bg-surface-container-highest dark:hover:bg-tertiary rounded-full font-label-caps text-label-caps px-4 py-3 flex items-center gap-3 transition-colors scale-95 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">help</span>
+                Support
+            </a>
+<a class="text-secondary dark:text-secondary-fixed-dim hover:bg-surface-container-high hover:bg-surface-container-highest dark:hover:bg-tertiary rounded-full font-label-caps text-label-caps px-4 py-3 flex items-center gap-3 transition-colors scale-95 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">logout</span>
+                Log Out
+            </a>
+</div>
+</nav>
+<!-- Main Content Area -->
+<main class="flex-1 md:ml-64 p-margin-mobile md:p-margin-desktop max-w-container-max mx-auto w-full flex flex-col gap-8">
+<!-- Header -->
+<header class="flex justify-between items-end pb-4 border-b border-outline-variant">
+<div>
+<h1 class="font-display-lg-mobile md:font-display-lg text-display-lg-mobile md:text-display-lg text-on-surface">Luxe Studio Overview</h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant mt-2">Good morning. Here is how your studio is performing today.</p>
+</div>
+<div class="hidden sm:flex gap-4">
+<div class="bg-surface-container rounded-full px-4 py-2 flex items-center gap-2 border border-outline-variant">
+<span class="material-symbols-outlined text-secondary" style="font-variation-settings: 'FILL' 0;">calendar_today</span>
+<span class="font-label-md text-label-md text-on-surface">Oct 24, 2024</span>
+</div>
+</div>
+</header>
+<!-- Bento Grid Layout for Dashboard -->
+<div class="grid grid-cols-1 md:grid-cols-12 gap-gutter">
+<!-- Metrics Row (Top) -->
+<div class="col-span-1 md:col-span-12 grid grid-cols-1 sm:grid-cols-3 gap-gutter">
+<!-- Metric Card 1 -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 flex flex-col gap-4 relative overflow-hidden group hover:border-primary transition-colors duration-300">
+<div class="absolute -right-8 -top-8 w-32 h-32 bg-primary/5 rounded-full blur-2xl group-hover:bg-primary/10 transition-colors duration-500"></div>
+<div class="flex justify-between items-start">
+<p class="font-label-md text-label-md text-secondary">Today's Revenue</p>
+<span class="bg-tertiary-container/30 text-tertiary rounded-full p-2 flex items-center justify-center">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">payments</span>
+</span>
+</div>
+<div>
+<h3 class="font-headline-md text-headline-md text-on-surface">$1,245.00</h3>
+<p class="font-label-sm text-label-sm text-tertiary mt-1 flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">trending_up</span> +12% from yesterday
+                        </p>
+</div>
+</div>
+<!-- Metric Card 2 -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 flex flex-col gap-4 relative overflow-hidden group hover:border-primary transition-colors duration-300">
+<div class="absolute -right-8 -top-8 w-32 h-32 bg-secondary/5 rounded-full blur-2xl group-hover:bg-secondary/10 transition-colors duration-500"></div>
+<div class="flex justify-between items-start">
+<p class="font-label-md text-label-md text-secondary">Appointments</p>
+<span class="bg-secondary-container/50 text-secondary rounded-full p-2 flex items-center justify-center">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">event</span>
+</span>
+</div>
+<div>
+<h3 class="font-headline-md text-headline-md text-on-surface">24</h3>
+<p class="font-label-sm text-label-sm text-tertiary mt-1 flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">check_circle</span> 8 completed, 16 upcoming
+                        </p>
+</div>
+</div>
+<!-- Metric Card 3 -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 flex flex-col gap-4 relative overflow-hidden group hover:border-primary transition-colors duration-300">
+<div class="absolute -right-8 -top-8 w-32 h-32 bg-primary/5 rounded-full blur-2xl group-hover:bg-primary/10 transition-colors duration-500"></div>
+<div class="flex justify-between items-start">
+<p class="font-label-md text-label-md text-secondary">Client Retention</p>
+<span class="bg-primary-container/20 text-primary rounded-full p-2 flex items-center justify-center">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">loyalty</span>
+</span>
+</div>
+<div>
+<h3 class="font-headline-md text-headline-md text-on-surface">86%</h3>
+<p class="font-label-sm text-label-sm text-tertiary mt-1 flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">trending_up</span> +2% this month
+                        </p>
+</div>
+</div>
+</div>
+<!-- Main Content Area (Chart & Feed) -->
+<div class="col-span-1 md:col-span-8 bg-surface-container-lowest border border-outline-variant rounded-xl p-6 flex flex-col gap-6">
+<div class="flex justify-between items-center">
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Weekly Flow</h2>
+<select class="bg-surface-container border-outline-variant text-on-surface text-label-md rounded-lg focus:ring-primary focus:border-primary px-3 py-1">
+<option>This Week</option>
+<option>Last Week</option>
+<option>This Month</option>
+</select>
+</div>
+<!-- Chart Container -->
+<div class="w-full h-80 relative flex items-end gap-2 px-2 pb-6 pt-10 border-b border-l border-outline-variant">
+<!-- Placeholder for Chart - using simple CSS bars for visual representation in this prompt's constraints -->
+<div class="flex-1 flex flex-col justify-end items-center group relative h-full">
+<div class="w-full bg-primary rounded-t-sm transition-all duration-300 group-hover:opacity-80 h-[40%]"></div>
+<span class="absolute -bottom-6 font-label-sm text-label-sm text-secondary">Mon</span>
+</div>
+<div class="flex-1 flex flex-col justify-end items-center group relative h-full">
+<div class="w-full bg-primary rounded-t-sm transition-all duration-300 group-hover:opacity-80 h-[60%]"></div>
+<span class="absolute -bottom-6 font-label-sm text-label-sm text-secondary">Tue</span>
+</div>
+<div class="flex-1 flex flex-col justify-end items-center group relative h-full">
+<div class="w-full bg-secondary rounded-t-sm transition-all duration-300 group-hover:opacity-80 h-[85%] relative">
+<!-- Tooltip example -->
+<div class="opacity-0 group-hover:opacity-100 absolute -top-10 left-1/2 -translate-x-1/2 bg-inverse-surface text-inverse-on-surface font-label-sm text-label-sm px-2 py-1 rounded whitespace-nowrap transition-opacity pointer-events-none z-10">
+                                $850
+                            </div>
+</div>
+<span class="absolute -bottom-6 font-label-sm text-label-sm text-on-surface font-bold">Wed</span>
+</div>
+<div class="flex-1 flex flex-col justify-end items-center group relative h-full">
+<div class="w-full bg-primary rounded-t-sm transition-all duration-300 group-hover:opacity-80 h-[70%]"></div>
+<span class="absolute -bottom-6 font-label-sm text-label-sm text-secondary">Thu</span>
+</div>
+<div class="flex-1 flex flex-col justify-end items-center group relative h-full">
+<div class="w-full bg-primary rounded-t-sm transition-all duration-300 group-hover:opacity-80 h-[90%]"></div>
+<span class="absolute -bottom-6 font-label-sm text-label-sm text-secondary">Fri</span>
+</div>
+<div class="flex-1 flex flex-col justify-end items-center group relative h-full">
+<div class="w-full bg-primary rounded-t-sm transition-all duration-300 group-hover:opacity-80 h-[95%]"></div>
+<span class="absolute -bottom-6 font-label-sm text-label-sm text-secondary">Sat</span>
+</div>
+<div class="flex-1 flex flex-col justify-end items-center group relative h-full">
+<div class="w-full bg-primary/40 rounded-t-sm transition-all duration-300 group-hover:opacity-80 h-[30%]"></div>
+<span class="absolute -bottom-6 font-label-sm text-label-sm text-secondary">Sun</span>
+</div>
+<!-- Y-Axis labels (approximate) -->
+<div class="absolute left-[-30px] top-0 h-full flex flex-col justify-between items-end pb-6 text-label-sm text-outline font-label-sm">
+<span>1k</span>
+<span>500</span>
+<span>0</span>
+</div>
+</div>
+</div>
+<!-- Live Feed Column (Right) -->
+<div class="col-span-1 md:col-span-4 bg-surface-container border border-outline-variant rounded-xl p-6 flex flex-col">
+<div class="flex justify-between items-center mb-6">
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Live Feed</h2>
+<span class="flex h-3 w-3 relative">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-tertiary opacity-75"></span>
+<span class="relative inline-flex rounded-full h-3 w-3 bg-tertiary"></span>
+</span>
+</div>
+<div class="flex-1 flex flex-col gap-4 overflow-y-auto pr-2">
+<!-- Feed Item 1 -->
+<div class="bg-surface-container-lowest p-4 rounded-lg border border-outline-variant flex gap-4 hover:-translate-y-1 transition-transform duration-200 shadow-sm cursor-pointer">
+<div class="flex-shrink-0">
+<img class="w-10 h-10 rounded-full object-cover" data-alt="A portrait of a young professional woman with a stylish short haircut, smiling gently. The background is a blurred, brightly lit high-end salon interior. Soft, natural lighting highlights her skin, emphasizing a clean, modern wellness aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDDJobnh4_x1VEdVYNqPTIW5rCwn2BfgLRJg76I6iwzz6zWdmBioTAZi0eFcdWweTjBP6r_hm--1ZhEgN--mzEA9V-oCzdO6Lo0Z-CU5NcOhEbQzu_Ie9dGh_8CPvMx7mEJHF6toOY-UfmQCbdkcWilE_0kM381ir8BjlWQ8TGd6xsCo-GY4erYtlNJ-vWKCtdpIktc1-KZRuMWV-x4VEvp1Uszq6jgglUzimBoU14gmyCFrR0foBgQmg"/>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start">
+<h4 class="font-label-md text-label-md text-on-surface">Sarah J.</h4>
+<span class="font-label-sm text-label-sm text-secondary">10:00 AM</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant line-clamp-1 mt-1">Balayage &amp; Trim • with Elena</p>
+<div class="mt-2 flex gap-2">
+<span class="bg-secondary-container/50 text-on-secondary-container font-label-sm text-[10px] px-2 py-1 rounded-full">Checked In</span>
+</div>
+</div>
+</div>
+<!-- Feed Item 2 -->
+<div class="bg-surface-container-lowest p-4 rounded-lg border border-outline-variant flex gap-4 hover:-translate-y-1 transition-transform duration-200 cursor-pointer">
+<div class="flex-shrink-0 w-10 h-10 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-headline-sm">
+                            M
+                        </div>
+<div class="flex-1">
+<div class="flex justify-between items-start">
+<h4 class="font-label-md text-label-md text-on-surface">Marcus T.</h4>
+<span class="font-label-sm text-label-sm text-secondary">11:15 AM</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant line-clamp-1 mt-1">Executive Fade • with David</p>
+<div class="mt-2 flex gap-2">
+<span class="bg-surface-container-high text-on-surface-variant font-label-sm text-[10px] px-2 py-1 rounded-full">Upcoming</span>
+</div>
+</div>
+</div>
+<!-- Feed Item 3 -->
+<div class="bg-surface-container-lowest p-4 rounded-lg border border-outline-variant flex gap-4 hover:-translate-y-1 transition-transform duration-200 cursor-pointer">
+<div class="flex-shrink-0">
+<img class="w-10 h-10 rounded-full object-cover" data-alt="A portrait of a mature man with a neatly trimmed silver beard, looking confident. The background features subtle copper and cream tones typical of a luxury barbershop. Soft, ambient lighting creates a warm, inviting mood." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB2nHYDQOm83aQ9od96HfIEt6cvK9J8SbNgCfECMyvHvtkbp6zmV_lYXFSHcjkTRWxbxhPT_3-j05ZO1ZCBFYm7JtHJliknP5IVndmlJQ9oi9hGhEIAhWa9Qarbfo__jp6WktfHAe2Tb8egPKW7tn2b8IZaZH37o4wyIlsmQQodFSPbNXPFk54XscwnVw3BtujDA69l3WSAVpDye_GYK5h1N72TTvizHd_x4uOB6GJDCi1Ta1NyUEKV0g"/>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start">
+<h4 class="font-label-md text-label-md text-on-surface">Robert C.</h4>
+<span class="font-label-sm text-label-sm text-secondary">12:30 PM</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant line-clamp-1 mt-1">Hot Towel Shave • with Elena</p>
+<div class="mt-2 flex gap-2">
+<span class="bg-surface-container-high text-on-surface-variant font-label-sm text-[10px] px-2 py-1 rounded-full">Upcoming</span>
+</div>
+</div>
+</div>
+</div>
+<button class="mt-4 w-full py-2 border border-outline text-secondary font-label-md text-label-md rounded-lg hover:bg-surface-container-high transition-colors">
+                    View Full Schedule
+                </button>
+</div>
+</div>
+</main>
+</body></html>
