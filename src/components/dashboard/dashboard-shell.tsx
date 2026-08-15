@@ -36,7 +36,7 @@ export function DashboardShell({ slug, businessName, theme, logoUrl, children }:
   const isActive = (href: string) => pathname === href;
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: theme.background }}>
+    <div className="flex min-h-screen flex-col" style={{ backgroundColor: theme.background }}>
       {/* Top bar */}
       <header className="sticky top-0 z-40 border-b bg-white/80 backdrop-blur-md" style={{ borderColor: theme.outlineVariant }}>
         <div className="flex h-16 items-center justify-between gap-4 px-4 md:px-8">
@@ -70,7 +70,7 @@ export function DashboardShell({ slug, businessName, theme, logoUrl, children }:
         </div>
       </header>
 
-      <div className="mx-auto flex max-w-screen-2xl gap-6 px-4 py-8 md:px-8">
+      <div className="mx-auto flex w-full max-w-screen-2xl flex-1 gap-6 px-4 py-8 md:px-8">
         {/* Sidebar (desktop) */}
         <aside className="hidden w-56 shrink-0 flex-col gap-1 md:flex">
           {items.map((item) => {

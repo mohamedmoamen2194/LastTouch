@@ -7,8 +7,18 @@ dist/
 next-env.d.ts
 .env
 .env.local
-.env*.local
+.env.*
+.env.*.local
+!.env.example
 .vercel
 drizzle/
 *.log
 .DS_Store
+# Secrets / keys
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa
+id_ed25519
+*.jks

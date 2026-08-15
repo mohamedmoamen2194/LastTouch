@@ -12,6 +12,15 @@ import {
 
 const ALLOWED_KINDS = ["logo", "image"] as const;
 const MAX_BYTES = 6 * 1024 * 1024; // 6 MB
+// Raster formats only — SVGs can embed scripts and would be served as HTML
+// by the blob host, creating a stored-XSS vector.
+const ALLOWED_MIME_TYPES = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+  "image/gif",
+  "image/avif",
+]);
 
 /**
  * POST /api/admin/media
@@ -48,15 +57,16 @@ export async function POST(req: Request) {
         return NextResponse.json(ok({ url: body.url }, "Logo removed"));
       }
       const next = await removeTenantImage(ctx, body.url);
-      await safeDelete(body.url);
-      return NextResponse.json(ok({ images: next }, "Image removed"));
+      if (next.removed) await safeDelete(body.url);
+      return NextResponse.json(ok({ images: next.images }, "Image removed"));
     }
 
     // Upload branch
     const form = await req.formData();
     const file = form.get("file");
     if (!(file instanceof File)) throw new ValidationAppError("Missing file field");
-    if (!file.type.startsWith("image/")) throw new ValidationAppError("Only image files are allowed");
+    if (!file.type.startsWith("image/") || !ALLOWED_MIME_TYPES.has(file.type))
+      throw new ValidationAppError("Only PNG, JPEG, WebP, GIF or AVIF images are allowed");
     if (file.size > MAX_BYTES) throw new ValidationAppError("Image must be 6 MB or smaller");
     if (file.size === 0) throw new ValidationAppError("Image is empty");
 

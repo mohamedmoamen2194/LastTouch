@@ -35,14 +35,19 @@ export async function addTenantImage(ctx: TenantContext, url: string) {
   return next;
 }
 
-/** Remove a shop image URL from the gallery. Returns the new list. */
+/**
+ * Remove a shop image URL from the gallery. Returns `{ images, removed }`
+ * where `removed` is true only when the URL was present and removed.
+ */
 export async function removeTenantImage(ctx: TenantContext, url: string) {
   assertPermission(ctx, Permission["gallery.manage"]);
   const tenant = await getTenant(ctx);
-  const next = (tenant.shopImages ?? []).filter((u) => u !== url);
+  const current = tenant.shopImages ?? [];
+  if (!current.includes(url)) return { images: current, removed: false };
+  const next = current.filter((u) => u !== url);
   await db
     .update(tenants)
     .set({ shopImages: next, updatedAt: new Date() })
     .where(eq(tenants.id, tenant.id));
-  return next;
+  return { images: next, removed: true };
 }

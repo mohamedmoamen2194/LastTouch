@@ -1,11 +1,13 @@
 import { setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { resolveTenantForBooking, listTenantEmployeesWithServices, listTenantServices } from "@/modules/booking/domain/catalog";
+import { listActivePackagesForBooking } from "@/modules/booking/application/packages";
 import { getBusinessTypeConfig, getThemeTokens } from "@/config/business-types";
 import { BookingWidget } from "@/components/booking/booking-widget";
 import { Logo } from "@/components/booking/logo";
 import { ShopCarousel } from "@/components/booking/shop-carousel";
 import { PoweredByLastTouch } from "@/components/shared/powered-by-lasttouch";
+import { LangSwitcher } from "@/components/shared/lang-switcher";
 
 export const dynamic = "force-dynamic";
 
@@ -47,10 +49,13 @@ export default async function BookingPage({
   const employeeLabel = tenant.employeeLabel ?? biz.employeeLabel;
   const theme = getThemeTokens(tenant.theme);
 
-  const [employees, services] = await Promise.all([
+  const [employees, services, packages] = await Promise.all([
     listTenantEmployeesWithServices(tenant.id),
     listTenantServices(tenant.id),
+    listActivePackagesForBooking(tenant.id),
   ]);
+
+  const pick = (en: string, ar: string | null) => (locale === "ar" && ar ? ar : en);
 
   return (
     <main className="flex min-h-screen flex-col" style={{ backgroundColor: theme.background }}>
@@ -65,18 +70,21 @@ export default async function BookingPage({
           ) : (
             <Logo />
           )}
-          <a
-            href="#booking"
-            className="rounded-full px-5 py-2.5 text-sm font-semibold"
-            style={{ backgroundColor: theme.primary, color: theme.onPrimary }}
-          >
-            Book Now
-          </a>
+          <div className="flex items-center gap-3">
+            <LangSwitcher theme={theme} />
+            <a
+              href="#booking"
+              className="rounded-full px-5 py-2.5 text-sm font-semibold"
+              style={{ backgroundColor: theme.primary, color: theme.onPrimary }}
+            >
+              Book Now
+            </a>
+          </div>
         </div>
       </header>
 
       {/* Hero */}
-      <section className="mx-auto flex w-full max-w-screen-xl flex-col gap-6 px-4 py-10 md:gap-8 md:px-8 md:py-14">
+      <section className="mx-auto flex w-full max-w-screen-xl flex-1 flex-col gap-6 px-4 py-10 md:gap-8 md:px-8 md:py-14">
         <div className="flex max-w-3xl flex-col items-start gap-3 md:gap-4">
           <span
             className="text-xs font-semibold uppercase tracking-widest"
@@ -110,10 +118,18 @@ export default async function BookingPage({
           themeId={tenant.theme}
           services={services.map((s) => ({
             id: s.id,
-            name: s.name,
-            description: s.description,
+            name: pick(s.name, s.nameAr ?? null),
+            description: s.descriptionAr && locale === "ar" ? s.descriptionAr : s.description,
             durationMinutes: s.durationMinutes,
             price: String(s.price),
+          }))}
+          packages={packages.map((p) => ({
+            id: p.id,
+            name: pick(p.name, p.nameAr ?? null),
+            description: p.descriptionAr && locale === "ar" ? p.descriptionAr : p.description,
+            price: p.price,
+            serviceIds: p.serviceIds,
+            serviceNames: p.serviceNames,
           }))}
           employees={employees.map((e) => ({
             id: e.id,
@@ -121,6 +137,7 @@ export default async function BookingPage({
             firstName: e.firstName,
             lastName: e.lastName,
             yearsExperience: e.yearsExperience,
+            isGeneral: e.isGeneral,
             serviceIds: e.serviceIds,
           }))}
         />

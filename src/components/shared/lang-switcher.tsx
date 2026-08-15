@@ -1,11 +1,12 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
+import type { ThemeTokens } from "@/config/business-types";
 
 const LOCALES = ["en", "ar"] as const;
 const LABELS: Record<string, string> = { en: "EN", ar: "عربى" };
 
-export function LangSwitcher() {
+export function LangSwitcher({ theme }: { theme?: ThemeTokens }) {
   const router = useRouter();
   const pathname = usePathname();
   const locale = detectLocale(pathname);
@@ -25,10 +26,10 @@ export function LangSwitcher() {
     <button
       type="button"
       onClick={() => switchTo(target)}
-      className="rounded-full border border-[#c5c6cd]/60 bg-white/60 px-3 py-1 font-semibold uppercase tracking-wide transition-colors"
+      className="rounded-full border border-[#c5c6cd]/60 px-3 py-1 font-semibold uppercase tracking-wide transition-colors"
       style={{
-        backgroundColor: "#091426",
-        color: "#ffffff",
+        backgroundColor: theme?.primary ?? "#091426",
+        color: theme?.onPrimary ?? "#ffffff",
       }}
     >
       {LABELS[locale]}

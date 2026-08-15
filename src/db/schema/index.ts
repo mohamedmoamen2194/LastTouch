@@ -213,6 +213,7 @@ export const employees = pgTable(
     yearsExperience: integer("years_experience").default(0),
     hireDate: timestamp("hire_date", { withTimezone: true }),
     rating: numeric("rating", { precision: 3, scale: 2 }).default("0"),
+    isGeneral: boolean("is_general").default(false).notNull(),
     active: boolean("active").default(true).notNull(),
     createdAt,
     updatedAt,
@@ -369,7 +370,9 @@ export const services = pgTable(
       .notNull(),
     categoryId: uuid("category_id").references(() => serviceCategories.id, { onDelete: "set null" }),
     name: text("name").notNull(),
+    nameAr: text("name_ar"),
     description: text("description"),
+    descriptionAr: text("description_ar"),
     imageUrl: text("image_url"),
     durationMinutes: integer("duration_minutes").notNull(),
     bufferBefore: integer("buffer_before").default(0).notNull(),
@@ -398,7 +401,9 @@ export const packages = pgTable(
       .references(() => tenants.id, { onDelete: "cascade" })
       .notNull(),
     name: text("name").notNull(),
+    nameAr: text("name_ar"),
     description: text("description"),
+    descriptionAr: text("description_ar"),
     price: numeric("price", { precision: 12, scale: 2 }).default("0").notNull(),
     active: boolean("active").default(true).notNull(),
     createdAt,
@@ -499,6 +504,27 @@ export const appointmentServices = pgTable(
     sortOrder: integer("sort_order").default(0).notNull(),
   },
   (t) => [index("appt_services_appt_idx").on(t.appointmentId)]
+);
+
+/**
+ * Worker assignments per service within a multi-worker booking (packages).
+ * One row per (appointment, service, worker); `serviceId` is null when a
+ * single general worker covers the whole appointment.
+ */
+export const appointmentEmployees = pgTable(
+  "appointment_employees",
+  {
+    id,
+    appointmentId: uuid("appointment_id")
+      .references(() => appointments.id, { onDelete: "cascade" })
+      .notNull(),
+    employeeId: uuid("employee_id")
+      .references(() => employees.id, { onDelete: "set null" })
+      .notNull(),
+    serviceId: uuid("service_id").references(() => services.id, { onDelete: "set null" }),
+    sortOrder: integer("sort_order").default(0).notNull(),
+  },
+  (t) => [index("appt_employees_appt_idx").on(t.appointmentId)]
 );
 
 export const appointmentAddons = pgTable(

@@ -30,6 +30,7 @@ export type ManagedEmployee = {
   salary: string | null;
   bio: string | null;
   rating: string | null;
+  isGeneral: boolean;
   active: boolean;
   serviceIds: string[];
   workingHours: { weekday: number; startTime: string; endTime: string }[];
@@ -58,6 +59,7 @@ type FormState = {
   role: string;
   phone: string;
   salary: string;
+  isGeneral: boolean;
   active: boolean;
   serviceIds: string[];
   days: DayForm[];
@@ -88,6 +90,7 @@ const EMPTY_FORM: FormState = {
   role: "",
   phone: "",
   salary: "",
+  isGeneral: false,
   active: true,
   serviceIds: [],
   days: makeEmptyDays(),
@@ -100,7 +103,11 @@ type EmployeeOverview = {
     startTime: string;
     endTime: string;
     status: string;
-    serviceNames: string[];
+    services: {
+      name: string;
+      startTime: string;
+      endTime: string;
+    }[];
     customerName: string | null;
   }[];
   monthly: { date: string; count: number }[];
@@ -170,6 +177,7 @@ export function EmployeesManager({ slug, locale, theme, employees: initial, serv
       role: e.role ?? "",
       phone: e.phone ?? "",
       salary: e.salary ?? "",
+      isGeneral: e.isGeneral,
       active: e.active,
       serviceIds: e.serviceIds,
       days: daysToForm(e.workingHours),
@@ -202,6 +210,7 @@ export function EmployeesManager({ slug, locale, theme, employees: initial, serv
         role: form.role,
         phone: form.phone,
         salary: form.salary,
+        isGeneral: form.isGeneral,
         active: form.active,
         serviceIds: form.serviceIds,
         workingHours: form.days.filter((d) => d.enabled).map((d) => ({ weekday: d.weekday, startTime: d.start, endTime: d.end })),
@@ -217,6 +226,7 @@ export function EmployeesManager({ slug, locale, theme, employees: initial, serv
         salary: form.salary === "" ? null : form.salary,
         bio: null,
         rating: null,
+        isGeneral: form.isGeneral,
         active: form.active,
         serviceIds: form.serviceIds,
         workingHours: form.days.filter((d) => d.enabled).map((d) => ({ weekday: d.weekday, startTime: d.start, endTime: d.end })),
@@ -249,12 +259,14 @@ export function EmployeesManager({ slug, locale, theme, employees: initial, serv
   };
 
   const toggleService = (serviceId: string) => {
-    setForm((f) => ({
-      ...f,
-      serviceIds: f.serviceIds.includes(serviceId)
+    setForm((f) => {
+      const checked = f.serviceIds.includes(serviceId);
+      const serviceIds = checked
         ? f.serviceIds.filter((id) => id !== serviceId)
-        : [...f.serviceIds, serviceId],
-    }));
+        : [...f.serviceIds, serviceId];
+      const allSelected = serviceIds.length === services.length && services.length > 0;
+      return { ...f, serviceIds, isGeneral: checked ? false : allSelected };
+    });
   };
 
   const updateDay = (weekday: number, patch: Partial<DayForm>) => {
@@ -335,6 +347,15 @@ export function EmployeesManager({ slug, locale, theme, employees: initial, serv
                     {e.active ? t("active") : t("inactive")}
                   </span>
                 </div>
+                {e.isGeneral && (
+                  <span
+                    className="mt-2 inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold"
+                    style={{ backgroundColor: theme.primary, color: theme.onPrimary }}
+                  >
+                    <Star className="h-3 w-3" />
+                    {t("generalWorker")}
+                  </span>
+                )}
 
                 <div className="mt-3 space-y-1.5 text-sm" style={{ color: theme.onSurfaceVariant }}>
                   {e.phone && (
@@ -481,6 +502,29 @@ export function EmployeesManager({ slug, locale, theme, employees: initial, serv
               </div>
 
               <div>
+                <label
+                  className="mb-2 flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2.5 text-sm font-medium"
+                  style={{ borderColor: form.isGeneral ? theme.primary : theme.outlineVariant, backgroundColor: form.isGeneral ? theme.surfaceContainerLowest : "transparent", color: theme.onSurfaceVariant }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={form.isGeneral}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      setForm((f) => ({
+                        ...f,
+                        isGeneral: checked,
+                        serviceIds: checked ? services.map((s) => s.id) : f.serviceIds,
+                      }));
+                    }}
+                    className="h-4 w-4 shrink-0"
+                    style={{ accentColor: theme.primary }}
+                  />
+                  <span>{t("generalWorker")}</span>
+                </label>
+                <p className="mb-2 mt-1.5 text-xs" style={{ color: theme.onSurfaceVariant }}>
+                  {t("generalHint")}
+                </p>
                 <label className="mb-1 block text-xs font-medium" style={{ color: theme.onSurfaceVariant }}>{t("services")}</label>
                 {services.length === 0 ? (
                   <p className="text-xs" style={{ color: theme.onSurfaceVariant }}>{t("noServicesHint")}</p>
@@ -500,9 +544,6 @@ export function EmployeesManager({ slug, locale, theme, employees: initial, serv
                     ))}
                   </div>
                 )}
-                <p className="mt-1.5 text-xs" style={{ color: theme.onSurfaceVariant }}>
-                  {t("generalHint")}
-                </p>
               </div>
 
               <div>
@@ -627,8 +668,19 @@ export function EmployeesManager({ slug, locale, theme, employees: initial, serv
                           </p>
                           <p className="truncate text-xs" style={{ color: theme.secondary }}>
                             {a.customerName ?? t("emptyState")}
-                            {a.serviceNames.length > 0 ? ` · ${a.serviceNames.join(", ")}` : ""}
                           </p>
+                          {a.services.length > 0 && (
+                            <ul className="mt-1 space-y-0.5">
+                              {a.services.map((s, i) => (
+                                <li key={i} className="flex items-center gap-1.5 text-xs" style={{ color: theme.onSurfaceVariant }}>
+                                  <span className="shrink-0 rounded bg-black/[0.04] px-1.5 py-0.5 font-medium" style={{ backgroundColor: theme.surfaceContainerHigh }}>
+                                    {s.startTime}–{s.endTime}
+                                  </span>
+                                  <span className="truncate">{s.name}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
                         </div>
                         <span className="shrink-0 rounded-md px-2 py-1 text-xs font-medium capitalize" style={{ backgroundColor: theme.surfaceContainerHigh, color: theme.secondary }}>
                           {a.status.replace("_", " ")}

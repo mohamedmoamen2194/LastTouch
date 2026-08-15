@@ -7,7 +7,9 @@ import { Permission } from "@/lib/permissions";
 
 export type ServiceInput = {
   name: string;
+  nameAr?: string | null;
   description?: string | null;
+  descriptionAr?: string | null;
   price: number | string;
   durationMinutes: number;
   active?: boolean;
@@ -22,7 +24,9 @@ export async function createService(ctx: TenantContext, input: ServiceInput) {
     .values({
       tenantId: ctx.tenantId,
       name: input.name.trim(),
+      nameAr: input.nameAr?.trim() || null,
       description: input.description?.trim() || null,
+      descriptionAr: input.descriptionAr?.trim() || null,
       price: String(input.price),
       durationMinutes: input.durationMinutes,
       active: input.active ?? true,
@@ -47,7 +51,9 @@ export async function updateService(ctx: TenantContext, id: string, input: Servi
     .update(services)
     .set({
       name: input.name.trim(),
+      nameAr: input.nameAr?.trim() || null,
       description: input.description?.trim() || null,
+      descriptionAr: input.descriptionAr?.trim() || null,
       price: String(input.price),
       durationMinutes: input.durationMinutes,
       active: input.active ?? existing.active,
@@ -96,10 +102,14 @@ export function validateServiceInput(input: unknown): ServiceInput {
   }
 
   const description = typeof v.description === "string" ? v.description.trim() : "";
+  const nameAr = typeof v.nameAr === "string" ? v.nameAr.trim() : "";
+  const descriptionAr = typeof v.descriptionAr === "string" ? v.descriptionAr.trim() : "";
 
   return {
     name,
+    nameAr: nameAr || null,
     description: description || null,
+    descriptionAr: descriptionAr || null,
     price,
     durationMinutes,
     active: typeof v.active === "boolean" ? v.active : true,

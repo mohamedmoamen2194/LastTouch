@@ -41,9 +41,10 @@ export async function listTenantEmployeesWithServices(tenantId: string): Promise
 
 /**
  * Active employees that may take the given services.
- * A worker qualifies if they are mapped to at least one of the requested
- * services OR they have no service mappings at all (general staff who take
- * any service). Used for "any available" unions and auto-assignment.
+ * A worker qualifies if they are flagged as a general worker (they take any
+ * service) OR they are mapped to at least one of the requested services OR
+ * they have no service mappings at all (legacy "general" staff).
+ * Used for "any available" unions and auto-assignment.
  */
 export async function listEligibleEmployees(tenantId: string, serviceIds: string[]) {
   const staff = await db
@@ -71,7 +72,35 @@ export async function listEligibleEmployees(tenantId: string, serviceIds: string
     .where(inArray(employeeServices.employeeId, staff.map((s) => s.id)));
   const anyMapping = new Set(allLinks.map((l) => l.employeeId));
 
-  return staff.filter((e) => mapped.has(e.id) || !anyMapping.has(e.id));
+  return staff.filter((e) => e.isGeneral || mapped.has(e.id) || !anyMapping.has(e.id));
+}
+
+/**
+ * True when a worker covers every requested service (general workers and
+ * legacy staff with no mappings always qualify).
+ */
+export async function employeeCoversServices(
+  tenantId: string,
+  employeeId: string,
+  serviceIds: string[]
+): Promise<boolean> {
+  if (serviceIds.length === 0) return true;
+  const [emp] = await db
+    .select()
+    .from(employees)
+    .where(and(eq(employees.id, employeeId), eq(employees.tenantId, tenantId), eq(employees.active, true)))
+    .limit(1);
+  if (!emp) return false;
+  if (emp.isGeneral) return true;
+
+  const links = await db
+    .select({ serviceId: employeeServices.serviceId })
+    .from(employeeServices)
+    .where(eq(employeeServices.employeeId, employeeId));
+  if (links.length === 0) return true; // legacy general staff (no mappings)
+
+  const has = new Set(links.map((l) => l.serviceId));
+  return serviceIds.every((id) => has.has(id));
 }
 
 /** List active services of a tenant. */

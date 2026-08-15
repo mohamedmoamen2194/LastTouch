@@ -5,17 +5,17 @@ import { ok, HttpStatus } from "@/lib/response";
 import { ValidationAppError } from "@/lib/errors";
 import { getDashboardAccess } from "@/lib/tenant/dashboard";
 import {
-  createService,
-  updateService,
-  deleteService,
-  validateServiceInput,
-} from "@/modules/booking/application/services";
+  createPackage,
+  deletePackage,
+  updatePackage,
+  validatePackageInput,
+} from "@/modules/booking/application/packages";
 
 const idSchema = z.object({ id: z.string().uuid() });
 
 /**
- * POST /api/admin/services
- * Manages the tenant's service catalog: create / update / delete.
+ * POST /api/admin/packages
+ * Manages the tenant's service packages: create / update / delete (soft).
  * All paths enforce `services.manage` and tenant ownership server-side.
  */
 export async function POST(req: Request) {
@@ -29,28 +29,29 @@ export async function POST(req: Request) {
 
     if (action === "create") {
       const body = await readJson<unknown>(req);
-      const input = validateServiceInput(body);
-      const created = await createService(ctx, input);
-      return NextResponse.json(ok({ id: created.id, active: created.active }, "Service created"), {
-        status: HttpStatus.Created,
-      });
+      const input = validatePackageInput(body);
+      const created = await createPackage(ctx, input);
+      return NextResponse.json(
+        ok({ id: created.id, active: created.active }, "Package created"),
+        { status: HttpStatus.Created }
+      );
     }
 
     if (action === "update") {
       const body = await readJson<unknown>(req);
       const parsed = idSchema.safeParse(body);
-      if (!parsed.success) throw new ValidationAppError("Invalid service payload", parsed.error.issues.map((e) => ({ path: e.path.join("."), message: e.message })));
-      const input = validateServiceInput(body);
-      const updated = await updateService(ctx, parsed.data.id, input);
-      return NextResponse.json(ok({ id: updated.id, active: updated.active }, "Service updated"));
+      if (!parsed.success) throw new ValidationAppError("Invalid package payload");
+      const input = validatePackageInput(body);
+      const updated = await updatePackage(ctx, parsed.data.id, input);
+      return NextResponse.json(ok({ id: updated.id, active: updated.active }, "Package updated"));
     }
 
     if (action === "delete") {
       const body = await readJson<unknown>(req);
       const parsed = idSchema.safeParse(body);
-      if (!parsed.success) throw new ValidationAppError("Invalid service payload");
-      await deleteService(ctx, parsed.data.id);
-      return NextResponse.json(ok({ id: parsed.data.id }, "Service deleted"));
+      if (!parsed.success) throw new ValidationAppError("Invalid package payload");
+      await deletePackage(ctx, parsed.data.id);
+      return NextResponse.json(ok({ id: parsed.data.id }, "Package deleted"));
     }
 
     throw new ValidationAppError("Unknown action");

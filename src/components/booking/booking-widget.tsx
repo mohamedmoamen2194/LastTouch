@@ -13,12 +13,21 @@ type WidgetService = {
   durationMinutes: number;
   price: string;
 };
+type WidgetPackage = {
+  id: string;
+  name: string;
+  description: string | null;
+  price: string;
+  serviceIds: string[];
+  serviceNames: string[];
+};
 type WidgetEmployee = {
   id: string;
   displayName: string | null;
   firstName: string;
   lastName: string | null;
   yearsExperience: number | null;
+  isGeneral: boolean;
   serviceIds: string[];
 };
 type WidgetTenant = {
@@ -37,22 +46,29 @@ type Receipt = {
   appointmentDate: string;
   employee: { id: string; displayName: string | null; firstName: string; lastName: string | null } | null;
   services: { name: string; price: string; durationMinutes: number }[];
+  assignedWorkers?: { serviceId: string; employeeId: string; employeeName: string }[];
 };
 
 type Props = {
   tenant: WidgetTenant;
   themeId: ThemeName;
   services: WidgetService[];
+  packages?: WidgetPackage[];
   employees: WidgetEmployee[];
 };
 
-export function BookingWidget({ tenant, themeId, services, employees }: Props) {
+export function BookingWidget({ tenant, themeId, services, packages = [], employees }: Props) {
   const t = useTranslations("booking");
   const theme = getThemeTokens(themeId);
 
   const [step, setStep] = useState(1);
   const [serviceId, setServiceId] = useState<string | null>(null);
+  const [packageId, setPackageId] = useState<string | null>(null);
+  const [customServices, setCustomServices] = useState<string[]>([]);
+  const [customizeOpen, setCustomizeOpen] = useState(false);
   const [employeeId, setEmployeeId] = useState<string>("any");
+  const [generalWorkerId, setGeneralWorkerId] = useState<string | null>(null);
+  const [assignments, setAssignments] = useState<Record<string, string>>({});
   const [teamOpen, setTeamOpen] = useState(false);
   const [calOpen, setCalOpen] = useState(false);
   const [fullOpen, setFullOpen] = useState(false);
@@ -62,6 +78,7 @@ export function BookingWidget({ tenant, themeId, services, employees }: Props) {
   const [date, setDate] = useState<string | null>(null);
   const [hour, setHour] = useState<string | null>(null);
   const [time, setTime] = useState<string | null>(null);
+  const [arrivalTime, setArrivalTime] = useState<string>("");
   const [slots, setSlots] = useState<Slot[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [loadingCalendar, setLoadingCalendar] = useState(false);
@@ -72,17 +89,63 @@ export function BookingWidget({ tenant, themeId, services, employees }: Props) {
   const [form, setForm] = useState({ firstName: "", phone: "", notes: "" });
 
   const service = useMemo(() => services.find((s) => s.id === serviceId) ?? null, [serviceId, services]);
+  const pkg = useMemo(() => packages.find((p) => p.id === packageId) ?? null, [packageId, packages]);
 
-  // Staff who can take the selected service (must be linked to it).
-  const eligibleStaff = useMemo(() => {
-    if (!serviceId) return [];
-    return employees.filter((e) => e.serviceIds.includes(serviceId));
-  }, [employees, serviceId]);
+  // Service ids that drive slot fetching and confirmation: a custom package's
+  // selections, the selected package's bundled services, or a single service.
+  const activeServiceIds = useMemo(
+    () => (customServices.length > 0 ? customServices : pkg ? pkg.serviceIds : serviceId ? [serviceId] : []),
+    [customServices, pkg, serviceId]
+  );
+  // A package / custom bundle uses the grouped team-selection flow.
+  const multiSelection = pkg !== null || customServices.length > 0;
+
+  // Workers who can take a given service (general / unmapped workers qualify).
+  const coversService = (e: WidgetEmployee, sid: string) =>
+    e.isGeneral || e.serviceIds.length === 0 || e.serviceIds.includes(sid);
+
+  // General workers for the packages team step.
+  const generalWorkers = useMemo(
+    () => employees.filter((e) => e.isGeneral || e.serviceIds.length === 0),
+    [employees]
+  );
+  const specificWorkersFor = (sid: string) => employees.filter((e) => coversService(e, sid));
+
+  const assignmentsComplete = activeServiceIds.length > 0 && activeServiceIds.every((id) => Boolean(assignments[id]));
+  const assignedIds = useMemo(
+    () => [...new Set(Object.values(assignments))],
+    [assignments]
+  );
+
+  // Which workers drive availability: a single worker, a set (multi-worker
+  // packages), or the "any available" pool when nothing is picked yet.
+  // `employeeAssignments` maps each service to its worker so the backend can
+  // schedule services back-to-back (each worker doing their own service).
+  const workerRequest = useMemo(() => {
+    if (multiSelection) {
+      if (generalWorkerId) return { employeeId: generalWorkerId, employeeIds: undefined as string[] | undefined, employeeAssignments: undefined as { serviceId: string; employeeId: string }[] | undefined };
+      if (assignmentsComplete) {
+        // Same worker covering every service = one worker, one slot: collapse
+        // into the single-employee path instead of per-service assignments.
+        if (assignedIds.length === 1) {
+          return { employeeId: assignedIds[0], employeeIds: undefined as string[] | undefined, employeeAssignments: undefined as { serviceId: string; employeeId: string }[] | undefined };
+        }
+        const employeeAssignments = activeServiceIds.map((serviceId) => ({
+          serviceId,
+          employeeId: assignments[serviceId],
+        }));
+        return { employeeId: undefined as string | undefined, employeeIds: assignedIds, employeeAssignments };
+      }
+      return { employeeId: undefined as string | undefined, employeeIds: undefined as string[] | undefined, employeeAssignments: undefined as { serviceId: string; employeeId: string }[] | undefined };
+    }
+    return {
+      employeeId: employeeId && employeeId !== "any" ? employeeId : undefined,
+      employeeIds: undefined as string[] | undefined,
+      employeeAssignments: undefined as { serviceId: string; employeeId: string }[] | undefined,
+    };
+  }, [multiSelection, generalWorkerId, assignmentsComplete, assignedIds, employeeId, activeServiceIds, assignments]);
 
   const names = [t("stepService"), t("stepStaff"), t("stepTime")];
-
-  const initials = (e: WidgetEmployee | undefined) =>
-    (e ? (e.displayName ?? `${e.firstName} ${e.lastName ?? ""}`).trim().charAt(0).toUpperCase() : "") || "P";
 
   const week = useMemo(() => nextSevenDays(), []);
   const shortWeekLabels = useMemo(() => shortWeekLabelsFor(week), [week]);
@@ -90,7 +153,7 @@ export function BookingWidget({ tenant, themeId, services, employees }: Props) {
   // ---- Slot fetching ----
 
   const fetchSlots = async (d: string) => {
-    if (!serviceId) return;
+    if (activeServiceIds.length === 0) return;
     setLoadingSlots(true);
     setError(null);
     try {
@@ -99,8 +162,10 @@ export function BookingWidget({ tenant, themeId, services, employees }: Props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           slug: slugFromPath(),
-          serviceIds: [serviceId],
-          employeeId: !employeeId || employeeId === "any" ? undefined : employeeId,
+          serviceIds: activeServiceIds,
+          employeeId: workerRequest.employeeId,
+          employeeIds: workerRequest.employeeIds,
+          employeeAssignments: workerRequest.employeeAssignments,
           date: d,
         }),
       });
@@ -120,8 +185,8 @@ export function BookingWidget({ tenant, themeId, services, employees }: Props) {
   };
 
   const loadMonth = async (ym: string) => {
-    if (!serviceId) return;
-    const key = `${ym}|${employeeId}|${serviceId}`;
+    if (activeServiceIds.length === 0) return;
+    const key = `${ym}|${workerRequest.employeeId ?? workerRequest.employeeIds?.join(",") ?? "any"}|${activeServiceIds.join(",")}`;
     if (monthsLoaded.current.has(key)) return;
     monthsLoaded.current.add(key);
     setLoadingCalendar(true);
@@ -131,8 +196,9 @@ export function BookingWidget({ tenant, themeId, services, employees }: Props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           slug: slugFromPath(),
-          serviceIds: [serviceId],
-          employeeId: !employeeId || employeeId === "any" ? undefined : employeeId,
+          serviceIds: activeServiceIds,
+          employeeId: workerRequest.employeeId,
+          employeeIds: workerRequest.employeeIds,
           month: ym,
         }),
       });
@@ -145,6 +211,25 @@ export function BookingWidget({ tenant, themeId, services, employees }: Props) {
     }
   };
 
+  const anySelected = employeeId === "any" && !generalWorkerId && Object.keys(assignments).length === 0;
+
+  // The worker currently picked in the "choose from team" flow, used to label
+  // the toggle button once a selection is made.
+  const workerSelected = !anySelected && (Boolean(generalWorkerId) || Object.keys(assignments).length > 0 || (Boolean(employeeId) && employeeId !== "any"));
+  const selectedWorker = useMemo(() => {
+    if (generalWorkerId) return employees.find((e) => e.id === generalWorkerId) ?? null;
+    if (Object.keys(assignments).length > 0) {
+      const first = Object.values(assignments)[0];
+      return first ? employees.find((e) => e.id === first) ?? null : null;
+    }
+    if (employeeId && employeeId !== "any") return employees.find((e) => e.id === employeeId) ?? null;
+    return null;
+  }, [generalWorkerId, assignments, employeeId, employees]);
+  const workerName = selectedWorker
+    ? (selectedWorker.displayName ?? `${selectedWorker.firstName} ${selectedWorker.lastName ?? ""}`.trim())
+    : "";
+  const workerInitial = workerName.charAt(0).toUpperCase() || "+";
+
   const enterTimeStep = () => {
     const yms = new Set<string>([
       ...week.map((d) => d.value.slice(0, 7)),
@@ -156,7 +241,7 @@ export function BookingWidget({ tenant, themeId, services, employees }: Props) {
     setMonths({});
     monthsLoaded.current.clear();
     for (const ym of yms) void loadMonth(ym);
-    if (date && serviceId) void fetchSlots(date);
+    if (date && activeServiceIds.length > 0) void fetchSlots(date);
   };
 
   const pickDate = async (d: string) => {
@@ -167,6 +252,24 @@ export function BookingWidget({ tenant, themeId, services, employees }: Props) {
     await fetchSlots(d);
   };
 
+  // Dynamic arrival search: the user says when they can arrive, and we pick
+  // the earliest bookable slot at or after that time (slots are already
+  // back-to-back sequential chains for multi-worker bookings).
+  const findBestSlot = () => {
+    const open = visibleSlots.filter((s) => s.available);
+    if (open.length === 0) return;
+    let best = open[0];
+    if (arrivalTime) {
+      const from = arrivalTime;
+      const afterOrAt = open.find((s) => s.start >= from);
+      if (afterOrAt) best = afterOrAt;
+      else best = open.reduce((a, b) => (a.start >= b.start ? a : b));
+    }
+    setTime(best.start);
+    const h = best.start.slice(0, 2) + ":00";
+    setHour(h);
+  };
+
   const moveMonth = (dir: 1 | -1) => {
     const [y, m] = viewMonth.split("-").map(Number);
     const nd = new Date(y, (m ?? 1) - 1 + dir, 1);
@@ -175,24 +278,125 @@ export function BookingWidget({ tenant, themeId, services, employees }: Props) {
     void loadMonth(ym);
   };
 
+  // ---- Step-1 selection ----
+
+  const resetSelection = () => {
+    setEmployeeId("any");
+    setGeneralWorkerId(null);
+    setAssignments({});
+    setDate(null);
+    setHour(null);
+    setTime(null);
+    setSlots([]);
+    setMonths({});
+    monthsLoaded.current.clear();
+  };
+
+  const pickPackage = (id: string) => {
+    if (packageId !== id) {
+      setPackageId(id);
+      setServiceId(null);
+      setCustomServices([]);
+      setCustomizeOpen(false);
+      resetSelection();
+    }
+  };
+
+  const pickService = (id: string) => {
+    if (serviceId !== id) {
+      setServiceId(id);
+      setPackageId(null);
+      setCustomServices([]);
+      setCustomizeOpen(false);
+      resetSelection();
+    }
+  };
+
+  const openCustomize = () => {
+    setCustomizeOpen(true);
+    setPackageId(null);
+    setServiceId(null);
+    setCustomServices([]);
+    resetSelection();
+  };
+
+  const closeCustomize = () => {
+    setCustomizeOpen(false);
+    setCustomServices([]);
+  };
+
+  const toggleCustomService = (id: string) => {
+    setCustomServices((prev) =>
+      prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]
+    );
+    setPackageId(null);
+    setServiceId(null);
+  };
+
+  // Shared worker selection for the unified team step. For a single-service
+  // booking we drive `employeeId`; for packages/custom we drive
+  // `generalWorkerId` (whole booking) or `assignments` (per service).
+  const selectWorker = (worker: WidgetEmployee, serviceIdForAssignment?: string) => {
+    setDate(null);
+    setHour(null);
+    setTime(null);
+    setSlots([]);
+    if (multiSelection) {
+      if (serviceIdForAssignment) {
+        setAssignments((a) => ({ ...a, [serviceIdForAssignment]: worker.id }));
+        setGeneralWorkerId(null);
+        setEmployeeId("");
+      } else {
+        setGeneralWorkerId(worker.id);
+        setAssignments({});
+        setEmployeeId("");
+      }
+    } else {
+      setEmployeeId(worker.id);
+      setGeneralWorkerId(null);
+      setAssignments({});
+    }
+  };
+
+  const customPrice = (ids: string[]) =>
+    ids.reduce((sum, id) => sum + Number(services.find((s) => s.id === id)?.price ?? 0), 0);
+
   // ---- Confirm ----
 
   const confirm = async () => {
-    if (!serviceId || !date || !time) return;
+    if (activeServiceIds.length === 0 || !date || !time) return;
     setSubmitting(true);
     setError(null);
     try {
+      const payload: Record<string, unknown> = {
+        slug: slugFromPath(),
+        serviceIds: activeServiceIds,
+        appointmentDate: date,
+        startTime: time,
+        customer: { ...form, marketingConsent: true },
+      };
+      if (multiSelection) {
+        if (generalWorkerId) {
+          payload.employeeId = generalWorkerId;
+        } else if (assignmentsComplete) {
+          if (assignedIds.length === 1) {
+            // One worker covering every service → single-worker booking.
+            payload.employeeId = assignedIds[0];
+          } else {
+            payload.employeeAssignments = activeServiceIds.map((serviceId) => ({
+              serviceId,
+              employeeId: assignments[serviceId],
+            }));
+          }
+        }
+        // else: "any available" → backend auto-assigns per service.
+      } else {
+        payload.employeeId = employeeId && employeeId !== "any" ? employeeId : undefined;
+      }
       const res = await fetch("/api/book/confirm", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          slug: slugFromPath(),
-          serviceIds: [serviceId],
-          employeeId: !employeeId || employeeId === "any" ? undefined : employeeId,
-          appointmentDate: date,
-          startTime: time,
-          customer: { ...form, marketingConsent: true },
-        }),
+        body: JSON.stringify(payload),
       });
       const json = await res.json();
       if (!json.success) {
@@ -210,9 +414,19 @@ export function BookingWidget({ tenant, themeId, services, employees }: Props) {
 
   // ---- Hourly slot grouping ----
 
+  // Past-slot cutoff: when booking for today, any start time at or before
+  // the current time in Egypt is not bookable — greyed out with a line.
+  const visibleSlots = useMemo(() => {
+    const now = cairoNow();
+    if (date !== now.ymd) return slots;
+    return slots.map((s) =>
+      s.start <= now.hhmm ? { ...s, available: false } : s
+    );
+  }, [slots, date]);
+
   const hourGroups = useMemo(() => {
     const map = new Map<string, Slot[]>();
-    for (const s of slots) {
+    for (const s of visibleSlots) {
       const h = s.start.slice(0, 2) + ":00";
       if (!map.has(h)) map.set(h, []);
       map.get(h)!.push(s);
@@ -220,7 +434,7 @@ export function BookingWidget({ tenant, themeId, services, employees }: Props) {
     return Array.from(map.entries())
       .map(([label, list]) => ({ label, times: list.sort((a, b) => a.start.localeCompare(b.start)) }))
       .sort((a, b) => a.label.localeCompare(b.label));
-  }, [slots]);
+  }, [visibleSlots]);
 
   // ---- Done / receipt ----
 
@@ -258,6 +472,22 @@ export function BookingWidget({ tenant, themeId, services, employees }: Props) {
                   <span className="font-medium" style={{ color: theme.primary }}>{formatMoney(s.price, tenant.currency)}</span>
                 </div>
               ))}
+              {receipt.assignedWorkers && receipt.assignedWorkers.length > 0 && (
+                <div className="space-y-2 border-t pt-3" style={{ borderColor: theme.outlineVariant }}>
+                  <p className="text-xs font-medium uppercase tracking-wide" style={{ color: theme.secondary }}>
+                    {t("receiptWorkers")}
+                  </p>
+                  {receipt.assignedWorkers.map((w) => {
+                    const svc = services.find((s) => s.id === w.serviceId);
+                    return (
+                      <div key={w.serviceId} className="flex items-center justify-between gap-3 text-sm">
+                        <span style={{ color: theme.onSurfaceVariant }}>{svc?.name ?? w.serviceId}</span>
+                        <span className="font-semibold" style={{ color: theme.primary }}>{w.employeeName}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
               <div className="flex items-center justify-between gap-3 border-t pt-3" style={{ borderColor: theme.outlineVariant }}>
                 <span style={{ color: theme.onSurfaceVariant }}>{t("receiptWorker")}</span>
                 <span className="font-semibold" style={{ color: theme.primary }}>
@@ -285,12 +515,14 @@ export function BookingWidget({ tenant, themeId, services, employees }: Props) {
             setReceipt(null);
             setStep(1);
             setServiceId(null);
+            setPackageId(null);
+            setCustomServices([]);
+            setCustomizeOpen(false);
             setEmployeeId("any");
             setDate(null);
             setHour(null);
             setTime(null);
             setSlots([]);
-            setTeamOpen(false);
             setCalOpen(false);
           }}
           className="mt-8 rounded-full px-6 py-3 text-sm font-semibold"
@@ -361,63 +593,202 @@ export function BookingWidget({ tenant, themeId, services, employees }: Props) {
         {step === 1 && (
           <div>
             <Heading title={t("selectService")} subtitle={t("subtitle")} theme={theme} />
-            <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-2">
-              {services.map((s) => (
-                <button
-                  key={s.id}
-                  type="button"
-                  onClick={() => {
-                    if (serviceId !== s.id) {
-                      setServiceId(s.id);
-                      setEmployeeId("any");
-                      setTeamOpen(false);
-                      setDate(null);
-                      setHour(null);
-                      setTime(null);
-                      setSlots([]);
-                      setMonths({});
-                      monthsLoaded.current.clear();
-                    }
-                  }}
-                  className="relative flex flex-col gap-2 rounded-lg border p-3 text-left transition-all sm:gap-3 sm:p-4 md:p-5"
-                  style={{
-                    borderColor: serviceId === s.id ? theme.primary : theme.outlineVariant,
-                    boxShadow: serviceId === s.id ? `0 4px 20px -5px ${theme.primary}` : "none",
-                  }}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <span
-                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold sm:h-10 sm:w-10"
-                      style={{ backgroundColor: theme.primaryContainer, color: theme.onSurfaceVariant }}
-                    >
-                      {s.name.charAt(0)}
-                    </span>
-                    <span
-                      className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2"
-                      style={{ borderColor: serviceId === s.id ? theme.primary : theme.outlineVariant }}
-                    >
-                      {serviceId === s.id && <span className="block h-2 w-2 rounded-full" style={{ backgroundColor: theme.primary }} />}
-                    </span>
+
+            {packages.length > 0 && (
+              <div className="mb-8">
+                <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide" style={{ color: theme.secondary }}>
+                  {t("packages")}
+                </h3>
+                <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-2">
+                  {packages.map((p) => {
+                    const selected = packageId === p.id;
+                    return (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => pickPackage(p.id)}
+                        className="relative flex flex-col gap-2 rounded-lg border p-3 text-left transition-all sm:gap-3 sm:p-4 md:p-5"
+                        style={{
+                          borderColor: selected ? theme.primary : theme.outlineVariant,
+                          boxShadow: selected ? `0 4px 20px -5px ${theme.primary}` : "none",
+                        }}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <span
+                            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold sm:h-10 sm:w-10"
+                            style={{ backgroundColor: selected ? theme.primary : theme.primaryContainer, color: selected ? theme.onPrimary : theme.onSurfaceVariant }}
+                          >
+                            +
+                          </span>
+                          <span
+                            className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2"
+                            style={{ borderColor: selected ? theme.primary : theme.outlineVariant }}
+                          >
+                            {selected && <span className="block h-2 w-2 rounded-full" style={{ backgroundColor: theme.primary }} />}
+                          </span>
+                        </div>
+                        <div className="min-w-0">
+                          <h3 className="truncate text-sm font-semibold sm:text-base" style={{ color: theme.primary }}>{p.name}</h3>
+                          {p.description && <p className="mt-0.5 hidden text-xs sm:mt-1 sm:block sm:text-sm" style={{ color: theme.onSurfaceVariant }}>{p.description}</p>}
+                          {p.serviceNames.length > 0 && (
+                            <p className="mt-1 truncate text-xs" style={{ color: theme.secondary }}>
+                              {p.serviceNames.join(" · ")}
+                            </p>
+                          )}
+                        </div>
+                        <div className="mt-auto flex items-center justify-between border-t pt-2 text-sm" style={{ borderColor: theme.surfaceContainerHigh }}>
+                          <span className="text-xs" style={{ color: theme.secondary }}>
+                            {p.serviceIds.length} {t("services")}
+                          </span>
+                          <span className="text-xs font-semibold sm:text-sm" style={{ color: theme.primary }}>{formatMoney(p.price, tenant.currency)}</span>
+                        </div>
+                      </button>
+                    );
+                  })}
+
+                  {/* Customize your package */}
+                  <button
+                    type="button"
+                    onClick={() => (customizeOpen ? closeCustomize() : openCustomize())}
+                    className="relative flex flex-col gap-2 rounded-lg border border-dashed p-3 text-left transition-all sm:gap-3 sm:p-4 md:p-5"
+                    style={{
+                      borderColor: customizeOpen ? theme.primary : theme.outlineVariant,
+                      boxShadow: customizeOpen ? `0 4px 20px -5px ${theme.primary}` : "none",
+                    }}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <span
+                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold sm:h-10 sm:w-10"
+                        style={{ backgroundColor: customizeOpen ? theme.primary : theme.primaryContainer, color: customizeOpen ? theme.onPrimary : theme.onSurfaceVariant }}
+                      >
+                        {customizeOpen ? "×" : "+"}
+                      </span>
+                      <span
+                        className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2"
+                        style={{ borderColor: customizeOpen ? theme.primary : theme.outlineVariant }}
+                      >
+                        {customizeOpen && <span className="block h-2 w-2 rounded-full" style={{ backgroundColor: theme.primary }} />}
+                      </span>
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="truncate text-sm font-semibold sm:text-base" style={{ color: theme.primary }}>{t("customizePackage")}</h3>
+                      <p className="mt-0.5 hidden text-xs sm:mt-1 sm:block sm:text-sm" style={{ color: theme.onSurfaceVariant }}>{t("customizeHint")}</p>
+                    </div>
+                    <div className="mt-auto flex items-center justify-between border-t pt-2 text-sm" style={{ borderColor: theme.surfaceContainerHigh }}>
+                      <span className="text-xs" style={{ color: theme.secondary }}>
+                        {customServices.length} {t("services")}
+                      </span>
+                      <span className="text-xs font-semibold sm:text-sm" style={{ color: theme.primary }}>
+                        {customServices.length > 0 ? formatMoney(customPrice(customServices), tenant.currency) : t("buildYours")}
+                      </span>
+                    </div>
+                  </button>
+                </div>
+
+                {customizeOpen && (
+                  <div
+                    className="mt-4 rounded-xl border p-4 sm:p-5"
+                    style={{ borderColor: theme.outlineVariant, backgroundColor: theme.surface }}
+                  >
+                    <p className="mb-3 text-sm font-medium" style={{ color: theme.primary }}>
+                      {t("customizePick")}
+                    </p>
+                    <div className="grid max-h-72 grid-cols-1 gap-2 overflow-y-auto sm:grid-cols-2">
+                      {services.map((s) => {
+                        const checked = customServices.includes(s.id);
+                        return (
+                          <button
+                            key={s.id}
+                            type="button"
+                            onClick={() => toggleCustomService(s.id)}
+                            className="flex items-center gap-3 rounded-lg border p-3 text-left transition-all"
+                            style={{
+                              borderColor: checked ? theme.primary : theme.outlineVariant,
+                              boxShadow: checked ? `0 2px 10px -3px ${theme.primary}` : "none",
+                              backgroundColor: checked ? theme.surfaceContainerLowest : "transparent",
+                            }}
+                          >
+                            <span
+                              className="flex h-5 w-5 shrink-0 items-center justify-center rounded border-2"
+                              style={{ borderColor: checked ? theme.primary : theme.outlineVariant, backgroundColor: checked ? theme.primary : "transparent" }}
+                            >
+                              {checked && <span className="text-[10px] font-bold" style={{ color: theme.onPrimary }}>✓</span>}
+                            </span>
+                            <span className="min-w-0 flex-1">
+                              <span className="block truncate text-sm font-semibold" style={{ color: theme.primary }}>{s.name}</span>
+                              <span className="block truncate text-xs" style={{ color: theme.secondary }}>
+                                {s.durationMinutes} {t("min")}
+                              </span>
+                            </span>
+                            <span className="shrink-0 text-sm font-semibold" style={{ color: theme.primary }}>
+                              {formatMoney(s.price, tenant.currency)}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                  <div className="min-w-0">
-                    <h3 className="truncate text-sm font-semibold sm:text-base" style={{ color: theme.primary }}>{s.name}</h3>
-                    {s.description && <p className="mt-0.5 hidden text-xs sm:mt-1 sm:block sm:text-sm" style={{ color: theme.onSurfaceVariant }}>{s.description}</p>}
-                  </div>
-                  <div className="mt-auto flex flex-col gap-0.5 border-t pt-2 text-sm sm:flex-row sm:items-center sm:justify-between" style={{ borderColor: theme.surfaceContainerHigh, color: theme.secondary }}>
-                    <span className="text-xs sm:text-sm">{s.durationMinutes} {t("min")}</span>
-                    <span className="text-xs font-semibold sm:text-sm" style={{ color: theme.primary }}>{formatMoney(s.price, tenant.currency)}</span>
-                  </div>
-                </button>
-              ))}
-            </div>
+                )}
+              </div>
+            )}
+
+            {!customizeOpen && (
+              <>
+                <div className="mb-4 flex items-center justify-between">
+                  <h3 className="text-sm font-semibold uppercase tracking-wide" style={{ color: theme.secondary }}>
+                    {t("services")}
+                  </h3>
+                  {packages.length > 0 && <span className="text-xs" style={{ color: theme.onSurfaceVariant }}>{t("pickOne")}</span>}
+                </div>
+                <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-2">
+                  {services.map((s) => {
+                    const selected = serviceId === s.id;
+                    return (
+                      <button
+                        key={s.id}
+                        type="button"
+                        onClick={() => pickService(s.id)}
+                        className="relative flex flex-col gap-2 rounded-lg border p-3 text-left transition-all sm:gap-3 sm:p-4 md:p-5"
+                        style={{
+                          borderColor: selected ? theme.primary : theme.outlineVariant,
+                          boxShadow: selected ? `0 4px 20px -5px ${theme.primary}` : "none",
+                        }}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <span
+                            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold sm:h-10 sm:w-10"
+                            style={{ backgroundColor: theme.primaryContainer, color: theme.onSurfaceVariant }}
+                          >
+                            {s.name.charAt(0)}
+                          </span>
+                          <span
+                            className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2"
+                            style={{ borderColor: selected ? theme.primary : theme.outlineVariant }}
+                          >
+                            {selected && <span className="block h-2 w-2 rounded-full" style={{ backgroundColor: theme.primary }} />}
+                          </span>
+                        </div>
+                        <div className="min-w-0">
+                          <h3 className="truncate text-sm font-semibold sm:text-base" style={{ color: theme.primary }}>{s.name}</h3>
+                          {s.description && <p className="mt-0.5 hidden text-xs sm:mt-1 sm:block sm:text-sm" style={{ color: theme.onSurfaceVariant }}>{s.description}</p>}
+                        </div>
+                        <div className="mt-auto flex flex-col gap-0.5 border-t pt-2 text-sm sm:flex-row sm:items-center sm:justify-between" style={{ borderColor: theme.surfaceContainerHigh, color: theme.secondary }}>
+                          <span className="text-xs sm:text-sm">{s.durationMinutes} {t("min")}</span>
+                          <span className="text-xs font-semibold sm:text-sm" style={{ color: theme.primary }}>{formatMoney(s.price, tenant.currency)}</span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
             <div className="mt-8 flex justify-end">
               <button
                 type="button"
                 onClick={() => {
-                  setTeamOpen(false);
                   setStep(2);
                 }}
-                disabled={!serviceId}
+                disabled={activeServiceIds.length === 0}
                 className="rounded-full px-8 py-3 text-sm font-semibold disabled:opacity-40"
                 style={{ backgroundColor: theme.primary, color: theme.onPrimary }}
               >
@@ -432,116 +803,156 @@ export function BookingWidget({ tenant, themeId, services, employees }: Props) {
             <Back theme={theme} onClick={() => setStep(1)} />
             <Heading title={t("selectStaff")} subtitle={t("subtitle")} theme={theme} />
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              {/* Any team member */}
-              <button
-                type="button"
-                onClick={() => {
-                  setEmployeeId("any");
-                  setTeamOpen(false);
-                  setDate(null);
-                  setHour(null);
-                  setTime(null);
-                  setSlots([]);
-                }}
-                className="flex flex-col items-center rounded-xl border-2 p-5 text-center transition-all sm:p-6"
-                style={{
-                  borderColor: employeeId === "any" ? theme.primary : theme.outlineVariant,
-                  boxShadow: employeeId === "any" ? `0 4px 20px -5px ${theme.primary}` : "none",
-                }}
+            {/* Any team member — available for both flows */}
+            <button
+              type="button"
+              onClick={() => {
+                setEmployeeId("any");
+                setGeneralWorkerId(null);
+                setAssignments({});
+                setDate(null);
+                setHour(null);
+                setTime(null);
+                setSlots([]);
+              }}
+              className="flex w-full flex-col items-center rounded-xl border-2 p-5 text-center transition-all sm:p-6"
+              style={{
+                borderColor: anySelected ? theme.primary : theme.outlineVariant,
+                boxShadow: anySelected ? `0 4px 20px -5px ${theme.primary}` : "none",
+              }}
+            >
+              <span
+                className="mb-3 flex h-14 w-14 items-center justify-center rounded-full"
+                style={{ backgroundColor: theme.surface }}
               >
-                <span
-                  className="mb-3 flex h-14 w-14 items-center justify-center rounded-full"
-                  style={{ backgroundColor: theme.surface }}
-                >
-                  <GroupsIcon color={theme.onSurfaceVariant} />
-                </span>
-                <span className="text-base font-semibold" style={{ color: employeeId === "any" ? theme.primary : theme.onSurfaceVariant }}>
-                  {t("anyTeam")}
-                </span>
-                <span className="mt-1 text-xs" style={{ color: theme.secondary }}>
-                  {t("anyTeamHint")}
-                </span>
-              </button>
+                <GroupsIcon color={theme.onSurfaceVariant} />
+              </span>
+              <span className="text-base font-semibold" style={{ color: anySelected ? theme.primary : theme.onSurfaceVariant }}>
+                {t("anyTeam")}
+              </span>
+              <span className="mt-1 text-xs" style={{ color: theme.secondary }}>
+                {t("anyTeamHint")}
+              </span>
+            </button>
 
-              {/* Choose from team */}
-              <button
-                type="button"
-                onClick={() => {
-                  if (!employeeId || employeeId === "any") setEmployeeId("");
-                  setTeamOpen((o) => !o);
-                  setDate(null);
-                  setHour(null);
-                  setTime(null);
-                  setSlots([]);
-                }}
-                className="flex flex-col items-center rounded-xl border-2 p-5 text-center transition-all sm:p-6"
-                style={{
-                  borderColor: teamOpen || (employeeId && employeeId !== "any" && eligibleStaff.some((e) => e.id === employeeId))
+            {/* Choose from team — expands the grouped sections */}
+            <button
+              type="button"
+              onClick={() => {
+                if (!employeeId || employeeId === "any") setEmployeeId("");
+                setTeamOpen((o) => !o);
+                setDate(null);
+                setHour(null);
+                setTime(null);
+                setSlots([]);
+              }}
+              className="mt-4 flex w-full flex-col items-center rounded-xl border-2 p-5 text-center transition-all sm:p-6"
+              style={{
+                borderColor:
+                  teamOpen ||
+                  (employeeId && employeeId !== "any") ||
+                  generalWorkerId ||
+                  Object.keys(assignments).length > 0
                     ? theme.primary
                     : theme.outlineVariant,
-                  boxShadow: teamOpen || (employeeId && employeeId !== "any" && eligibleStaff.some((e) => e.id === employeeId))
+                boxShadow:
+                  teamOpen ||
+                  (employeeId && employeeId !== "any") ||
+                  generalWorkerId ||
+                  Object.keys(assignments).length > 0
                     ? `0 4px 20px -5px ${theme.primary}`
                     : "none",
-                }}
+              }}
+            >
+              <span
+                className="mb-3 flex h-14 w-14 items-center justify-center rounded-full text-base font-semibold"
+                style={{ backgroundColor: theme.surface, color: theme.primary }}
               >
-                <span className="mb-3 flex h-14 w-14 items-center justify-center rounded-full text-base font-semibold" style={{ backgroundColor: theme.surface, color: theme.primary }}>
-                  {employeeId !== "any" && employeeId ? initials(eligibleStaff.find((e) => e.id === employeeId) ?? eligibleStaff[0]) : teamOpen ? "×" : "+"}
-                </span>
-                <span className="text-base font-semibold" style={{ color: employeeId && employeeId !== "any" ? theme.primary : theme.onSurfaceVariant }}>
-                  {employeeId && employeeId !== "any"
-                    ? (eligibleStaff.find((e) => e.id === employeeId)?.displayName ?? t("chooseTeam"))
-                    : t("chooseTeam")}
-                </span>
-                <span className="mt-1 text-xs" style={{ color: theme.secondary }}>
-                  {t("teamHint")}
-                </span>
-              </button>
-            </div>
+                {teamOpen ? "×" : workerInitial ? workerInitial : "+"}
+              </span>
+              <span className="text-base font-semibold" style={{ color: workerSelected ? theme.primary : theme.onSurfaceVariant }}>
+                {workerSelected ? workerName : t("chooseTeam")}
+              </span>
+              <span className="mt-1 text-xs" style={{ color: theme.secondary }}>
+                {t("teamHint")}
+              </span>
+            </button>
 
-            {/* Team list — only staff for the selected service */}
             {teamOpen && (
-              <div className="mt-4 rounded-xl border p-3 sm:p-4" style={{ borderColor: theme.outlineVariant, backgroundColor: theme.surface }}>
-                <p className="mb-3 text-xs font-medium uppercase tracking-wide" style={{ color: theme.secondary }}>
-                  {t("teamListTitle")} · {service?.name}
-                </p>
-                {eligibleStaff.length === 0 ? (
-                  <p className="py-6 text-center text-sm" style={{ color: theme.onSurfaceVariant }}>{t("noStaffForService")}</p>
-                ) : (
-                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                    {eligibleStaff.map((e) => (
-                      <button
-                        key={e.id}
-                        type="button"
-                        onClick={() => {
-                          setEmployeeId(e.id);
-                          setTeamOpen(false);
-                          setDate(null);
-                          setHour(null);
-                          setTime(null);
-                          setSlots([]);
-                        }}
-                        className="flex items-center gap-3 rounded-lg border p-3 text-left"
-                        style={{ borderColor: employeeId === e.id ? theme.primary : theme.outlineVariant }}
-                      >
-                        <span
-                          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold"
-                          style={{ backgroundColor: theme.surfaceContainerHigh, color: theme.onSurfaceVariant }}
-                        >
-                          {initials(e)}
-                        </span>
-                        <span className="min-w-0">
-                          <span className="block truncate text-sm font-semibold" style={{ color: theme.primary }}>
-                            {e.displayName ?? `${e.firstName} ${e.lastName ?? ""}`.trim()}
+              <div className="mt-8 space-y-10">
+                {/* General workers */}
+                <section>
+                  <SectionDivider label={t("generalWorkers")} theme={theme} />
+                  {generalWorkers.length === 0 ? (
+                    <p className="mx-auto max-w-md rounded-lg border border-dashed p-4 text-center text-sm" style={{ borderColor: theme.outlineVariant, color: theme.onSurfaceVariant }}>
+                      {t("noGeneralWorkers")}
+                    </p>
+                  ) : (
+                    <div className="mx-auto flex w-full max-w-md flex-col gap-3">
+                      {generalWorkers.map((e) => (
+                        <WorkerCard
+                          key={e.id}
+                          employee={e}
+                          selected={multiSelection ? generalWorkerId === e.id : employeeId === e.id}
+                          badge={t("generalWorker")}
+                          theme={theme}
+                          tenant={tenant}
+                          onClick={() => selectWorker(e)}
+                        />
+                      ))}
+                    </div>
+                  )}
+                  <p className="mx-auto mt-2 max-w-md text-xs" style={{ color: theme.onSurfaceVariant }}>
+                    {t("generalPickHint")}
+                  </p>
+                </section>
+
+                {/* Specific workers per service */}
+                <section>
+                  <SectionDivider label={t("specificWorkers")} theme={theme} />
+                  {activeServiceIds.map((sid) => {
+                    const svc = services.find((s) => s.id === sid);
+                    const workers = specificWorkersFor(sid);
+                    const selectedId = multiSelection
+                      ? assignments[sid]
+                      : employeeId !== "any" && employeeId
+                        ? employeeId
+                        : undefined;
+                    return (
+                      <div key={sid} className="mb-7 last:mb-0">
+                        <div className="mx-auto mb-3 flex max-w-md items-center justify-center gap-2">
+                          <span className="text-sm font-semibold" style={{ color: theme.primary }}>
+                            {svc?.name ?? sid}
                           </span>
-                          <span className="block truncate text-xs" style={{ color: theme.secondary }}>
-                            {e.yearsExperience ? `${e.yearsExperience} yrs` : tenant.employeeLabel}
-                          </span>
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                )}
+                          {selectedId && (
+                            <span className="rounded-full px-2 py-0.5 text-[11px] font-medium" style={{ backgroundColor: theme.primaryContainer, color: theme.onSurfaceVariant }}>
+                              {t("selected")}
+                            </span>
+                          )}
+                        </div>
+                        {workers.length === 0 ? (
+                          <p className="mx-auto max-w-md rounded-lg border border-dashed p-4 text-center text-sm" style={{ borderColor: theme.outlineVariant, color: theme.onSurfaceVariant }}>
+                            {t("noStaffForService")}
+                          </p>
+                        ) : (
+                          <div className="mx-auto flex w-full max-w-md flex-col gap-3">
+                            {workers.map((e) => (
+                              <WorkerCard
+                                key={e.id}
+                                employee={e}
+                                selected={selectedId === e.id}
+                                badge={e.isGeneral ? t("generalWorker") : undefined}
+                                theme={theme}
+                                tenant={tenant}
+                                onClick={() => selectWorker(e, sid)}
+                              />
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </section>
               </div>
             )}
 
@@ -549,7 +960,8 @@ export function BookingWidget({ tenant, themeId, services, employees }: Props) {
               <button
                 type="button"
                 onClick={enterTimeStep}
-                className="rounded-full px-8 py-3 text-sm font-semibold"
+                disabled={multiSelection ? !(anySelected || generalWorkerId || assignmentsComplete) : !employeeId}
+                className="rounded-full px-8 py-3 text-sm font-semibold disabled:opacity-40"
                 style={{ backgroundColor: theme.primary, color: theme.onPrimary }}
               >
                 {t("continue")}
@@ -707,6 +1119,36 @@ export function BookingWidget({ tenant, themeId, services, employees }: Props) {
                   <p className="mb-2 text-xs font-medium uppercase tracking-wide" style={{ color: theme.secondary }}>
                     {t("pickHour")}
                   </p>
+
+                  {/* Dynamic arrival search */}
+                  {date && visibleSlots.length > 0 && (
+                    <div className="mb-4 rounded-lg border p-3 sm:p-4" style={{ borderColor: theme.outlineVariant, backgroundColor: theme.surface }}>
+                      <p className="mb-2 text-xs font-semibold" style={{ color: theme.primary }}>
+                        {t("arrivalTitle")}
+                      </p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <input
+                          type="time"
+                          value={arrivalTime}
+                          onChange={(e) => setArrivalTime(e.target.value)}
+                          className="rounded-lg border px-3 py-2 text-sm outline-none"
+                          style={{ borderColor: theme.outlineVariant, backgroundColor: theme.surfaceContainerLowest, color: theme.onSurfaceVariant }}
+                        />
+                        <button
+                          type="button"
+                          onClick={findBestSlot}
+                          className="rounded-full px-4 py-2 text-sm font-semibold"
+                          style={{ backgroundColor: theme.primary, color: theme.onPrimary }}
+                        >
+                          {t("arrivalFind")}
+                        </button>
+                      </div>
+                      <p className="mt-2 text-xs" style={{ color: theme.secondary }}>
+                        {t("arrivalHint")}
+                      </p>
+                    </div>
+                  )}
+
                   <div className="flex flex-wrap gap-2">
                     {hourGroups.map((g) => (
                       <button
@@ -789,7 +1231,13 @@ export function BookingWidget({ tenant, themeId, services, employees }: Props) {
               <div>
                 <p className="text-sm" style={{ color: theme.secondary }}>{t("totalPrice")}</p>
                 <p className="text-xl font-bold" style={{ color: theme.primary }}>
-                  {service ? formatMoney(service.price, tenant.currency) : "0"}
+                  {customServices.length > 0
+                    ? formatMoney(customPrice(customServices), tenant.currency)
+                    : pkg
+                      ? formatMoney(pkg.price, tenant.currency)
+                      : service
+                        ? formatMoney(service.price, tenant.currency)
+                        : "0"}
                 </p>
               </div>
               <button
@@ -830,12 +1278,12 @@ function Back({ theme, onClick }: { theme: ThemeTokens; onClick: () => void }) {
 
 function nextSevenDays() {
   const out: { value: string; day: number }[] = [];
-  const today = new Date();
+  const today = cairoNow().ymd;
+  const [y, m, d] = today.split("-").map(Number);
   for (let i = 1; i <= 7; i++) {
-    const d = new Date(today);
-    d.setDate(today.getDate() + i);
-    const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-    out.push({ value, day: d.getDate() });
+    const date = new Date(y, (m ?? 1) - 1, (d ?? 1) + i);
+    const value = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+    out.push({ value, day: date.getDate() });
   }
   return out;
 }
@@ -850,13 +1298,35 @@ function dayLabel(ymd: string): string {
 }
 
 function todayYM(): string {
-  const n = new Date();
-  return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}`;
+  return cairoNow().ym;
 }
 
 function todayYMD(): string {
-  const n = new Date();
-  return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-${String(n.getDate()).padStart(2, "0")}`;
+  return cairoNow().ymd;
+}
+
+/**
+ * Current date/time in Egypt (Africa/Cairo), used so "today" and the
+ * cutoff for past slots follow the business's timezone, not the visitor's.
+ */
+function cairoNow(): { ymd: string; ym: string; hhmm: string } {
+  const fmt = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Africa/Cairo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  });
+  const parts: Record<string, string> = {};
+  for (const part of fmt.formatToParts(new Date())) {
+    if (part.type !== "literal") parts[part.type] = part.value;
+  }
+  const ym = `${parts.year}-${parts.month}`;
+  const ymd = `${ym}-${parts.day}`;
+  const hhmm = `${parts.hour}:${parts.minute}`;
+  return { ymd, ym, hhmm };
 }
 
 function nextMonthYM(ym: string): string {
@@ -903,6 +1373,69 @@ function formatNice(ymd: string) {
 
 function formatMoney(v: string | number, currency: string) {
   return `${Number(v).toLocaleString(undefined, { maximumFractionDigits: 2 })} ${currency}`;
+}
+
+function SectionDivider({ label, theme }: { label: string; theme: ThemeTokens }) {
+  return (
+    <div className="mb-4 flex items-center gap-3">
+      <span className="text-xs font-bold uppercase tracking-widest" style={{ color: theme.secondary }}>{label}</span>
+      <div className="h-px flex-1" style={{ backgroundColor: theme.outlineVariant }} />
+    </div>
+  );
+}
+
+function WorkerCard({
+  employee,
+  selected,
+  badge,
+  theme,
+  tenant,
+  onClick,
+}: {
+  employee: WidgetEmployee;
+  selected: boolean;
+  badge?: string;
+  theme: ThemeTokens;
+  tenant: WidgetTenant;
+  onClick: () => void;
+}) {
+  const fullName = employee.displayName ?? `${employee.firstName} ${employee.lastName ?? ""}`.trim();
+  const ch = (fullName || "P").trim().charAt(0).toUpperCase();
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex items-center gap-3 rounded-xl border p-3 text-left transition-all sm:p-4"
+      style={{
+        borderColor: selected ? theme.primary : theme.outlineVariant,
+        boxShadow: selected ? `0 4px 20px -5px ${theme.primary}` : "none",
+        backgroundColor: selected ? theme.surfaceContainerLowest : "transparent",
+      }}
+    >
+      <span
+        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm font-semibold"
+        style={{ backgroundColor: selected ? theme.primary : theme.surfaceContainerHigh, color: selected ? theme.onPrimary : theme.onSurfaceVariant }}
+      >
+        {ch}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="flex flex-wrap items-center gap-1.5">
+          <span className="truncate text-sm font-semibold" style={{ color: theme.primary }}>{fullName}</span>
+          {badge && (
+            <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ backgroundColor: theme.primaryContainer, color: theme.onSurfaceVariant }}>
+              {badge}
+            </span>
+          )}
+        </span>
+        <span className="block truncate text-xs" style={{ color: theme.secondary }}>
+          {employee.yearsExperience ? `${employee.yearsExperience} yrs` : tenant.employeeLabel}
+        </span>
+      </span>
+      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2" style={{ borderColor: selected ? theme.primary : theme.outlineVariant }}>
+        {selected && <span className="block h-2 w-2 rounded-full" style={{ backgroundColor: theme.primary }} />}
+      </span>
+    </button>
+  );
 }
 
 function slugFromPath() {

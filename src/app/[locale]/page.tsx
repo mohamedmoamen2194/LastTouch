@@ -30,7 +30,7 @@ export default async function LandingPage({
     .limit(20)) as unknown as PartnerStore[];
 
   return (
-    <main className="min-h-screen bg-[#f7f9fb] text-[#191c1e]">
+    <main className="flex min-h-screen flex-col bg-[#f7f9fb] text-[#191c1e]">
       {/* Nav */}
       <header className="sticky top-0 z-50 border-b border-[#c5c6cd]/40 bg-[#f7f9fb]/80 backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4 md:px-8">
@@ -52,7 +52,7 @@ export default async function LandingPage({
       </header>
 
       {/* Hero */}
-      <section className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-8 px-4 py-12 md:grid-cols-2 md:gap-12 md:px-8 md:py-24">
+      <section className="mx-auto grid max-w-6xl flex-1 grid-cols-1 items-center gap-8 px-4 py-12 md:grid-cols-2 md:gap-12 md:px-8 md:py-24">
         <div className="flex flex-col items-start gap-5 md:gap-6">
           <span className="rounded-full border border-[#c5c6cd] bg-white px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-[#515f74]">
             {t("hero.badge")}

@@ -6,13 +6,17 @@ import { ValidationAppError } from "@/lib/errors";
 import { resolveTenantForBooking } from "@/modules/booking/domain/catalog";
 import { createBooking } from "@/modules/booking/application/book";
 import { db } from "@/db";
-import { appointmentServices, employees } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { appointmentServices, appointmentEmployees, employees } from "@/db/schema";
+import { eq, inArray } from "drizzle-orm";
+import { clientIp, rateLimit } from "@/lib/rate-limit";
 
 const bodySchema = z.object({
   slug: z.string().min(1),
   serviceIds: z.array(z.string().uuid()).min(1),
   employeeId: z.string().uuid().optional(),
+  employeeAssignments: z
+    .array(z.object({ serviceId: z.string().uuid(), employeeId: z.string().uuid() }))
+    .optional(),
   appointmentDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   startTime: z.string().regex(/^\d{2}:\d{2}$/),
   customer: z.object({
@@ -31,6 +35,7 @@ const bodySchema = z.object({
  */
 export async function POST(req: Request) {
   return withApi(async () => {
+    rateLimit(`book:confirm:${clientIp(req)}`, 10);
     const body = await readJson<unknown>(req);
     const input = bodySchema.safeParse(body);
     if (!input.success) throw new ValidationAppError("Invalid booking request");
@@ -42,6 +47,7 @@ export async function POST(req: Request) {
       slug: tenant.slug,
       serviceIds: input.data.serviceIds,
       employeeId: input.data.employeeId,
+      employeeAssignments: input.data.employeeAssignments,
       appointmentDate: input.data.appointmentDate,
       startTime: input.data.startTime,
       customer: {
@@ -66,6 +72,20 @@ export async function POST(req: Request) {
       .where(eq(appointmentServices.appointmentId, appt.id))
       .orderBy(appointmentServices.sortOrder);
 
+    const assignments = await db
+      .select()
+      .from(appointmentEmployees)
+      .where(eq(appointmentEmployees.appointmentId, appt.id))
+      .orderBy(appointmentEmployees.sortOrder);
+
+    const assignedWorkers = assignments.length
+      ? await db
+          .select({ id: employees.id, displayName: employees.displayName, firstName: employees.firstName, lastName: employees.lastName })
+          .from(employees)
+          .where(inArray(employees.id, [...new Set(assignments.map((a) => a.employeeId))]))
+      : [];
+    const workerById = new Map(assignedWorkers.map((w) => [w.id, w]));
+
     return NextResponse.json(
       ok(
         {
@@ -81,6 +101,14 @@ export async function POST(req: Request) {
             price: String(s.priceSnapshot),
             durationMinutes: s.durationSnapshot,
           })),
+          assignedWorkers: assignments.map((a) => {
+            const w = workerById.get(a.employeeId);
+            return {
+              serviceId: a.serviceId,
+              employeeId: a.employeeId,
+              employeeName: w ? (w.displayName ?? `${w.firstName} ${w.lastName ?? ""}`.trim()) : null,
+            };
+          }),
         },
         "Appointment confirmed"
       ),

@@ -44,6 +44,7 @@ export default async function EmployeesPage({
         salary: e.salary ? String(e.salary) : null,
         bio: e.bio,
         rating: e.rating ? String(e.rating) : null,
+        isGeneral: e.isGeneral,
         active: e.active,
         serviceIds: e.serviceIds,
         workingHours: e.workingHours,

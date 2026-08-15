@@ -5,51 +5,56 @@ import { useTranslations } from "next-intl";
 import { Pencil, Plus, Trash2, X } from "lucide-react";
 import type { ThemeTokens } from "@/config/business-types";
 
-export type ManagedService = {
+export type ManagedPackage = {
   id: string;
   name: string;
   nameAr: string | null;
   description: string | null;
   descriptionAr: string | null;
-  durationMinutes: number;
   price: string;
   active: boolean;
+  serviceIds: string[];
+};
+
+export type ManagedServiceRef = {
+  id: string;
+  name: string;
 };
 
 type Props = {
   slug: string;
   locale: string;
   theme: ThemeTokens;
-  services: ManagedService[];
-  businessName: string;
+  packages: ManagedPackage[];
+  services: ManagedServiceRef[];
 };
 
 type FormState = {
   id?: string;
   name: string;
   nameAr: string;
-  price: string;
-  durationMinutes: string;
   description: string;
   descriptionAr: string;
+  price: string;
   active: boolean;
+  serviceIds: string[];
 };
 
 const EMPTY_FORM: FormState = {
   name: "",
   nameAr: "",
-  price: "",
-  durationMinutes: "30",
   description: "",
   descriptionAr: "",
+  price: "",
   active: true,
+  serviceIds: [],
 };
 
-export function ServicesManager({ slug, locale, theme, services: initial, businessName }: Props) {
-  const t = useTranslations("services");
+export function PackagesManager({ slug, locale, theme, packages: initial, services }: Props) {
+  const t = useTranslations("packages");
   const dt = useTranslations("dashboard");
 
-  const [services, setServices] = useState<ManagedService[]>(initial);
+  const [packages, setPackages] = useState<ManagedPackage[]>(initial);
   const [modal, setModal] = useState<"create" | "edit" | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -59,6 +64,8 @@ export function ServicesManager({ slug, locale, theme, services: initial, busine
 
   const money = (v: string) => Number(v).toLocaleString(locale, { maximumFractionDigits: 2 });
 
+  const serviceName = (id: string) => services.find((s) => s.id === id)?.name ?? id;
+
   const openCreate = () => {
     setForm(EMPTY_FORM);
     setEditingId(null);
@@ -66,24 +73,24 @@ export function ServicesManager({ slug, locale, theme, services: initial, busine
     setModal("create");
   };
 
-  const openEdit = (s: ManagedService) => {
+  const openEdit = (p: ManagedPackage) => {
     setForm({
-      id: s.id,
-      name: s.name,
-      nameAr: s.nameAr ?? "",
-      price: Number(s.price).toString(),
-      durationMinutes: String(s.durationMinutes),
-      description: s.description ?? "",
-      descriptionAr: s.descriptionAr ?? "",
-      active: s.active,
+      id: p.id,
+      name: p.name,
+      nameAr: p.nameAr ?? "",
+      description: p.description ?? "",
+      descriptionAr: p.descriptionAr ?? "",
+      price: Number(p.price).toString(),
+      active: p.active,
+      serviceIds: p.serviceIds,
     });
-    setEditingId(s.id);
+    setEditingId(p.id);
     setError(null);
     setModal("edit");
   };
 
   const call = async (action: "create" | "update" | "delete", payload: Record<string, unknown>) => {
-    const res = await fetch(`/api/admin/services?slug=${encodeURIComponent(slug)}&action=${action}`, {
+    const res = await fetch(`/api/admin/packages?slug=${encodeURIComponent(slug)}&action=${action}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -102,26 +109,26 @@ export function ServicesManager({ slug, locale, theme, services: initial, busine
         id: isEdit ? editingId : undefined,
         name: form.name,
         nameAr: form.nameAr,
-        price: form.price,
-        durationMinutes: Number(form.durationMinutes),
         description: form.description,
         descriptionAr: form.descriptionAr,
+        price: form.price,
         active: form.active,
+        serviceIds: form.serviceIds,
       });
-      const full: ManagedService = {
+      const full: ManagedPackage = {
         id: result.id,
         name: form.name.trim(),
         nameAr: form.nameAr.trim() || null,
-        price: form.price === "" ? "0" : form.price,
-        durationMinutes: Number(form.durationMinutes),
         description: form.description.trim() || null,
         descriptionAr: form.descriptionAr.trim() || null,
+        price: form.price === "" ? "0" : form.price,
         active: result.active,
+        serviceIds: form.serviceIds,
       };
       if (isEdit) {
-        setServices((prev) => prev.map((s) => (s.id === result.id ? { ...s, ...full } : s)));
+        setPackages((prev) => prev.map((p) => (p.id === result.id ? { ...p, ...full } : p)));
       } else {
-        setServices((prev) => [...prev, full]);
+        setPackages((prev) => [...prev, full]);
       }
       setModal(null);
     } catch (e) {
@@ -136,7 +143,7 @@ export function ServicesManager({ slug, locale, theme, services: initial, busine
     setError(null);
     try {
       await call("delete", { id });
-      setServices((prev) => prev.filter((s) => s.id !== id));
+      setPackages((prev) => prev.filter((p) => p.id !== id));
       setPendingDelete(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Request failed");
@@ -145,14 +152,22 @@ export function ServicesManager({ slug, locale, theme, services: initial, busine
     }
   };
 
+  const toggleService = (id: string) =>
+    setForm((f) => ({
+      ...f,
+      serviceIds: f.serviceIds.includes(id)
+        ? f.serviceIds.filter((s) => s !== id)
+        : [...f.serviceIds, id],
+    }));
+
   const inputClass = "w-full rounded-lg border px-3 py-2.5 text-sm outline-none focus:border-[#091426]";
 
   return (
-    <div className="space-y-5 md:space-y-6">
+    <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <h1 className="text-xl font-bold md:text-2xl" style={{ color: theme.primary }}>{dt("topServices")}</h1>
-          <p className="mt-1 text-sm" style={{ color: theme.onSurfaceVariant }}>{businessName}</p>
+          <h2 className="text-lg font-bold md:text-xl" style={{ color: theme.primary }}>{t("title")}</h2>
+          <p className="mt-1 text-sm" style={{ color: theme.onSurfaceVariant }}>{t("subtitle")}</p>
         </div>
         <button
           type="button"
@@ -171,39 +186,75 @@ export function ServicesManager({ slug, locale, theme, services: initial, busine
         </div>
       )}
 
-      {services.length === 0 ? (
-        <div className="rounded-xl border border-dashed p-8 text-center text-sm md:p-10" style={{ borderColor: theme.outlineVariant, color: theme.onSurfaceVariant }}>
-          {dt("noData")}
+      {packages.length === 0 ? (
+        <div
+          className="flex min-h-[180px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed p-8 text-center md:min-h-[220px] md:p-10"
+          style={{ borderColor: theme.outlineVariant, backgroundColor: theme.surfaceContainerLowest }}
+        >
+          <span
+            className="flex h-12 w-12 items-center justify-center rounded-full text-2xl"
+            style={{ backgroundColor: theme.surfaceContainerHigh, color: theme.primary }}
+          >
+            +
+          </span>
+          <div>
+            <p className="text-sm font-semibold" style={{ color: theme.primary }}>{t("emptyTitle")}</p>
+            <p className="mt-1 text-sm" style={{ color: theme.onSurfaceVariant }}>{t("emptyBody")}</p>
+          </div>
+          <button
+            type="button"
+            onClick={openCreate}
+            className="mt-1 inline-flex items-center gap-1.5 rounded-full px-5 py-2.5 text-sm font-semibold"
+            style={{ backgroundColor: theme.primary, color: theme.onPrimary }}
+          >
+            <Plus className="h-4 w-4" />
+            {t("add")}
+          </button>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:gap-4 lg:grid-cols-3">
-          {services.map((s) => (
+          {packages.map((p) => (
             <div
-              key={s.id}
+              key={p.id}
               className="flex h-full flex-col rounded-xl border p-4 md:p-5"
               style={{
                 borderColor: theme.outlineVariant,
                 backgroundColor: theme.surfaceContainerLowest,
-                opacity: s.active ? 1 : 0.6,
+                opacity: p.active ? 1 : 0.6,
               }}
             >
               <div className="flex items-start justify-between gap-3">
-                <h3 className="min-w-0 truncate text-base font-semibold md:text-lg" style={{ color: theme.primary }}>{s.name}</h3>
+                <h3 className="min-w-0 truncate text-base font-semibold md:text-lg" style={{ color: theme.primary }}>{p.name}</h3>
                 <span className="shrink-0 rounded-full px-2.5 py-1 text-xs font-medium" style={{ backgroundColor: theme.surfaceContainerHigh, color: theme.onSurfaceVariant }}>
-                  {s.active ? t("active") : t("inactive")}
+                  {p.active ? t("active") : t("inactive")}
                 </span>
               </div>
-              {s.description && (
-                <p className="mt-2 text-sm leading-relaxed" style={{ color: theme.onSurfaceVariant }}>{s.description}</p>
+              {p.description && (
+                <p className="mt-2 text-sm leading-relaxed" style={{ color: theme.onSurfaceVariant }}>{p.description}</p>
+              )}
+              {p.serviceIds.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {p.serviceIds.map((sid) => (
+                    <span
+                      key={sid}
+                      className="rounded-full px-2.5 py-1 text-xs font-medium"
+                      style={{ backgroundColor: theme.surfaceContainerHigh, color: theme.onSurfaceVariant }}
+                    >
+                      {serviceName(sid)}
+                    </span>
+                  ))}
+                </div>
               )}
               <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t pt-3 text-sm md:mt-auto" style={{ borderColor: theme.outlineVariant }}>
-                <span style={{ color: theme.secondary }}>{s.durationMinutes} min</span>
-                <span className="font-semibold" style={{ color: theme.primary }}>{money(s.price)}</span>
+                <span className="text-xs" style={{ color: theme.secondary }}>
+                  {p.serviceIds.length} {t("servicesCount")}
+                </span>
+                <span className="font-semibold" style={{ color: theme.primary }}>{money(p.price)}</span>
               </div>
               <div className="mt-3 flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => openEdit(s)}
+                  onClick={() => openEdit(p)}
                   className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold"
                   style={{ borderColor: theme.outlineVariant, color: theme.primary }}
                 >
@@ -212,7 +263,7 @@ export function ServicesManager({ slug, locale, theme, services: initial, busine
                 </button>
                 <button
                   type="button"
-                  onClick={() => setPendingDelete(s.id)}
+                  onClick={() => setPendingDelete(p.id)}
                   className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold"
                   style={{ borderColor: theme.outlineVariant, color: "#ba1a1a" }}
                 >
@@ -234,7 +285,7 @@ export function ServicesManager({ slug, locale, theme, services: initial, busine
           >
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-lg font-semibold" style={{ color: theme.primary }}>
-                {modal === "create" ? t("add") : t("editTitle")}
+                {modal === "create" ? t("addTitle") : t("editTitle")}
               </h2>
               <button type="button" onClick={() => !busy && setModal(null)} className="rounded-md p-1" style={{ color: theme.onSurfaceVariant }}>
                 <X className="h-5 w-5" />
@@ -265,33 +316,6 @@ export function ServicesManager({ slug, locale, theme, services: initial, busine
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="mb-1 block text-xs font-medium" style={{ color: theme.onSurfaceVariant }}>{t("price")}</label>
-                  <input
-                    value={form.price}
-                    onChange={(e) => setForm({ ...form, price: e.target.value })}
-                    type="number"
-                    inputMode="decimal"
-                    min="0"
-                    className={inputClass}
-                    style={{ borderColor: theme.outlineVariant, backgroundColor: theme.surfaceContainerLowest, color: theme.onSurfaceVariant }}
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-medium" style={{ color: theme.onSurfaceVariant }}>{t("durationMinutes")}</label>
-                  <input
-                    value={form.durationMinutes}
-                    onChange={(e) => setForm({ ...form, durationMinutes: e.target.value })}
-                    type="number"
-                    inputMode="numeric"
-                    min="5"
-                    step="5"
-                    className={inputClass}
-                    style={{ borderColor: theme.outlineVariant, backgroundColor: theme.surfaceContainerLowest, color: theme.onSurfaceVariant }}
-                  />
-                </div>
-              </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
                   <label className="mb-1 block text-xs font-medium" style={{ color: theme.onSurfaceVariant }}>{t("description")}</label>
@@ -317,6 +341,50 @@ export function ServicesManager({ slug, locale, theme, services: initial, busine
                   />
                 </div>
               </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium" style={{ color: theme.onSurfaceVariant }}>{t("price")}</label>
+                <input
+                  value={form.price}
+                  onChange={(e) => setForm({ ...form, price: e.target.value })}
+                  type="number"
+                  inputMode="decimal"
+                  min="0"
+                  className={inputClass}
+                  style={{ borderColor: theme.outlineVariant, backgroundColor: theme.surfaceContainerLowest, color: theme.onSurfaceVariant }}
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-xs font-medium" style={{ color: theme.onSurfaceVariant }}>{t("services")}</label>
+                {services.length === 0 ? (
+                  <p className="rounded-lg border border-dashed px-4 py-4 text-center text-sm" style={{ borderColor: theme.outlineVariant, color: theme.onSurfaceVariant }}>
+                    {t("noServicesHint")}
+                  </p>
+                ) : (
+                  <div className="grid max-h-48 grid-cols-1 gap-2 overflow-y-auto rounded-lg border p-3 sm:grid-cols-2" style={{ borderColor: theme.outlineVariant }}>
+                    {services.map((s) => {
+                      const checked = form.serviceIds.includes(s.id);
+                      return (
+                        <label
+                          key={s.id}
+                          className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-sm"
+                          style={{ backgroundColor: checked ? theme.surfaceContainerHigh : "transparent", color: theme.onSurfaceVariant }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => toggleService(s.id)}
+                            className="h-4 w-4 shrink-0"
+                            style={{ accentColor: theme.primary }}
+                          />
+                          <span className="truncate">{s.name}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
               <label className="flex items-center gap-2 text-sm" style={{ color: theme.onSurfaceVariant }}>
                 <input
                   type="checkbox"
@@ -327,6 +395,7 @@ export function ServicesManager({ slug, locale, theme, services: initial, busine
                 />
                 {t("active")}
               </label>
+
               <div className="flex justify-end gap-2 pt-2">
                 <button
                   type="button"
@@ -340,7 +409,7 @@ export function ServicesManager({ slug, locale, theme, services: initial, busine
                 <button
                   type="button"
                   onClick={save}
-                  disabled={busy || !form.name.trim()}
+                  disabled={busy || !form.name.trim() || form.serviceIds.length === 0}
                   className="rounded-full px-6 py-2.5 text-sm font-semibold disabled:opacity-40"
                   style={{ backgroundColor: theme.primary, color: theme.onPrimary }}
                 >
