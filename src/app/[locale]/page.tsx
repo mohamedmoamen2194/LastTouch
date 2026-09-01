@@ -52,7 +52,7 @@ export default async function LandingPage({
       </header>
 
       {/* Hero */}
-      <section className="mx-auto grid max-w-6xl flex-1 grid-cols-1 items-center gap-8 px-4 py-12 md:grid-cols-2 md:gap-12 md:px-8 md:py-24">
+      <section className="mx-auto grid w-full max-w-6xl flex-1 grid-cols-1 items-center gap-8 px-4 py-12 md:grid-cols-2 md:gap-12 md:px-8 md:py-24">
         <div className="flex flex-col items-start gap-5 md:gap-6">
           <span className="rounded-full border border-[#c5c6cd] bg-white px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-[#515f74]">
             {t("hero.badge")}
@@ -93,7 +93,7 @@ export default async function LandingPage({
       </section>
 
       {/* Businesses supported */}
-      <section id="businesses" className="mx-auto max-w-6xl px-4 py-12 md:px-8 md:py-16">
+      <section id="businesses" className="mx-auto w-full max-w-6xl px-4 py-12 md:px-8 md:py-16">
         <p className="mb-6 text-center text-xs font-semibold uppercase tracking-widest text-[#515f74] md:mb-8">{t("businesses.label")}</p>
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
           {businessTypes.map((b) => (
@@ -109,7 +109,7 @@ export default async function LandingPage({
       </section>
 
       {/* Features */}
-      <section id="features" className="mx-auto max-w-6xl px-4 py-12 md:px-8 md:py-16">
+      <section id="features" className="mx-auto w-full max-w-6xl px-4 py-12 md:px-8 md:py-16">
         <div className="mb-8 max-w-2xl md:mb-10">
           <h2 className="text-2xl font-bold text-[#091426] md:text-4xl">{t("features.title")}</h2>
           <p className="mt-3 text-base text-[#45474c] md:text-lg">{t("features.subtitle")}</p>
@@ -131,7 +131,7 @@ export default async function LandingPage({
       <PricingSection />
 
       {/* CTA */}
-      <section className="mx-auto max-w-6xl px-4 pb-16 md:px-8 md:pb-20">
+      <section className="mx-auto w-full max-w-6xl px-4 pb-16 md:px-8 md:pb-20">
         <div className="flex flex-col items-center gap-5 rounded-2xl bg-[#091426] px-6 py-12 text-center md:gap-6 md:px-8 md:py-14">
           <h2 className="max-w-xl text-2xl font-bold text-white md:text-4xl">{t("cta.title")}</h2>
           <Link href="/auth/sign-up" className="rounded-full bg-white px-8 py-3.5 text-base font-semibold text-[#091426] transition-colors hover:bg-[#eff1f3]">

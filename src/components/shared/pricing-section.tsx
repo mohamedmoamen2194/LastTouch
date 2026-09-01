@@ -52,7 +52,7 @@ export function PricingSection() {
   };
 
   return (
-    <section id="pricing" className="mx-auto max-w-6xl px-4 py-12 md:px-8 md:py-16">
+    <section id="pricing" className="mx-auto w-full max-w-6xl px-4 py-12 md:px-8 md:py-16">
       <div className="mb-8 max-w-2xl md:mb-10">
         <h2 className="text-2xl font-bold text-[#091426] md:text-4xl">{t("title")}</h2>
         <p className="mt-3 text-base text-[#45474c] md:text-lg">{t("subtitle")}</p>
