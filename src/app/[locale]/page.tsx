@@ -33,17 +33,17 @@ export default async function LandingPage({
     <main className="flex min-h-screen flex-col bg-[#f7f9fb] text-[#191c1e]">
       {/* Nav */}
       <header className="sticky top-0 z-50 border-b border-[#c5c6cd]/40 bg-[#f7f9fb]/80 backdrop-blur-md">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4 md:px-8">
-          <Logo />
+        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-2 px-3 sm:gap-3 sm:px-4 md:h-16 md:px-8">
+          <Logo className="h-4 w-auto shrink-0 sm:h-5 md:h-6" />
           <nav className="hidden items-center gap-8 md:flex">
             <a href="#features" className="text-sm font-medium text-[#45474c] hover:text-[#091426]">{t("nav.features")}</a>
             <a href="#pricing" className="text-sm font-medium text-[#45474c] hover:text-[#091426]">{t("nav.pricing")}</a>
           </nav>
-          <div className="flex items-center gap-3">
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
             <LangSwitcher />
             <Link
               href="/auth/sign-up"
-              className="rounded-full bg-[#091426] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#1e293b] md:px-6 md:py-2.5"
+              className="whitespace-nowrap rounded-full bg-[#091426] px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-[#1e293b] sm:px-5 sm:py-2 sm:text-sm md:px-6 md:py-2.5"
             >
               {t("nav.getStarted")}
             </Link>

@@ -26,7 +26,7 @@ export function LangSwitcher({ theme }: { theme?: ThemeTokens }) {
     <button
       type="button"
       onClick={() => switchTo(target)}
-      className="rounded-full border border-[#c5c6cd]/60 px-3 py-1 font-semibold uppercase tracking-wide transition-colors"
+      className="whitespace-nowrap rounded-full border border-[#c5c6cd]/60 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide transition-colors sm:px-3 sm:text-sm"
       style={{
         backgroundColor: theme?.primary ?? "#091426",
         color: theme?.onPrimary ?? "#ffffff",

@@ -70,7 +70,7 @@ export function PricingSection() {
                 key={b.key}
                 type="button"
                 onClick={() => setBilling(b)}
-                className="shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold transition-colors"
+                className="shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-semibold transition-colors sm:px-4 sm:py-2 sm:text-sm"
                 style={{
                   backgroundColor: active ? "#091426" : "transparent",
                   color: active ? "#ffffff" : "#45474c",
