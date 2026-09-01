@@ -59,52 +59,54 @@ export function PricingSection() {
       </div>
 
       {/* Billing toggle */}
-      <div className="mb-8 flex flex-col items-start gap-3 md:items-center">
+      <div className="mb-8 flex flex-col items-center gap-2 sm:gap-3">
         <span className="text-sm font-semibold text-[#45474c]">{t("billingLabel")}</span>
-        <div className="flex w-full max-w-full gap-2 overflow-x-auto rounded-full border border-[#c5c6cd]/60 bg-white p-1 md:w-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {BILLING.map((b) => {
-            const active = billing.key === b.key;
-            return (
-              <button
-                key={b.key}
-                type="button"
-                onClick={() => setBilling(b)}
-                className="shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-semibold transition-colors sm:px-4 sm:py-2 sm:text-sm"
-                style={{
-                  backgroundColor: active ? "#091426" : "transparent",
-                  color: active ? "#ffffff" : "#45474c",
-                }}
-              >
-                {t(b.key)}
-                {b.off > 0 && (
-                  <span className={`ms-1 text-xs ${active ? "text-emerald-300" : "text-emerald-600"}`}>
-                    −{Math.round(b.off * 100)}%
-                  </span>
-                )}
-              </button>
-            );
-          })}
+        <div className="flex w-full justify-center">
+          <div className="flex w-fit max-w-full items-center gap-2 overflow-x-auto rounded-full border border-[#c5c6cd]/60 bg-white p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {BILLING.map((b) => {
+              const active = billing.key === b.key;
+              return (
+                <button
+                  key={b.key}
+                  type="button"
+                  onClick={() => setBilling(b)}
+                  className="shrink-0 whitespace-nowrap rounded-full px-2.5 py-1.5 text-xs font-semibold transition-colors sm:px-4 sm:py-2 sm:text-sm"
+                  style={{
+                    backgroundColor: active ? "#091426" : "transparent",
+                    color: active ? "#ffffff" : "#45474c",
+                  }}
+                >
+                  {t(b.key)}
+                  {b.off > 0 && (
+                    <span className={`ms-1 text-xs ${active ? "text-emerald-300" : "text-emerald-600"}`}>
+                      −{Math.round(b.off * 100)}%
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
       {/* Carousel */}
-      <div className="relative px-12 md:px-0">
+      <div className="relative px-10 md:px-0">
         {/* Prev / Next arrows (mobile only) */}
         <button
           type="button"
           aria-label="Previous"
           onClick={() => scrollCarousel(-1)}
-          className="absolute left-2 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-[#c5c6cd]/60 bg-white text-[#091426] shadow-md transition-colors hover:bg-[#f2f4f6] md:hidden"
+          className="absolute left-1 top-1/2 z-10 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-[#c5c6cd]/60 bg-white text-[#091426] shadow-md transition-colors hover:bg-[#f2f4f6] md:hidden"
         >
-          <ChevronLeft className="h-5 w-5" />
+          <ChevronLeft className="h-4 w-4" />
         </button>
         <button
           type="button"
           aria-label="Next"
           onClick={() => scrollCarousel(1)}
-          className="absolute right-2 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-[#c5c6cd]/60 bg-white text-[#091426] shadow-md transition-colors hover:bg-[#f2f4f6] md:hidden"
+          className="absolute right-1 top-1/2 z-10 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-[#c5c6cd]/60 bg-white text-[#091426] shadow-md transition-colors hover:bg-[#f2f4f6] md:hidden"
         >
-          <ChevronRight className="h-5 w-5" />
+          <ChevronRight className="h-4 w-4" />
         </button>
 
         <div
@@ -123,7 +125,7 @@ export function PricingSection() {
               <div
                 key={plan.key}
                 data-pricing-card
-                className={`relative flex min-h-[25rem] w-[78%] max-w-[19rem] shrink-0 snap-center flex-col rounded-2xl border p-4 md:min-h-0 md:w-auto md:max-w-none md:snap-none md:min-w-0 md:p-6 ${
+                className={`relative flex min-h-[25rem] w-[88%] max-w-[20rem] shrink-0 snap-center flex-col rounded-2xl border p-4 md:min-h-0 md:w-auto md:max-w-none md:snap-none md:min-w-0 md:p-6 ${
                   featured
                     ? "border-[#091426] bg-[#091426] text-white shadow-lg"
                     : "border-[#c5c6cd]/60 bg-white"
