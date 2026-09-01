@@ -26,7 +26,6 @@ const PLANS = [
 
 const BILLING = [
   { key: "billing1m", months: 1, off: 0 },
-  { key: "billing3m", months: 3, off: 0.1 },
   { key: "billing6m", months: 6, off: 0.2 },
   { key: "billing1y", months: 12, off: 0.4 },
 ] as const;
@@ -89,7 +88,7 @@ export function PricingSection() {
       </div>
 
       {/* Carousel */}
-      <div className="relative">
+      <div className="relative px-12 md:px-0">
         {/* Prev / Next arrows (mobile only) */}
         <button
           type="button"
@@ -124,7 +123,7 @@ export function PricingSection() {
               <div
                 key={plan.key}
                 data-pricing-card
-                className={`relative flex w-3/4 max-w-[20rem] shrink-0 snap-center flex-col rounded-2xl border p-5 md:w-auto md:max-w-none md:snap-none md:min-w-0 md:p-6 ${
+                className={`relative flex min-h-[25rem] w-[78%] max-w-[19rem] shrink-0 snap-center flex-col rounded-2xl border p-4 md:min-h-0 md:w-auto md:max-w-none md:snap-none md:min-w-0 md:p-6 ${
                   featured
                     ? "border-[#091426] bg-[#091426] text-white shadow-lg"
                     : "border-[#c5c6cd]/60 bg-white"
@@ -140,7 +139,7 @@ export function PricingSection() {
                 </h3>
 
                 {/* Price */}
-                <div className="mt-3 flex items-baseline gap-2">
+                <div className="mt-3 flex flex-wrap items-baseline gap-x-2 gap-y-1 md:flex-nowrap">
                   {customPrice ? (
                     <span className={`text-2xl font-bold md:text-4xl ${featured ? "text-white" : "text-[#091426]"}`}>
                       {t(`plans.${plan.key}.priceLabel`)}
@@ -180,7 +179,7 @@ export function PricingSection() {
                 <p className={`mt-2 text-xs leading-relaxed md:text-sm ${featured ? "text-white/80" : "text-[#45474c]"}`}>
                   {t(`plans.${plan.key}.description`)}
                 </p>
-                <ul className="mt-4 flex flex-col gap-2">
+                <ul className="mt-4 flex flex-1 flex-col gap-2">
                   {plan.features.map((f) => (
                     <li key={f} className="flex items-start gap-2 text-xs md:text-sm">
                       <Check
@@ -195,7 +194,7 @@ export function PricingSection() {
                 </ul>
                 <Link
                   href="/auth/sign-up"
-                  className={`mt-5 rounded-full px-5 py-2.5 text-center text-xs font-semibold md:mt-6 md:px-6 md:py-3 md:text-sm ${
+                  className={`mt-6 rounded-full px-5 py-2.5 text-center text-xs font-semibold md:px-6 md:py-3 md:text-sm ${
                     featured
                       ? "bg-white text-[#091426] hover:bg-[#eff1f3]"
                       : "bg-[#091426] text-white hover:bg-[#1e293b]"
