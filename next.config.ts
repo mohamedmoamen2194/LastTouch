@@ -11,7 +11,7 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       { protocol: "https", hostname: "images.unsplash.com" },
       { protocol: "https", hostname: "img.clerk.com" },
-      { protocol: "https", hostname: "pub-*.r2.dev" },
+      { protocol: "https", hostname: "*.r2.dev" },
       { protocol: "https", hostname: "*.r2.cloudflarestorage.com" },
       { protocol: "https", hostname: "lh3.googleusercontent.com" },
     ],
@@ -38,26 +38,30 @@ const nextConfig: NextConfig = {
             value: "max-age=63072000; includeSubDomains; preload",
           },
           // CSP: allow same-origin + the external services the app relies on.
-          // - scripts: self + Clerk (accounts.dev). 'unsafe-inline'/'unsafe-eval'
-            //   are required by Clerk + Next dev in some paths; revisit with a
-            //   strict nonce-based CSP before production hardening.
+          // Clerk production uses a custom Frontend API proxy
+          // (e.g. https://clerk.last-touch.vercel.app) — NOT *.clerk.* — so
+          // it must be allowlisted explicitly or clerk-js is blocked and the
+          // sign-in/up forms render empty ("Create account" with no fields).
+          // 'unsafe-inline'/'unsafe-eval' are required by Clerk + Next in
+          // some paths; revisit with a strict nonce-based CSP before final
+          // production hardening.
           {
             key: "Content-Security-Policy",
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.clerk.accounts.dev https://*.clerk.com https://*.clerk.dev https://challenges.cloudflare.com",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.clerk.accounts.dev https://*.clerk.com https://*.clerk.dev https://clerk.last-touch.vercel.app https://*.last-touch.vercel.app https://challenges.cloudflare.com",
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com",
               "font-src 'self' https://fonts.gstatic.com data:",
-              "img-src 'self' blob: data: https://images.unsplash.com https://img.clerk.com https://*.clerk.com https://*.clerk.accounts.dev https://*.r2.dev https://pub-*.r2.dev https://*.r2.cloudflarestorage.com https://lh3.googleusercontent.com https://*.public.blob.vercel-storage.com",
-              "connect-src 'self' https://*.clerk.accounts.dev https://*.clerk.com https://*.clerk.dev https://accounts.google.com",
-              "frame-src 'self' https://*.clerk.accounts.dev https://*.clerk.com https://*.clerk.dev https://accounts.google.com https://challenges.cloudflare.com",
+              "img-src 'self' blob: data: https://images.unsplash.com https://img.clerk.com https://*.clerk.com https://*.clerk.accounts.dev https://clerk.last-touch.vercel.app https://*.r2.dev https://*.r2.cloudflarestorage.com https://lh3.googleusercontent.com https://*.public.blob.vercel-storage.com",
+              "connect-src 'self' https://*.clerk.accounts.dev https://*.clerk.com https://*.clerk.dev https://clerk.last-touch.vercel.app https://*.last-touch.vercel.app https://accounts.google.com",
+              "frame-src 'self' https://*.clerk.accounts.dev https://*.clerk.com https://*.clerk.dev https://clerk.last-touch.vercel.app https://accounts.google.com https://challenges.cloudflare.com",
               "worker-src 'self' blob:",
-              "child-src 'self' blob: https://*.clerk.accounts.dev https://*.clerk.com https://accounts.google.com https://challenges.cloudflare.com",
+              "child-src 'self' blob: https://*.clerk.accounts.dev https://*.clerk.com https://clerk.last-touch.vercel.app https://accounts.google.com https://challenges.cloudflare.com",
               "object-src 'none'",
               "base-uri 'self'",
               // form-action must allow Clerk + Google or the OAuth POST is
               // blocked and sign-up silently loops back to sign-in.
-              "form-action 'self' https://*.clerk.accounts.dev https://*.clerk.com https://*.clerk.dev https://accounts.google.com",
+              "form-action 'self' https://*.clerk.accounts.dev https://*.clerk.com https://*.clerk.dev https://clerk.last-touch.vercel.app https://accounts.google.com",
               "frame-ancestors 'none'",
               "upgrade-insecure-requests",
             ].join("; "),
