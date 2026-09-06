@@ -5,6 +5,8 @@ import { getThemeTokens } from "@/config/business-types";
 import { listAppointments } from "@/modules/appointments/application/appointments";
 import { formatMoney } from "@/lib/utils";
 import { AppointmentList } from "@/components/dashboard/appointment-list";
+import { LockedPage } from "@/components/dashboard/locked-page";
+import { getSubscriptionState } from "@/lib/subscriptions";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +26,10 @@ export default async function AppointmentsPage({
     notFound();
   }
   const theme = getThemeTokens(ctx.theme);
+  const sub = await getSubscriptionState(ctx.tenantId, { role: ctx.role });
+  if (!sub.hasAccess) {
+    return <LockedPage page="appointments" slug={slug} theme={theme} />;
+  }
 
   const today = new Date();
   const iso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;

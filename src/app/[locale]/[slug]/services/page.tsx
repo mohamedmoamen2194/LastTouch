@@ -6,6 +6,8 @@ import { listTenantServicesForAdmin } from "@/modules/booking/domain/catalog";
 import { listTenantPackages } from "@/modules/booking/application/packages";
 import { ServicesManager } from "@/components/dashboard/services-manager";
 import { PackagesManager } from "@/components/dashboard/packages-manager";
+import { LockedPage } from "@/components/dashboard/locked-page";
+import { getSubscriptionState } from "@/lib/subscriptions";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +27,11 @@ export default async function ServicesPage({
   }
 
   const theme = getThemeTokens(ctx.theme);
+  const sub = await getSubscriptionState(ctx.tenantId, { role: ctx.role });
+  if (!sub.hasAccess) {
+    return <LockedPage page="services" slug={slug} theme={theme} />;
+  }
+
   const [services, packages] = await Promise.all([
     listTenantServicesForAdmin(ctx.tenantId),
     listTenantPackages(ctx),

@@ -276,6 +276,8 @@
     "planEnterprise": "Enterprise",
     "logo": "Logo",
     "logoHint": "Shown on your public booking page",
+    "billingPeriod": "Billing period",
+    "managePlan": "Manage plan",
     "upload": "Upload",
     "uploading": "Uploading…",
     "remove": "Remove",
@@ -383,6 +385,39 @@
         }
       }
     }
+  },
+  "subscription": {
+    "title": "Choose your plan",
+    "subtitle": "Pick the plan that fits how you run your business. You can upgrade anytime.",
+    "currentPlan": "Current plan",
+    "activate": "Choose",
+    "activating": "Activating…",
+    "activated": "Plan activated",
+    "askOwner": "Only the store owner can change the plan. Ask your owner to pick one.",
+    "period": "Billing period",
+    "period1m": "1 month",
+    "period6m": "6 months",
+    "period1y": "1 year",
+    "daysLeft": "{days, plural, =0 {Last day} one {# day left} other {# days left}}",
+    "endsOn": "Ends on {date}",
+    "reminderTitle": "Your subscription is ending soon",
+    "reminderBody": "{days, plural, =0 {It ends today.} one {Only # day left.} other {Only # days left.}} Renew now to keep every feature running without interruption.",
+    "reminderCta": "View plans",
+    "reminderLater": "Later",
+    "expiredTitle": "Your subscription has ended",
+    "expiredBody": "We loved having you with us — and we'd miss you if you left. Resubscribe anytime to unlock your dashboard again; everything you built is still here waiting for you.",
+    "unsubTitle": "You're on the free plan",
+    "unsubBody": "Subscribe to unlock appointments, customers, services, team management and analytics. Your store stays exactly as you left it.",
+    "resubscribe": "See plans",
+    "lockedCta": "View subscription plans",
+    "lockedAppointmentsTitle": "Appointments",
+    "lockedAppointmentsBody": "See today's bookings, confirm arrivals, track no-shows and manage your calendar — once you're subscribed.",
+    "lockedCustomersTitle": "Customers",
+    "lockedCustomersBody": "Build client profiles with visit history, loyalty points and preferences — once you're subscribed.",
+    "lockedServicesTitle": "Services & packages",
+    "lockedServicesBody": "Create services, bundle packages and set prices for your booking page — once you're subscribed.",
+    "lockedEmployeesTitle": "Team",
+    "lockedEmployeesBody": "Add specialists, set working hours and assign services — once you're subscribed."
   },
   "footer": {
     "poweredBy": "Powered by LastTouch"

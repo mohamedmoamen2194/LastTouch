@@ -4,6 +4,8 @@ import { getDashboardAccess } from "@/lib/tenant/dashboard";
 import { getThemeTokens } from "@/config/business-types";
 import { listTenantServicesForAdmin, listTenantTeam } from "@/modules/booking/domain/catalog";
 import { EmployeesManager } from "@/components/dashboard/employees-manager";
+import { LockedPage } from "@/components/dashboard/locked-page";
+import { getSubscriptionState } from "@/lib/subscriptions";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +25,11 @@ export default async function EmployeesPage({
   }
 
   const theme = getThemeTokens(ctx.theme);
+  const sub = await getSubscriptionState(ctx.tenantId, { role: ctx.role });
+  if (!sub.hasAccess) {
+    return <LockedPage page="employees" slug={slug} theme={theme} />;
+  }
+
   const [team, services] = await Promise.all([
     listTenantTeam(ctx.tenantId),
     listTenantServicesForAdmin(ctx.tenantId),

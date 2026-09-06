@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { getDashboardAccess } from "@/lib/tenant/dashboard";
 import { getThemeTokens } from "@/config/business-types";
 import { listCustomers } from "@/modules/crm/application/customers";
+import { LockedPage } from "@/components/dashboard/locked-page";
+import { getSubscriptionState } from "@/lib/subscriptions";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +24,10 @@ export default async function CustomersPage({
     notFound();
   }
   const theme = getThemeTokens(ctx.theme);
+  const sub = await getSubscriptionState(ctx.tenantId, { role: ctx.role });
+  if (!sub.hasAccess) {
+    return <LockedPage page="customers" slug={slug} theme={theme} />;
+  }
 
   const rows = await listCustomers(ctx);
 

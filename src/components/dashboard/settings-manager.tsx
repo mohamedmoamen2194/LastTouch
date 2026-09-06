@@ -16,6 +16,9 @@ type Props = {
   planStatus: string | null;
   renewalDate: string | null;
   expirationDate: string | null;
+  billingPeriod: string | null;
+  daysLeft: number | null;
+  manageHref: string;
   logoUrl: string | null;
   shopImages: string[];
 };
@@ -53,10 +56,14 @@ export function SettingsManager({
   planStatus,
   renewalDate,
   expirationDate,
+  billingPeriod,
+  daysLeft,
+  manageHref,
   logoUrl,
   shopImages,
 }: Props) {
   const t = useTranslations("settings");
+  const ts = useTranslations("subscription");
   const [logo, setLogo] = useState<string | null>(logoUrl);
   const [images, setImages] = useState<string[]>(shopImages);
   const [busy, setBusy] = useState(false);
@@ -191,6 +198,13 @@ export function SettingsManager({
           </div>
           <dl className="mt-4 space-y-2.5 border-t pt-4 text-sm" style={{ borderColor: theme.outlineVariant }}>
             <div className="flex flex-col gap-0.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+              <dt className="text-xs font-medium uppercase tracking-wide" style={{ color: theme.onSurfaceVariant }}>{t("billingPeriod")}</dt>
+              <dd className="break-words" style={{ color: theme.onSurfaceVariant }}>
+                {billingPeriod === "monthly" ? ts("period1m") : billingPeriod === "semiannual" ? ts("period6m") : billingPeriod === "annual" ? ts("period1y") : t("notSet")}
+                {daysLeft !== null && daysLeft >= 0 ? ` · ${ts("daysLeft", { days: daysLeft })}` : ""}
+              </dd>
+            </div>
+            <div className="flex flex-col gap-0.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
               <dt className="text-xs font-medium uppercase tracking-wide" style={{ color: theme.onSurfaceVariant }}>{t("renewsOn")}</dt>
               <dd className="break-words" style={{ color: theme.onSurfaceVariant }}>
                 {renewalDate ? formatDate(locale, renewalDate) : t("notSet")}
@@ -203,6 +217,13 @@ export function SettingsManager({
               </dd>
             </div>
           </dl>
+          <a
+            href={manageHref}
+            className="mt-4 inline-block w-full rounded-full px-4 py-2.5 text-center text-sm font-semibold sm:w-auto"
+            style={{ backgroundColor: theme.primary, color: theme.onPrimary }}
+          >
+            {t("managePlan")}
+          </a>
         </section>
 
         {/* Logo */}

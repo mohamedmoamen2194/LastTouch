@@ -6,6 +6,7 @@ import { subscriptions, tenants } from "@/db/schema";
 import { getDashboardAccess } from "@/lib/tenant/dashboard";
 import { getBusinessTypeConfig, getThemeTokens } from "@/config/business-types";
 import { SettingsManager } from "@/components/dashboard/settings-manager";
+import { getSubscriptionState } from "@/lib/subscriptions";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +33,7 @@ export default async function SettingsPage({
     .from(subscriptions)
     .where(eq(subscriptions.tenantId, ctx.tenantId))
     .limit(1);
+  const subState = await getSubscriptionState(ctx.tenantId, { role: ctx.role });
 
   return (
     <SettingsManager
@@ -45,6 +47,9 @@ export default async function SettingsPage({
       planStatus={subscription?.status ?? "active"}
       renewalDate={subscription?.renewalDate ? subscription.renewalDate.toISOString() : null}
       expirationDate={subscription?.expirationDate ? subscription.expirationDate.toISOString() : null}
+      billingPeriod={subscription?.billingPeriod ?? null}
+      daysLeft={subState.daysLeft}
+      manageHref={`/${locale}/${slug}/dashboard#subscription`}
       logoUrl={tenant?.logoUrl ?? null}
       shopImages={tenant?.shopImages ?? []}
     />

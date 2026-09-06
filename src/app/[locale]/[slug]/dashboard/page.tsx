@@ -5,6 +5,8 @@ import { getThemeTokens } from "@/config/business-types";
 import { getDashboardStats } from "@/modules/analytics/application/dashboard";
 import { getBookingFlow } from "@/modules/analytics/application/flow";
 import { BookingFlowChart } from "@/components/dashboard/booking-flow-chart";
+import { SubscriptionPlans } from "@/components/dashboard/subscription-plans";
+import { getSubscriptionState } from "@/lib/subscriptions";
 import { formatMoney } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -17,6 +19,7 @@ export default async function DashboardPage({
   const { locale, slug } = await params;
   setRequestLocale(locale);
   const t = await getTranslations("dashboard");
+  const ts = await getTranslations("subscription");
 
   let ctx;
   try {
@@ -26,6 +29,40 @@ export default async function DashboardPage({
   }
 
   const theme = getThemeTokens(ctx.theme);
+  const sub = await getSubscriptionState(ctx.tenantId, { role: ctx.role });
+
+  // No active subscription (or expired) → plans + warm message instead of data.
+  if (!sub.hasAccess) {
+    const expired = sub.banner === "expired";
+    return (
+      <div className="space-y-6 md:space-y-8">
+        <div>
+          <h1 className="text-xl font-bold md:text-2xl" style={{ color: theme.primary }}>{t("welcome")}</h1>
+          <p className="mt-1 text-sm" style={{ color: theme.onSurfaceVariant }}>{ctx.businessName}</p>
+        </div>
+
+        <div
+          className="rounded-2xl border px-5 py-6 text-center sm:px-8 md:py-8"
+          style={{ borderColor: theme.outlineVariant, backgroundColor: theme.surfaceContainerLowest }}
+        >
+          <p className="text-base font-bold sm:text-lg" style={{ color: theme.primary }}>
+            {expired ? ts("expiredTitle") : ts("unsubTitle")}
+          </p>
+          <p className="mx-auto mt-2 max-w-xl text-sm leading-relaxed sm:text-base" style={{ color: theme.onSurfaceVariant }}>
+            {expired ? ts("expiredBody") : ts("unsubBody")}
+          </p>
+        </div>
+
+        <SubscriptionPlans
+          slug={slug}
+          theme={theme}
+          currentPlan={sub.plan}
+          isOwner={sub.isOwner}
+        />
+      </div>
+    );
+  }
+
   const [stats, flow] = await Promise.all([getDashboardStats(ctx), getBookingFlow(ctx)]);
 
   const cards = [
@@ -80,9 +117,9 @@ export default async function DashboardPage({
         ) : (
           <ul className="mt-4 divide-y" style={{ borderColor: theme.outlineVariant }}>
             {stats.topServices.map((s) => (
-              <li key={s.name} className="flex items-center justify-between py-3">
-                <span className="text-sm font-medium" style={{ color: theme.onSurfaceVariant }}>{s.name}</span>
-                <span className="text-sm" style={{ color: theme.onSurfaceVariant }}>
+              <li key={s.name} className="flex items-center justify-between gap-3 py-3">
+                <span className="min-w-0 truncate text-sm font-medium" style={{ color: theme.onSurfaceVariant }}>{s.name}</span>
+                <span className="shrink-0 text-sm tabular-nums" style={{ color: theme.onSurfaceVariant }}>
                   {s.count} · {formatMoney(s.revenue, "EGP", locale)}
                 </span>
               </li>

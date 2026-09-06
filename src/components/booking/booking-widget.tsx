@@ -1269,9 +1269,10 @@ function Heading({ title, subtitle, theme }: { title: string; subtitle?: string;
 }
 
 function Back({ theme, onClick }: { theme: ThemeTokens; onClick: () => void }) {
+  const tc = useTranslations("common");
   return (
     <button type="button" onClick={onClick} className="mb-6 flex items-center gap-2 text-sm font-medium" style={{ color: theme.secondary }}>
-      <ArrowIcon /> Back
+      <ArrowIcon /> {tc("back")}
     </button>
   );
 }

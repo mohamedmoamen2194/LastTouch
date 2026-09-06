@@ -93,7 +93,7 @@ export function DashboardShell({ slug, businessName, theme, logoUrl, children }:
         </aside>
 
         {/* Mobile floating bottom nav */}
-        <div className="fixed inset-x-2 bottom-2 z-40 md:hidden sm:inset-x-4 sm:bottom-4">
+        <div className="fixed inset-x-2 bottom-2 z-40 md:hidden sm:inset-x-4 sm:bottom-4" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
           <MobileNav
             items={items}
             bookHref={`/${locale}/book/${slug}`}
@@ -143,7 +143,7 @@ function MobileNav({
           <Link
             key={item.key}
             href={item.href}
-            className="flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-xl px-1 py-1.5 text-[10px] font-medium leading-tight"
+            className="flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-xl px-1 py-2 text-[10px] font-medium leading-tight"
             style={{
               color: active ? activeColor : inactiveColor,
               backgroundColor: active ? withAlpha(activeColor, 0.18) : "transparent",
@@ -158,7 +158,7 @@ function MobileNav({
         href={bookHref}
         target="_blank"
         rel="noreferrer"
-        className="flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-xl px-1 py-1.5 text-[10px] font-medium leading-tight"
+        className="flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-xl px-1 py-2 text-[10px] font-medium leading-tight"
         style={{ color: inactiveColor }}
         aria-label={t("bookPublic")}
       >

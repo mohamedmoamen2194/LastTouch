@@ -1,5 +1,6 @@
 import {
   pgTable,
+  pgEnum,
   uuid,
   text,
   timestamp,
@@ -57,6 +58,27 @@ export type ThemeName = (typeof THEMES)[number];
 export const SUBSCRIPTION_PLANS = ["free", "pro", "ai", "enterprise"] as const;
 export type SubscriptionPlan = (typeof SUBSCRIPTION_PLANS)[number];
 
+export const SUBSCRIPTION_STATUSES = ["active", "trial", "expired", "cancelled", "grace"] as const;
+export type SubscriptionStatus = (typeof SUBSCRIPTION_STATUSES)[number];
+
+export const BILLING_PERIODS = ["monthly", "semiannual", "annual"] as const;
+export type BillingPeriod = (typeof BILLING_PERIODS)[number];
+
+/** 1 month / 6 months / 12 months. */
+export const BILLING_PERIOD_MONTHS: Record<BillingPeriod, number> = {
+  monthly: 1,
+  semiannual: 6,
+  annual: 12,
+};
+
+/**
+ * Constrained choices (Postgres enums) so manual DB edits are pick-lists
+ * instead of free text.
+ */
+export const subscriptionPlanEnum = pgEnum("subscription_plan", SUBSCRIPTION_PLANS);
+export const subscriptionStatusEnum = pgEnum("subscription_status", SUBSCRIPTION_STATUSES);
+export const billingPeriodEnum = pgEnum("billing_period", BILLING_PERIODS);
+
 export const ROLES = ["owner", "manager", "employee", "customer"] as const;
 export type Role = (typeof ROLES)[number];
 
@@ -111,7 +133,7 @@ export const tenants = pgTable(
     slug: varchar("slug", { length: 120 }).notNull(),
     businessName: text("business_name").notNull(),
     businessType: varchar("business_type", { length: 40 }).$type<BusinessType>().notNull(),
-    subscriptionPlan: varchar("subscription_plan", { length: 20 }).$type<SubscriptionPlan>().default("free").notNull(),
+    subscriptionPlan: subscriptionPlanEnum("subscription_plan").default("free").notNull(),
     theme: varchar("theme", { length: 40 }).$type<ThemeName>().default("modern_men").notNull(),
     employeeLabel: text("employee_label").default("Professional"),
     logoUrl: text("logo_url"),
@@ -710,8 +732,10 @@ export const subscriptions = pgTable(
     tenantId: uuid("tenant_id")
       .references(() => tenants.id, { onDelete: "cascade" })
       .notNull(),
-    plan: varchar("plan", { length: 20 }).$type<SubscriptionPlan>().default("free").notNull(),
-    status: varchar("status", { length: 20 }).default("active").notNull(), // active | trial | expired | cancelled | grace
+    plan: subscriptionPlanEnum("plan").default("free").notNull(),
+    status: subscriptionStatusEnum("status").default("active").notNull(),
+    billingPeriod: billingPeriodEnum("billing_period").default("monthly").notNull(),
+    startedAt: timestamp("started_at", { withTimezone: true }).defaultNow().notNull(),
     renewalDate: timestamp("renewal_date", { withTimezone: true }),
     expirationDate: timestamp("expiration_date", { withTimezone: true }),
     trialEnd: timestamp("trial_end", { withTimezone: true }),

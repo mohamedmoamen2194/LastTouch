@@ -6,6 +6,8 @@ import { tenants } from "@/db/schema";
 import { getDashboardAccess } from "@/lib/tenant/dashboard";
 import { getThemeTokens } from "@/config/business-types";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
+import { SubscriptionReminder } from "@/components/dashboard/subscription-reminder";
+import { getSubscriptionState } from "@/lib/subscriptions";
 import { UnauthorizedError } from "@/lib/errors";
 
 export async function generateMetadata({
@@ -65,6 +67,35 @@ export default async function TenantLayout({
       logoUrl={tenantLogo?.logoUrl ?? null}
     >
       {children}
+      <SubscriptionReminderGate
+        tenantId={ctx.tenantId}
+        slug={slug}
+        theme={theme}
+        role={ctx.role}
+      />
     </DashboardShell>
+  );
+}
+
+async function SubscriptionReminderGate({
+  tenantId,
+  slug,
+  theme,
+  role,
+}: {
+  tenantId: string;
+  slug: string;
+  theme: ReturnType<typeof getThemeTokens>;
+  role: string;
+}) {
+  const state = await getSubscriptionState(tenantId, { role });
+  if (state.banner !== "ending_soon" || state.daysLeft === null) return null;
+  return (
+    <SubscriptionReminder
+      tenantId={tenantId}
+      slug={slug}
+      theme={theme}
+      daysLeft={state.daysLeft}
+    />
   );
 }
