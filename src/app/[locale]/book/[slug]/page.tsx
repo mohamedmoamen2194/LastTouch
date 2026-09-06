@@ -1,5 +1,6 @@
-import { setRequestLocale } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
+import { PauseCircle } from "lucide-react";
 import { resolveTenantForBooking, listTenantEmployeesWithServices, listTenantServices } from "@/modules/booking/domain/catalog";
 import { listActivePackagesForBooking } from "@/modules/booking/application/packages";
 import { getBusinessTypeConfig, getThemeTokens } from "@/config/business-types";
@@ -8,6 +9,7 @@ import { Logo } from "@/components/booking/logo";
 import { ShopCarousel } from "@/components/booking/shop-carousel";
 import { PoweredByLastTouch } from "@/components/shared/powered-by-lasttouch";
 import { LangSwitcher } from "@/components/shared/lang-switcher";
+import { getSubscriptionState } from "@/lib/subscriptions";
 
 export const dynamic = "force-dynamic";
 
@@ -48,6 +50,48 @@ export default async function BookingPage({
   const biz = getBusinessTypeConfig(tenant.businessType);
   const employeeLabel = tenant.employeeLabel ?? biz.employeeLabel;
   const theme = getThemeTokens(tenant.theme);
+
+  // Unsubscribed/expired stores: booking site shows a disabled message
+  // instead of the booking flow (APIs enforce the same gate).
+  const sub = await getSubscriptionState(tenant.id);
+  if (!sub.hasAccess) {
+    const bt = await getTranslations("booking");
+    return (
+      <main className="flex min-h-screen flex-col" style={{ backgroundColor: theme.background }}>
+        <header
+          className="sticky top-0 z-50 border-b border-black/5 backdrop-blur-md"
+          style={{ backgroundColor: "rgba(255,255,255,0.7)" }}
+        >
+          <div className="mx-auto flex h-16 max-w-screen-xl items-center justify-between px-4 md:px-8">
+            {tenant.logoUrl ? (
+              <img src={tenant.logoUrl} alt={tenant.businessName} className="h-10 w-auto max-w-[170px] object-contain" />
+            ) : (
+              <Logo />
+            )}
+            <LangSwitcher theme={theme} />
+          </div>
+        </header>
+        <section className="mx-auto flex w-full max-w-xl flex-1 flex-col items-center justify-center px-4 py-16 text-center md:py-24">
+          <span
+            className="flex h-16 w-16 items-center justify-center rounded-full"
+            style={{ backgroundColor: theme.primaryContainer, color: theme.primary }}
+          >
+            <PauseCircle className="h-8 w-8" />
+          </span>
+          <h1 className="mt-5 text-2xl font-bold md:text-3xl" style={{ color: theme.primary }}>
+            {tenant.businessName}
+          </h1>
+          <p className="mt-2 text-base font-semibold" style={{ color: theme.primary }}>
+            {bt("siteDisabledTitle")}
+          </p>
+          <p className="mt-2 max-w-md text-sm leading-relaxed md:text-base" style={{ color: theme.onSurfaceVariant }}>
+            {bt("siteDisabledBody")}
+          </p>
+        </section>
+        <PoweredByLastTouch theme={theme} />
+      </main>
+    );
+  }
 
   const [employees, services, packages] = await Promise.all([
     listTenantEmployeesWithServices(tenant.id),

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { withApi, readJson } from "@/lib/api";
 import { ok, HttpStatus } from "@/lib/response";
 import { ValidationAppError } from "@/lib/errors";
+import { assertBookingOpen } from "@/lib/subscriptions";
 import { resolveTenantForBooking } from "@/modules/booking/domain/catalog";
 import { createBooking } from "@/modules/booking/application/book";
 import { db } from "@/db";
@@ -41,6 +42,7 @@ export async function POST(req: Request) {
     if (!input.success) throw new ValidationAppError("Invalid booking request");
 
     const tenant = await resolveTenantForBooking(input.data.slug);
+    await assertBookingOpen(tenant.id);
 
     const result = await createBooking({
       tenantId: tenant.id,

@@ -8,6 +8,7 @@ import { db } from "@/db";
 import { services } from "@/db/schema";
 import { and, eq, inArray } from "drizzle-orm";
 import { ValidationAppError } from "@/lib/errors";
+import { assertBookingOpen } from "@/lib/subscriptions";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 
 const bodySchema = z.object({
@@ -35,6 +36,7 @@ export async function POST(req: Request) {
     if (!input.success) throw new ValidationAppError("Invalid booking request");
 
     const tenant = await resolveTenantForBooking(input.data.slug);
+    await assertBookingOpen(tenant.id);
 
     // Validate services belong to this tenant and sum their durations.
     const rows = await db

@@ -56,6 +56,8 @@
     "confirmedHours": "Select an available time",
     "success": "Your appointment is confirmed",
     "successBody": "You'll receive a confirmation by phone or email.",
+    "siteDisabledTitle": "Online booking is paused",
+    "siteDisabledBody": "This store's booking page is temporarily disabled. Please contact the store directly or try again later.",
     "makeAnother": "Book another appointment",
     "notFound": "This business couldn't be found",
     "priceFrom": "From",

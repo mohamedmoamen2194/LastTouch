@@ -8,6 +8,7 @@ import {
   type SubscriptionPlan,
   type SubscriptionStatus,
 } from "@/db/schema";
+import { ForbiddenError } from "@/lib/errors";
 
 export const REMINDER_DAYS = 5;
 
@@ -85,4 +86,16 @@ export function periodEnd(from: Date, period: BillingPeriod): Date {
   const d = new Date(from);
   d.setMonth(d.getMonth() + BILLING_PERIOD_MONTHS[period]);
   return d;
+}
+
+/**
+ * Throws when the store's public booking site must stay closed (no active
+ * subscription). Used by the booking page + book APIs so direct POSTs can't
+ * bypass the disabled page.
+ */
+export async function assertBookingOpen(tenantId: string): Promise<void> {
+  const state = await getSubscriptionState(tenantId);
+  if (!state.hasAccess) {
+    throw new ForbiddenError("Online booking is currently disabled for this business");
+  }
 }

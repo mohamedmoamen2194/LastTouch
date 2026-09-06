@@ -3,6 +3,7 @@ import { z } from "zod";
 import { withApi, readJson } from "@/lib/api";
 import { ok, HttpStatus } from "@/lib/response";
 import { ValidationAppError } from "@/lib/errors";
+import { assertBookingOpen } from "@/lib/subscriptions";
 import { resolveTenantForBooking, listEligibleEmployees } from "@/modules/booking/domain/catalog";
 import { listWorkingDays } from "@/modules/availability/domain/engine";
 import { db } from "@/db";
@@ -33,6 +34,7 @@ export async function POST(req: Request) {
     if (!input.success) throw new ValidationAppError("Invalid calendar request");
 
     const tenant = await resolveTenantForBooking(input.data.slug);
+    await assertBookingOpen(tenant.id);
 
     const rows = await db
       .select()
