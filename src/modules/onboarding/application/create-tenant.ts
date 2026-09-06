@@ -67,12 +67,17 @@ export async function createTenant(input: CreateTenantInput) {
   });
 
   // Default free subscription so the plan + renewal dates are always defined.
-  await db.insert(subscriptions).values({
-    tenantId: tenant.id,
-    plan: "free",
-    status: "active",
-    renewalDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-  });
+  // The trg_tenants_sync_subscription trigger already creates this row on
+  // tenant insert — upsert keeps onboarding safe if it exists.
+  await db
+    .insert(subscriptions)
+    .values({
+      tenantId: tenant.id,
+      plan: "free",
+      status: "active",
+      renewalDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    })
+    .onConflictDoNothing();
 
   const catRows = await db
     .insert(serviceCategories)
