@@ -37,7 +37,6 @@ export default async function SignInPage({
             routing="path"
             path={`/${locale}/auth/sign-in`}
             signUpUrl={`/${locale}/auth/sign-up`}
-            afterSignInUrl={`/${locale}/onboard`}
             fallbackRedirectUrl={`/${locale}/onboard`}
             signUpFallbackRedirectUrl={`/${locale}/onboard`}
           />

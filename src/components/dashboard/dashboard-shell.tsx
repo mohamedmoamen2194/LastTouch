@@ -63,7 +63,6 @@ export function DashboardShell({ slug, businessName, theme, logoUrl, children }:
               <ExternalLink className="h-3.5 w-3.5" />
             </a>
             <UserButton
-              afterSignOutUrl={`/${locale}`}
               appearance={{ elements: { avatarBox: { width: 36, height: 36 } } }}
             />
           </div>

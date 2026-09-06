@@ -24,6 +24,16 @@ export default async function middleware(
 ) {
   const pathname = req.nextUrl.pathname;
 
+  // Clerk's app-origin proxy (required for production on `*.vercel.app`,
+  // where no CNAME can be added). Must be handled purely by Clerk — never
+  // auth.protect() and never next-intl rewriting.
+  if (pathname.startsWith("/__clerk")) {
+    return clerkMiddleware(
+      () => undefined,
+      { frontendApiProxy: { enabled: true } },
+    )(req, event);
+  }
+
   // API routes are handled by their own handlers (withApi → 401). We only
   // need clerkMiddleware to run so `auth()` is available inside route.ts, and
   // we must NOT run next-intl rewriting or protection on them.
@@ -52,7 +62,8 @@ export default async function middleware(
 }
 
 export const config = {
-  // Include /api so clerkMiddleware can set auth for route handlers, but skip
-  // static assets and internal Next paths.
-  matcher: ["/((?!trpc|_next|_vercel|.*\\..*).*)"],
+  // Include /api so clerkMiddleware can set auth for route handlers, and
+  // /__clerk so the Frontend API proxy is handled. Skip static assets and
+  // internal Next paths.
+  matcher: ["/((?!trpc|_next|_vercel|.*\\..*).*)", "/__clerk/(.*)"],
 };
