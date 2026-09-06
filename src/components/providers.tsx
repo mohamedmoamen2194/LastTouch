@@ -30,11 +30,23 @@ export function AppProviders({ children, locale, messages }: AppProvidersProps) 
 
   if (!HAS_CLERK) return intl;
 
+  // Locale-aware auth URLs. Without these, `auth.protect()` in middleware
+  // falls back to the non-localized `/sign-in` default (which doesn't exist
+  // in this app) and Clerk bounces to its hosted Account Portal — the
+  // "takes me to a clerk site and loops" symptom. Keeping everything on the
+  // same localized paths guarantees: sign-up → /{locale}/onboard → /{locale}/{slug}/dashboard.
+  const signInUrl = `/${locale}/auth/sign-in`;
+  const signUpUrl = `/${locale}/auth/sign-up`;
+  const onboardUrl = `/${locale}/onboard`;
+
   return (
     <ClerkProvider
       appearance={{ variables: { colorPrimary: "#091426" } }}
-      // Keep the app locale in sync with the UI language.
-      localization={locale === "ar" ? undefined : undefined}
+      signInUrl={signInUrl}
+      signUpUrl={signUpUrl}
+      signInFallbackRedirectUrl={onboardUrl}
+      signUpFallbackRedirectUrl={onboardUrl}
+      afterSignOutUrl={`/${locale}`}
     >
       {intl}
     </ClerkProvider>

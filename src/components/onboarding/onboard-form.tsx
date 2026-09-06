@@ -42,6 +42,7 @@ export function OnboardForm() {
         return;
       }
       router.push(`/${locale}/${json.data.slug}/dashboard`);
+      router.refresh();
     } catch {
       setError(t("error"));
     } finally {

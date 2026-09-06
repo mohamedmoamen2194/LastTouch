@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { redirect } from "next/navigation";
 import { SignIn } from "@clerk/nextjs";
-import { getOptionalUserId } from "@/lib/auth/session";
+import { isClerkConfigured, getOptionalUserId } from "@/lib/auth/session";
 import { getUserFirstTenantSlug } from "@/lib/tenant/home";
 
 export const dynamic = "force-dynamic";
@@ -26,12 +26,22 @@ export default async function SignInPage({
       <div className="w-full max-w-md">
         <h1 className="mb-1 text-center text-2xl font-bold text-[#091426]">{t("signIn")}</h1>
         <div className="mt-6 rounded-2xl border border-[#c5c6cd]/60 bg-white p-5 shadow-sm md:p-8">
+          {!isClerkConfigured() ? (
+            <p className="rounded-lg bg-[#fff8e1] px-4 py-3 text-sm text-[#5d4037]">
+              Authentication is not configured on this deployment. Set
+              NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY and CLERK_SECRET_KEY, then
+              redeploy.
+            </p>
+          ) : (
           <SignIn
             routing="path"
             path={`/${locale}/auth/sign-in`}
             signUpUrl={`/${locale}/auth/sign-up`}
             afterSignInUrl={`/${locale}/onboard`}
+            fallbackRedirectUrl={`/${locale}/onboard`}
+            signUpFallbackRedirectUrl={`/${locale}/onboard`}
           />
+          )}
         </div>
       </div>
     </main>

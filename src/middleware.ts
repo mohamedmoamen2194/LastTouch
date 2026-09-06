@@ -7,12 +7,14 @@ const intlMiddleware = createMiddleware(routing);
 
 // Public routes that never require auth. Everything else is protected
 // (dashboards, onboarding, settings, etc.). The public booking flow and
-// landing + auth pages stay open.
+// landing + ALL auth pages (sign-in, sign-up, sso-callback, factor pages)
+// stay open. Using a single `/auth(.*)` matcher avoids OAuth loops where
+// Clerk's `.../sso-callback` sub-route would otherwise be treated as
+// protected and bounced back to sign-in.
 const isPublicRoute = createRouteMatcher([
   "/",
   "/:locale",
-  "/:locale/auth/sign-in(.*)",
-  "/:locale/auth/sign-up(.*)",
+  "/:locale/auth(.*)",
   "/:locale/book(.*)",
 ]);
 
