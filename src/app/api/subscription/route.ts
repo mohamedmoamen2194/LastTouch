@@ -90,3 +90,39 @@ export async function POST(req: Request) {
     );
   });
 }
+
+const patchSchema = z.object({
+  slug: z.string().min(1),
+  autoRenew: z.boolean(),
+});
+
+/**
+ * PATCH /api/subscription
+ * Owner-only auto-renew toggle (cancel / keep). Cancelling never cuts
+ * access early: the store keeps full access until the current period ends,
+ * it simply will not renew.
+ */
+export async function PATCH(req: Request) {
+  return withApi(async () => {
+    const body = await readJson<unknown>(req);
+    const input = patchSchema.safeParse(body);
+    if (!input.success) {
+      return NextResponse.json(
+        { success: false, message: "Invalid request" },
+        { status: HttpStatus.BadRequest },
+      );
+    }
+
+    const ctx = await getDashboardAccess(input.data.slug);
+    if (!canManageBilling(ctx.role)) throw new ForbiddenError();
+
+    await db
+      .update(subscriptions)
+      .set({ autoRenew: input.data.autoRenew, updatedAt: new Date() })
+      .where(eq(subscriptions.tenantId, ctx.tenantId));
+
+    return NextResponse.json(ok({ autoRenew: input.data.autoRenew }), {
+      status: HttpStatus.Ok,
+    });
+  });
+}

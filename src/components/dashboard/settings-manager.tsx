@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { ImagePlus, X } from "lucide-react";
 import type { ThemeTokens } from "@/config/business-types";
@@ -18,6 +19,9 @@ type Props = {
   expirationDate: string | null;
   billingPeriod: string | null;
   daysLeft: number | null;
+  autoRenew: boolean;
+  subscribed: boolean;
+  canManage: boolean;
   manageHref: string;
   logoUrl: string | null;
   shopImages: string[];
@@ -58,15 +62,23 @@ export function SettingsManager({
   expirationDate,
   billingPeriod,
   daysLeft,
+  autoRenew,
+  subscribed,
+  canManage,
   manageHref,
   logoUrl,
   shopImages,
 }: Props) {
   const t = useTranslations("settings");
   const ts = useTranslations("subscription");
+  const router = useRouter();
   const [logo, setLogo] = useState<string | null>(logoUrl);
   const [images, setImages] = useState<string[]>(shopImages);
   const [busy, setBusy] = useState(false);
+  const [popupOpen, setPopupOpen] = useState(false);
+  const [renewBusy, setRenewBusy] = useState(false);
+  const [renewAuto, setRenewAuto] = useState(autoRenew);
+  const [renewError, setRenewError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const logoInput = useRef<HTMLInputElement>(null);
   const imageInput = useRef<HTMLInputElement>(null);
@@ -74,6 +86,33 @@ export function SettingsManager({
   const planKey = PLAN_KEYS[plan] ?? "planFree";
   const statusKey = planStatus ? (STATUS_KEYS[planStatus] ?? "subActive") : "subActive";
   const initials = businessName.trim().charAt(0).toUpperCase() || "S";
+  const endIso = expirationDate ?? renewalDate;
+  const periodLabel =
+    billingPeriod === "monthly" ? ts("period1m")
+    : billingPeriod === "semiannual" ? ts("period6m")
+    : billingPeriod === "annual" ? ts("period1y")
+    : t("notSet");
+
+  const toggleRenew = async (value: boolean) => {
+    if (!canManage || renewBusy) return;
+    setRenewBusy(true);
+    setRenewError(null);
+    try {
+      const res = await fetch("/api/subscription", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slug, autoRenew: value }),
+      });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.message ?? "Request failed");
+      setRenewAuto(value);
+      router.refresh();
+    } catch (e) {
+      setRenewError(e instanceof Error ? e.message : "Request failed");
+    } finally {
+      setRenewBusy(false);
+    }
+  };
 
   const upload = async (file: File | null, kind: "logo" | "image") => {
     if (!file) return;
@@ -200,10 +239,20 @@ export function SettingsManager({
             <div className="flex flex-col gap-0.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
               <dt className="text-xs font-medium uppercase tracking-wide" style={{ color: theme.onSurfaceVariant }}>{t("billingPeriod")}</dt>
               <dd className="break-words" style={{ color: theme.onSurfaceVariant }}>
-                {billingPeriod === "monthly" ? ts("period1m") : billingPeriod === "semiannual" ? ts("period6m") : billingPeriod === "annual" ? ts("period1y") : t("notSet")}
+                {periodLabel}
                 {daysLeft !== null && daysLeft >= 0 ? ` · ${ts("daysLeft", { days: daysLeft })}` : ""}
               </dd>
             </div>
+            {subscribed && (
+              <div className="flex flex-col gap-0.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                <dt className="text-xs font-medium uppercase tracking-wide" style={{ color: theme.onSurfaceVariant }}>{t("status")}</dt>
+                <dd className="break-words text-xs font-semibold" style={{ color: renewAuto ? "#1d6e2f" : "#9a6b00" }}>
+                  {renewAuto
+                    ? t("autoRenewOn")
+                    : t("autoRenewOff", { date: endIso ? formatDate(locale, endIso) : t("notSet") })}
+                </dd>
+              </div>
+            )}
             <div className="flex flex-col gap-0.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
               <dt className="text-xs font-medium uppercase tracking-wide" style={{ color: theme.onSurfaceVariant }}>{t("renewsOn")}</dt>
               <dd className="break-words" style={{ color: theme.onSurfaceVariant }}>
@@ -217,13 +266,27 @@ export function SettingsManager({
               </dd>
             </div>
           </dl>
-          <a
-            href={manageHref}
-            className="mt-4 inline-block w-full rounded-full px-4 py-2.5 text-center text-sm font-semibold sm:w-auto"
-            style={{ backgroundColor: theme.primary, color: theme.onPrimary }}
-          >
-            {t("managePlan")}
-          </a>
+          {subscribed ? (
+            <button
+              type="button"
+              onClick={() => {
+                setRenewError(null);
+                setPopupOpen(true);
+              }}
+              className="mt-4 w-full rounded-full px-4 py-2.5 text-sm font-semibold sm:w-auto"
+              style={{ backgroundColor: theme.primary, color: theme.onPrimary }}
+            >
+              {t("managePlan")}
+            </button>
+          ) : (
+            <a
+              href={manageHref}
+              className="mt-4 inline-block w-full rounded-full px-4 py-2.5 text-center text-sm font-semibold sm:w-auto"
+              style={{ backgroundColor: theme.primary, color: theme.onPrimary }}
+            >
+              {t("managePlan")}
+            </a>
+          )}
         </section>
 
         {/* Logo */}
@@ -337,6 +400,96 @@ export function SettingsManager({
           )}
         </section>
       </div>
+
+      {/* Current-subscription popup (subscribed stores only) */}
+      {popupOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label={t("currentTitle")}
+          onClick={() => setPopupOpen(false)}
+        >
+          <div
+            className="w-full max-w-md rounded-t-2xl p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:rounded-2xl sm:p-6"
+            style={{ backgroundColor: theme.surfaceContainerLowest }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <h2 className="text-lg font-bold" style={{ color: theme.primary }}>
+                {t("currentTitle")}
+              </h2>
+              <button
+                type="button"
+                onClick={() => setPopupOpen(false)}
+                aria-label={t("remove")}
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+                style={{ backgroundColor: theme.surfaceContainerHigh, color: theme.onSurfaceVariant }}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <dl className="mt-4 space-y-2.5 rounded-xl border p-4 text-sm" style={{ borderColor: theme.outlineVariant }}>
+              <div className="flex items-center justify-between gap-3">
+                <dt className="text-xs font-medium uppercase tracking-wide" style={{ color: theme.onSurfaceVariant }}>{t("plan")}</dt>
+                <dd className="font-semibold" style={{ color: theme.primary }}>{t(planKey)}</dd>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <dt className="text-xs font-medium uppercase tracking-wide" style={{ color: theme.onSurfaceVariant }}>{t("billingPeriod")}</dt>
+                <dd className="font-semibold" style={{ color: theme.primary }}>{periodLabel}</dd>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <dt className="text-xs font-medium uppercase tracking-wide" style={{ color: theme.onSurfaceVariant }}>
+                  {renewAuto ? t("renewsLabel") : t("endsLabel")}
+                </dt>
+                <dd className="font-semibold" style={{ color: theme.primary }}>
+                  {endIso ? formatDate(locale, endIso) : t("notSet")}
+                </dd>
+              </div>
+            </dl>
+
+            {renewError && (
+              <p className="mt-3 rounded-lg px-4 py-2.5 text-xs" style={{ backgroundColor: "#ba1a1a", color: "#fff" }}>
+                {renewError}
+              </p>
+            )}
+
+            {!renewAuto && (
+              <p className="mt-3 rounded-lg px-4 py-2.5 text-xs leading-relaxed" style={{ backgroundColor: theme.surfaceContainerHigh, color: theme.onSurfaceVariant }}>
+                {t("cancelledNote", { date: endIso ? formatDate(locale, endIso) : t("notSet") })}
+              </p>
+            )}
+
+            {canManage ? (
+              <div className="mt-4 flex flex-col gap-2">
+                {renewAuto && (
+                  <p className="text-xs leading-relaxed" style={{ color: theme.onSurfaceVariant }}>
+                    {t("cancelNote")}
+                  </p>
+                )}
+                <button
+                  type="button"
+                  onClick={() => toggleRenew(!renewAuto)}
+                  disabled={renewBusy}
+                  className="w-full rounded-full px-5 py-2.5 text-sm font-semibold disabled:opacity-50"
+                  style={
+                    renewAuto
+                      ? { border: `1px solid #ba1a1a`, color: "#ba1a1a", backgroundColor: "transparent" }
+                      : { backgroundColor: theme.primary, color: theme.onPrimary }
+                  }
+                >
+                  {renewBusy ? t("cancelling") : renewAuto ? t("cancelSub") : t("keepSub")}
+                </button>
+              </div>
+            ) : (
+              <p className="mt-4 text-xs leading-relaxed" style={{ color: theme.onSurfaceVariant }}>
+                {ts("askOwner")}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

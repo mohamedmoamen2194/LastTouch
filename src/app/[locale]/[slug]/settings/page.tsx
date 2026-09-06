@@ -49,6 +49,9 @@ export default async function SettingsPage({
       expirationDate={subscription?.expirationDate ? subscription.expirationDate.toISOString() : null}
       billingPeriod={subscription?.billingPeriod ?? null}
       daysLeft={subState.daysLeft}
+      autoRenew={subscription?.autoRenew ?? true}
+      subscribed={subState.hasAccess}
+      canManage={ctx.role === "owner"}
       manageHref={`/${locale}/${slug}/dashboard#subscription`}
       logoUrl={tenant?.logoUrl ?? null}
       shopImages={tenant?.shopImages ?? []}
