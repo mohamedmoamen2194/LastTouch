@@ -4,6 +4,7 @@ import { withApi, readJson } from "@/lib/api";
 import { ok, HttpStatus } from "@/lib/response";
 import { ValidationAppError } from "@/lib/errors";
 import { getDashboardAccess } from "@/lib/tenant/dashboard";
+import { assertSubscriptionAccess } from "@/lib/subscriptions";
 import {
   addTenantImage,
   removeTenantImage,
@@ -44,6 +45,7 @@ export async function POST(req: Request) {
     }
 
     const ctx = await getDashboardAccess(slug);
+    await assertSubscriptionAccess(ctx.tenantId);
     const action = url.searchParams.get("action") ?? "upload";
 
     if (action === "remove") {

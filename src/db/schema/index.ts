@@ -106,6 +106,9 @@ export const NOTIFICATION_STATUSES = ["pending", "sent", "delivered", "opened", 
 
 export const REVIEW_STATUSES = ["pending", "published", "hidden", "reported"] as const;
 
+export const VISIT_STATUSES = ["checked_in", "checked_out"] as const;
+export type VisitStatus = (typeof VISIT_STATUSES)[number];
+
 export const PAYMENT_METHODS = ["cash", "card", "wallet", "online", "split"] as const;
 export const PAYMENT_STATUSES = ["pending", "paid", "partial", "refunded", "failed"] as const;
 
@@ -719,6 +722,68 @@ export const auditLogs = pgTable(
   (t) => [
     index("audit_tenant_created_idx").on(t.tenantId, t.createdAt),
     index("audit_actor_idx").on(t.actorUserId),
+  ]
+);
+
+/**
+ * Shop visits (QR / phone check-in). A device scans the store QR (or the
+ * client enters their phone): first touch opens a visit, the next one closes
+ * it. `deviceKey` is a random per-browser id so the page knows whether THIS
+ * device currently has an open visit.
+ */
+export const visits = pgTable(
+  "visits",
+  {
+    id,
+    tenantId: uuid("tenant_id")
+      .references(() => tenants.id, { onDelete: "cascade" })
+      .notNull(),
+    customerId: uuid("customer_id").references(() => customers.id, { onDelete: "set null" }),
+    customerName: text("customer_name"),
+    phone: varchar("phone", { length: 30 }),
+    deviceKey: varchar("device_key", { length: 64 }),
+    status: varchar("status", { length: 20 }).$type<VisitStatus>().default("checked_in").notNull(),
+    checkInAt: timestamp("check_in_at", { withTimezone: true }).defaultNow().notNull(),
+    checkOutAt: timestamp("check_out_at", { withTimezone: true }),
+    createdAt,
+    updatedAt,
+  },
+  (t) => [
+    index("visits_tenant_idx").on(t.tenantId),
+    index("visits_tenant_status_idx").on(t.tenantId, t.status),
+    index("visits_tenant_device_idx").on(t.tenantId, t.deviceKey),
+  ]
+);
+
+export const PENDING_ACTION_STATUSES = ["pending", "confirmed", "cancelled", "expired"] as const;
+export type PendingActionStatus = (typeof PENDING_ACTION_STATUSES)[number];
+
+/**
+ * Two-step write confirmations for the agent brain (dashboard chat now,
+ * WhatsApp later). A write tool never executes directly: it stores a pending
+ * row, the human confirms (button or YES reply), then executePendingAction
+ * runs it once. Rows expire after 10 minutes and are single-use.
+ */
+export const agentPendingActions = pgTable(
+  "agent_pending_actions",
+  {
+    id,
+    tenantId: uuid("tenant_id")
+      .references(() => tenants.id, { onDelete: "cascade" })
+      .notNull(),
+    userId: text("user_id"),
+    senderPhone: varchar("sender_phone", { length: 30 }),
+    tool: text("tool").notNull(),
+    args: jsonb("args").$type<Record<string, unknown>>().notNull(),
+    summary: text("summary").notNull(),
+    status: varchar("status", { length: 20 }).$type<PendingActionStatus>().default("pending").notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    createdAt,
+    updatedAt,
+  },
+  (t) => [
+    index("pending_actions_tenant_idx").on(t.tenantId),
+    index("pending_actions_tenant_status_idx").on(t.tenantId, t.status),
   ]
 );
 

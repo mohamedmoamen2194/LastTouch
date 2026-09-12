@@ -1,7 +1,7 @@
 import { and, eq, inArray, gte, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { appointments, type AppointmentStatus } from "@/db/schema";
-import { assertPermission, type TenantContext } from "@/lib/tenant/context";
+import { assertFeature, assertPermission, type TenantContext } from "@/lib/tenant/context";
 import { Permission } from "@/lib/permissions";
 
 const COUNTED: AppointmentStatus[] = ["pending", "confirmed", "completed"];
@@ -24,6 +24,7 @@ export type BookingFlow = {
  */
 export async function getBookingFlow(ctx: TenantContext): Promise<BookingFlow> {
   assertPermission(ctx, Permission["analytics.read"]);
+  assertFeature(ctx, "analytics");
   const now = new Date();
 
   const [dailyCounts, weeklyCounts, monthlyCounts] = await Promise.all([

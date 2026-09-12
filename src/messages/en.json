@@ -26,6 +26,23 @@
   "booking": {
     "title": "Book your appointment",
     "subtitle": "Choose a service, pick your favorite specialist and reserve your slot.",
+    "tabBooking": "Booking",
+    "tabScan": "Scan",
+    "tabRatings": "Ratings",
+    "scanTitle": "Scan store QR",
+    "scanHint": "Point your camera at the store's QR code to check in — or snap a photo of it.",
+    "scanCamera": "Open camera",
+    "scanStop": "Stop camera",
+    "scanUpload": "Upload QR photo",
+    "scanBadQr": "This QR code is not for this store.",
+    "scanOpenLink": "Open link",
+    "scanDenied": "Camera access was denied. Upload a photo instead.",
+    "scanError": "Couldn't start the camera. Upload a photo instead.",
+    "scanUnsupported": "Live camera scan isn't supported here. Upload a photo instead.",
+    "ratingsTitle": "Ratings",
+    "storeRating": "Store rating",
+    "ratingsCount": "{count} reviews",
+    "noRatings": "No ratings yet — be the first after your visit!",
     "stepService": "Service",
     "stepStaff": "Specialist",
     "stepTime": "Time",
@@ -105,6 +122,8 @@
     "services": "Services",
     "employees": "Team",
     "analytics": "Analytics",
+    "aiInsights": "AI Insights",
+    "aiAssistant": "AI Assistant",
     "marketing": "Marketing",
     "reviews": "Reviews",
     "settings": "Settings",
@@ -204,9 +223,48 @@
     "emptyTitle": "No packages yet",
     "emptyBody": "Create a package to offer bundled services at a fixed price."
   },
+  "ai": {
+    "insightsTitle": "AI Insights",
+    "insightsBody": "Automatic performance summaries with practical suggestions for your store. We're putting the finishing touches on it.",
+    "assistantTitle": "AI Assistant",
+    "assistantBody": "An assistant that answers questions about bookings, customers and revenue. We're putting the finishing touches on it.",
+    "comingSoon": "Coming soon",
+    "upgradeTitle": "Available on AI Growth & Enterprise",
+    "upgradeBody": "Upgrade your plan to unlock AI features.",
+    "viewPlans": "View plans",
+    "consoleHint": "Owner test console",
+    "consoleEmpty": "Ask about today's schedule, upcoming appointments, revenue or your team — in Arabic or English.",
+    "consolePlaceholder": "Ask something…",
+    "consoleSend": "Send",
+    "consoleConfirm": "Confirm",
+    "consoleDismiss": "Dismiss",
+    "consoleDone": "Done — action completed.",
+    "consoleDismissed": "Dismissed — nothing was changed.",
+    "consoleDownload": "Download report"
+  },
+  "checkin": {
+    "title": "Check-in",
+    "subtitle": "Scan the store QR or use the buttons below.",
+    "checkIn": "Check in",
+    "checkOut": "Check out",
+    "phone": "Phone number",
+    "phonePlaceholder": "+20 ...",
+    "nameOptional": "Name (optional)",
+    "namePlaceholder": "Your name",
+    "checkedIn": "You're checked in — enjoy your visit!",
+    "checkedOut": "Checked out — see you soon!",
+    "visitProgress": "Visit in progress",
+    "ratingsTitle": "Ratings",
+    "storeRating": "Store rating",
+    "noRating": "New",
+    "loading": "Loading…"
+  },
   "employees": {
     "title": "Team",
     "add": "Add team member",
+    "seatsUsed": "{used} of {max} team seats used",
+    "seatsUnlimited": "Enterprise plan — team seats based on your needs",
+    "limitReached": "Team limit reached (max {max}). Remove a team member or upgrade to Enterprise for more seats.",
     "addTitle": "New team member",
     "editTitle": "Edit team member",
     "edit": "Edit",
@@ -276,8 +334,14 @@
     "planPro": "Pro",
     "planAi": "AI Growth",
     "planEnterprise": "Enterprise",
+    "teamSeats": "Team seats",
+    "teamSeatsUpTo": "Up to {max} team members",
+    "teamSeatsCustom": "Based on your needs",
     "logo": "Logo",
     "logoHint": "Shown on your public booking page",
+    "qrBooking": "Booking QR",
+    "qrCheckin": "Check-in QR",
+    "download": "Download",
     "billingPeriod": "Billing period",
     "managePlan": "Manage plan",
     "autoRenewOn": "Auto-renew is on",
@@ -307,9 +371,9 @@
       "getStarted": "Get started"
     },
     "hero": {
-      "badge": "AI-powered business OS",
+      "badge": "Business OS for beauty & grooming",
       "title": "Run your beauty or grooming business, beautifully.",
-      "subtitle": "Booking, customer CRM, AI receptionist, analytics and marketing — all in one place your clients will love.",
+      "subtitle": "Booking, customer CRM and analytics — all in one place your clients will love.",
       "cta": "Start your store",
       "seeBusinesses": "Who it's for",
       "storesLabel": "Trusted by salons & barbershops"
@@ -322,11 +386,11 @@
       "subtitle": "One platform that grows with you.",
       "items": {
         "booking": { "title": "Online booking", "desc": "A beautiful, mobile-first booking page for your clients." },
-        "customers": { "title": "Customer CRM", "desc": "Profiles, history, loyalty points and preferences in one place." },
-        "ai": { "title": "AI receptionist", "desc": "Answer calls and book appointments around the clock." },
+        "customers": { "title": "Customer CRM", "desc": "Profiles, visit history and preferences in one place." },
+        "ai": { "title": "AI receptionist", "desc": "Coming soon: automated booking assistance around the clock." },
         "reports": { "title": "Analytics", "desc": "Revenue, top services and trends at a glance." },
-        "marketing": { "title": "Marketing", "desc": "Win-back lapsed clients and grow repeat visits." },
-        "payments": { "title": "Payments", "desc": "Collect deposits and take payments online." }
+        "marketing": { "title": "Marketing", "desc": "Coming soon: win back lapsed clients and grow repeat visits." },
+        "payments": { "title": "Payments", "desc": "Coming soon: deposits and online payments." }
       }
     },
     "cta": {
@@ -367,9 +431,10 @@
         "features": {
           "management": "Full management system",
           "booking": "Online booking system",
-          "whatsappManager": "WhatsApp agent for the manager",
-          "whatsappWorkers": "WhatsApp agent for your workers",
-          "whatsappClients": "WhatsApp agent for your clients"
+          "appointments": "Appointments calendar",
+          "customers": "Customer profiles & visit history",
+          "analytics": "Business reports & analytics",
+          "team5": "Up to 5 team members"
         }
       },
       "pro": {
@@ -378,10 +443,11 @@
         "description": "Everything in Basic, plus AI analytics to grow faster.",
         "features": {
           "included": "Everything in Basic",
-          "ads": "Ads & marketing integration with analytics",
-          "performance": "AI analytics for overall performance",
-          "aiAssistant": "AI assistant & smart insights",
-          "campaigns": "AI-powered campaigns & reports"
+          "ads": "Ads & marketing integrations (coming soon)",
+          "performance": "AI performance insights (coming soon)",
+          "aiAssistant": "AI assistant & smart insights (coming soon)",
+          "campaigns": "AI-powered campaigns & reports (coming soon)",
+          "team5": "Up to 5 team members"
         }
       },
       "custom": {
@@ -393,7 +459,8 @@
           "everything": "Everything in AI Growth",
           "tailored": "Features tuned to your workflows",
           "support": "Dedicated onboarding & support",
-          "flexible": "Flexible billing and team seats"
+          "flexible": "Flexible billing and team seats",
+          "teamCustom": "More team members based on your needs"
         }
       }
     }

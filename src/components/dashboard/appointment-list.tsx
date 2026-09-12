@@ -60,8 +60,8 @@ export function AppointmentList({
       >
         <div className="col-span-4">{t("appointmentDate")}</div>
         <div className="col-span-2">{t("appointmentStatus")}</div>
-        <div className="col-span-2 text-right">{t("appointmentPrice")}</div>
-        <div className="col-span-4 text-right">{t("appointmentActions")}</div>
+        <div className="col-span-2 text-end">{t("appointmentPrice")}</div>
+        <div className="col-span-4 text-end">{t("appointmentActions")}</div>
       </div>
 
       {/* Rows */}
@@ -84,13 +84,13 @@ export function AppointmentList({
                 <button
                   type="button"
                   onClick={() => setOpenId(open ? null : r.id)}
-                  className="text-left md:col-span-4"
+                  className="text-start md:col-span-4"
                 >
                   <span className="flex items-center gap-1.5">
                     <ChevronDown size={14} className={cn("transition-transform", open && "rotate-180")} style={{ color: theme.secondary }} />
                     <span className="text-sm font-semibold" style={{ color: theme.primary }}>{displayDate(r.dateTime)}</span>
                   </span>
-                  <span className="mt-0.5 block text-xs" style={{ color: theme.onSurfaceVariant }}>
+                  <span className="mt-0.5 block whitespace-nowrap text-xs tabular-nums" style={{ color: theme.onSurfaceVariant }}>
                     {r.startTime}–{r.endTime}
                   </span>
                   {r.services.length > 0 && (
@@ -106,7 +106,7 @@ export function AppointmentList({
                   <StatusBadge status={r.status} theme={theme} />
 
                   {/* Price */}
-                  <div className="text-sm font-semibold md:col-span-2 md:w-auto md:text-right" style={{ color: theme.primary }}>
+                  <div className="whitespace-nowrap text-sm font-semibold tabular-nums md:col-span-2 md:w-auto md:text-end" style={{ color: theme.primary }}>
                     {r.price}
                   </div>
                 </div>

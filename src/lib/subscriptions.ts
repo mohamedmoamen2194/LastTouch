@@ -12,6 +12,23 @@ import { ForbiddenError } from "@/lib/errors";
 
 export const REMINDER_DAYS = 5;
 
+/**
+ * Max team members (employees) allowed per subscription plan.
+ * - Basic (db "pro") and AI Growth (db "ai"): max 5 active employees.
+ * - Enterprise (db "enterprise"): unlimited (null) — sized per client needs.
+ * - Free: 5 (dashboard is locked anyway, but API stays guarded).
+ */
+export const MAX_EMPLOYEES_BY_PLAN: Record<SubscriptionPlan, number | null> = {
+  free: 5,
+  pro: 5,
+  ai: 5,
+  enterprise: null,
+};
+
+export function getMaxEmployeesForPlan(plan: SubscriptionPlan): number | null {
+  return MAX_EMPLOYEES_BY_PLAN[plan] ?? 5;
+}
+
 export type PaidPlan = Exclude<SubscriptionPlan, "free">;
 
 export type SubscriptionBanner = "none" | "ending_soon" | "expired" | "unsubscribed";
@@ -80,6 +97,19 @@ export async function getSubscriptionState(
   }
 
   return { ...base, hasAccess: true, banner: "none", daysLeft, endDate };
+}
+
+/**
+ * Throws when the tenant has no active subscription (free/expired/cancelled).
+ * Call at the top of every admin (dashboard) API route AFTER membership is
+ * resolved — pages already gate via LockedPage, but direct POSTs would
+ * otherwise bypass the paywall.
+ */
+export async function assertSubscriptionAccess(tenantId: string): Promise<void> {
+  const state = await getSubscriptionState(tenantId);
+  if (!state.hasAccess) {
+    throw new ForbiddenError("An active subscription is required for this action");
+  }
 }
 
 export function periodEnd(from: Date, period: BillingPeriod): Date {

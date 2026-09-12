@@ -48,6 +48,8 @@ type Props = {
   employees: ManagedEmployee[];
   services: ManagedServiceRef[];
   businessName: string;
+  /** Max active team members for the current plan; null = unlimited (enterprise). */
+  maxEmployees?: number | null;
 };
 
 type DayForm = { weekday: number; enabled: boolean; start: string; end: string };
@@ -116,7 +118,7 @@ type EmployeeOverview = {
   totalWorksThisMonth: number;
 };
 
-export function EmployeesManager({ slug, locale, theme, employees: initial, services, businessName }: Props) {
+export function EmployeesManager({ slug, locale, theme, employees: initial, services, businessName, maxEmployees = 5 }: Props) {
   const t = useTranslations("employees");
   const dt = useTranslations("dashboard");
 
@@ -136,6 +138,10 @@ export function EmployeesManager({ slug, locale, theme, employees: initial, serv
     services: false,
     notes: false,
   });
+
+  const activeCount = employees.filter((e) => e.active).length;
+  const isUnlimited = maxEmployees === null || maxEmployees === undefined;
+  const limitReached = !isUnlimited && activeCount >= (maxEmployees as number);
 
   const toggleSection = (key: keyof typeof openSections) =>
     setOpenSections((o) => ({ ...o, [key]: !o[key] }));
@@ -163,6 +169,10 @@ export function EmployeesManager({ slug, locale, theme, employees: initial, serv
   };
 
   const openCreate = () => {
+    if (limitReached) {
+      setError(t("limitReached", { max: maxEmployees as number }));
+      return;
+    }
     setForm(EMPTY_FORM);
     setEditingId(null);
     setError(null);
@@ -203,6 +213,17 @@ export function EmployeesManager({ slug, locale, theme, employees: initial, serv
     setError(null);
     try {
       const isEdit = modal === "edit";
+      // Client-side seat guard (server enforces too). Active creates consume a seat.
+      if (!isEdit && form.active && limitReached) {
+        throw new Error(t("limitReached", { max: maxEmployees as number }));
+      }
+      // Re-activating an inactive member also consumes a seat.
+      if (isEdit && form.active && !isUnlimited) {
+        const prev = employees.find((e) => e.id === editingId);
+        if (prev && !prev.active && activeCount >= (maxEmployees as number)) {
+          throw new Error(t("limitReached", { max: maxEmployees as number }));
+        }
+      }
       const payload = {
         id: isEdit ? editingId : undefined,
         firstName: form.firstName,
@@ -282,11 +303,23 @@ export function EmployeesManager({ slug, locale, theme, employees: initial, serv
         <div className="min-w-0">
           <h1 className="text-xl font-bold md:text-2xl" style={{ color: theme.primary }}>{t("title")}</h1>
           <p className="mt-1 text-sm" style={{ color: theme.onSurfaceVariant }}>{businessName}</p>
+          <p className="mt-1 text-xs font-medium" style={{ color: theme.onSurfaceVariant }}>
+            {isUnlimited
+              ? t("seatsUnlimited")
+              : t("seatsUsed", { used: activeCount, max: maxEmployees as number })}
+          </p>
+          {limitReached && (
+            <p className="mt-1 text-xs font-semibold" style={{ color: "#ba1a1a" }}>
+              {t("limitReached", { max: maxEmployees as number })}
+            </p>
+          )}
         </div>
         <button
           type="button"
           onClick={openCreate}
-          className="inline-flex shrink-0 items-center justify-center gap-2 self-start rounded-full px-4 py-2.5 text-sm font-semibold sm:self-auto"
+          disabled={limitReached}
+          title={limitReached ? t("limitReached", { max: maxEmployees as number }) : undefined}
+          className="inline-flex shrink-0 items-center justify-center gap-2 self-start rounded-full px-4 py-2.5 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-40 sm:self-auto"
           style={{ backgroundColor: theme.primary, color: theme.onPrimary }}
         >
           <Plus className="h-4 w-4" />
@@ -367,7 +400,7 @@ export function EmployeesManager({ slug, locale, theme, employees: initial, serv
                   {e.salary && (
                     <p className="flex items-center gap-2">
                       <Clock className="h-3.5 w-3.5 shrink-0" />
-                      {t("salaryShort")}: <span className="font-medium" style={{ color: theme.primary }}>{Number(e.salary).toLocaleString(locale)}</span>
+                      {t("salaryShort")}: <span className="whitespace-nowrap font-medium tabular-nums" style={{ color: theme.primary }}>{Number(e.salary).toLocaleString(locale)}</span>
                     </p>
                   )}
                 </div>
@@ -762,7 +795,7 @@ export function EmployeesManager({ slug, locale, theme, employees: initial, serv
                 <div className="min-w-0">
                   <p className="text-[11px] font-medium uppercase tracking-wide" style={{ color: theme.secondary }}>{t("salaryShort")}</p>
                   <p className="truncate text-sm font-semibold" style={{ color: theme.primary }}>
-                    {detail.salary ? Number(detail.salary).toLocaleString(locale) : "—"}
+                    <span className="whitespace-nowrap tabular-nums">{detail.salary ? Number(detail.salary).toLocaleString(locale) : "—"}</span>
                   </p>
                 </div>
               </div>
@@ -827,7 +860,7 @@ function AccordionItem({ icon, label, open, onToggle, theme, badge, children }: 
       <button
         type="button"
         onClick={onToggle}
-        className="flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-left"
+        className="flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-start"
         style={{ color: theme.onSurfaceVariant }}
       >
         <span className="flex min-w-0 items-center gap-2.5 text-sm font-semibold">

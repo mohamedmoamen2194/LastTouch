@@ -1,7 +1,7 @@
 import { and, count, desc, eq, gte, inArray, lte, sum } from "drizzle-orm";
 import { db } from "@/db";
 import { appointmentServices, appointments, customers, type AppointmentStatus } from "@/db/schema";
-import { assertPermission, type TenantContext } from "@/lib/tenant/context";
+import { assertFeature, assertPermission, type TenantContext } from "@/lib/tenant/context";
 import { Permission } from "@/lib/permissions";
 
 const OPEN: AppointmentStatus[] = ["confirmed", "pending"];
@@ -21,6 +21,7 @@ export type DashboardStats = {
  */
 export async function getDashboardStats(ctx: TenantContext): Promise<DashboardStats> {
   assertPermission(ctx, Permission["analytics.read"]);
+  assertFeature(ctx, "analytics");
   const ctxId = ctx.tenantId;
 
   const now = new Date();

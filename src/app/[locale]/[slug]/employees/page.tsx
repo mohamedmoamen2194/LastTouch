@@ -5,7 +5,7 @@ import { getThemeTokens } from "@/config/business-types";
 import { listTenantServicesForAdmin, listTenantTeam } from "@/modules/booking/domain/catalog";
 import { EmployeesManager } from "@/components/dashboard/employees-manager";
 import { LockedPage } from "@/components/dashboard/locked-page";
-import { getSubscriptionState } from "@/lib/subscriptions";
+import { getMaxEmployeesForPlan, getSubscriptionState } from "@/lib/subscriptions";
 
 export const dynamic = "force-dynamic";
 
@@ -40,6 +40,7 @@ export default async function EmployeesPage({
       slug={slug}
       locale={locale}
       theme={theme}
+      maxEmployees={getMaxEmployeesForPlan(ctx.subscriptionPlan)}
       businessName={ctx.businessName}
       employees={team.map((e) => ({
         id: e.id,

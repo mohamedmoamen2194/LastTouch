@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { UserButton } from "@clerk/nextjs";
 import { LangSwitcher } from "@/components/shared/lang-switcher";
 import { PoweredByLastTouch } from "@/components/shared/powered-by-lasttouch";
-import { LayoutDashboard, CalendarDays, Users, Scissors, Contact, Settings, ExternalLink } from "lucide-react";
+import { LayoutDashboard, CalendarDays, Users, Scissors, Contact, Settings, ExternalLink, Sparkles, Bot } from "lucide-react";
 import { Logo } from "@/components/booking/logo";
 
 import type { ThemeTokens } from "@/config/business-types";
@@ -16,22 +16,35 @@ type Props = {
   businessName: string;
   theme: ThemeTokens;
   logoUrl?: string | null;
+  /**
+   * Subscription feature flags for this tenant (see featuresForPlan).
+   * Nav items whose `feature` is missing from this list are hidden.
+   * `null` = core item, always visible to subscribed tenants.
+   */
+  features?: string[];
   children: React.ReactNode;
 };
 
-export function DashboardShell({ slug, businessName, theme, logoUrl, children }: Props) {
+export function DashboardShell({ slug, businessName, theme, logoUrl, features, children }: Props) {
   const t = useTranslations("nav");
   const locale = useLocale();
   const pathname = usePathname();
 
-  const items = [
-    { href: `/${locale}/${slug}/dashboard`, key: "dashboard", icon: LayoutDashboard },
-    { href: `/${locale}/${slug}/appointments`, key: "appointments", icon: CalendarDays },
-    { href: `/${locale}/${slug}/customers`, key: "customers", icon: Users },
-    { href: `/${locale}/${slug}/services`, key: "services", icon: Scissors },
-    { href: `/${locale}/${slug}/employees`, key: "employees", icon: Contact },
-    { href: `/${locale}/${slug}/settings`, key: "settings", icon: Settings },
+  const allItems = [
+    { href: `/${locale}/${slug}/dashboard`, key: "dashboard", icon: LayoutDashboard, feature: "analytics" as string | null },
+    { href: `/${locale}/${slug}/appointments`, key: "appointments", icon: CalendarDays, feature: null },
+    { href: `/${locale}/${slug}/customers`, key: "customers", icon: Users, feature: "customers" as string | null },
+    { href: `/${locale}/${slug}/services`, key: "services", icon: Scissors, feature: null },
+    { href: `/${locale}/${slug}/employees`, key: "employees", icon: Contact, feature: "employees" as string | null },
+    { href: `/${locale}/${slug}/ai-insights`, key: "aiInsights", icon: Sparkles, feature: "ai_insights" as string | null },
+    { href: `/${locale}/${slug}/ai-assistant`, key: "aiAssistant", icon: Bot, feature: "ai_assistant" as string | null },
+    { href: `/${locale}/${slug}/settings`, key: "settings", icon: Settings, feature: null },
   ];
+  // No list passed (or all features present) → show everything. Lets future
+  // AI/enterprise nav entries hide themselves on lower tiers automatically.
+  const items = features
+    ? allItems.filter((i) => i.feature === null || features.includes(i.feature))
+    : allItems;
 
   const isActive = (href: string) => pathname === href;
 
@@ -70,8 +83,8 @@ export function DashboardShell({ slug, businessName, theme, logoUrl, children }:
       </header>
 
       <div className="mx-auto flex w-full max-w-screen-2xl flex-1 gap-6 px-4 py-8 md:px-8">
-        {/* Sidebar (desktop) */}
-        <aside className="hidden w-56 shrink-0 flex-col gap-1 md:flex">
+        {/* Sidebar (desktop) — same size, scrolls if items overflow */}
+        <aside className="hidden w-56 shrink-0 flex-col gap-1 md:sticky md:top-20 md:flex md:max-h-[calc(100vh-7rem)] md:overflow-y-auto">
           {items.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.href);
@@ -133,7 +146,7 @@ function MobileNav({
   const t = useTranslations("nav");
   return (
     <nav
-      className="flex items-center justify-around gap-0.5 rounded-2xl p-1.5 shadow-lg"
+      className="flex items-center gap-0.5 overflow-x-auto rounded-2xl p-1.5 shadow-lg [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       style={{ backgroundColor: navBg }}
     >
       {items.map((item) => {
@@ -143,7 +156,7 @@ function MobileNav({
           <Link
             key={item.key}
             href={item.href}
-            className="flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-xl px-1 py-2 text-[10px] font-medium leading-tight"
+            className="flex min-w-[4.25rem] flex-1 shrink-0 flex-col items-center gap-0.5 rounded-xl px-1 py-2 text-[10px] font-medium leading-tight"
             style={{
               color: active ? activeColor : inactiveColor,
               backgroundColor: active ? withAlpha(activeColor, 0.18) : "transparent",
@@ -158,7 +171,7 @@ function MobileNav({
         href={bookHref}
         target="_blank"
         rel="noreferrer"
-        className="flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-xl px-1 py-2 text-[10px] font-medium leading-tight"
+        className="flex min-w-[4.25rem] flex-1 shrink-0 flex-col items-center gap-0.5 rounded-xl px-1 py-2 text-[10px] font-medium leading-tight"
         style={{ color: inactiveColor }}
         aria-label={t("bookPublic")}
       >

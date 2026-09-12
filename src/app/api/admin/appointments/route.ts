@@ -4,6 +4,7 @@ import { withApi, readJson } from "@/lib/api";
 import { ok, HttpStatus } from "@/lib/response";
 import { ValidationAppError } from "@/lib/errors";
 import { getDashboardAccess } from "@/lib/tenant/dashboard";
+import { assertSubscriptionAccess } from "@/lib/subscriptions";
 import {
   cancelAppointment,
   rescheduleAppointment,
@@ -42,6 +43,7 @@ export async function POST(req: Request) {
     const action = url.searchParams.get("action");
 
     const ctx = await getDashboardAccess(slug);
+    await assertSubscriptionAccess(ctx.tenantId);
 
     if (action === "cancel") {
       const body = await readJson<unknown>(req);

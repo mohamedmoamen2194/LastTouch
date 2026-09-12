@@ -17,16 +17,16 @@ const CARDS: Record<
   { features: readonly string[]; basePrice: number | null; popular?: boolean }
 > = {
   basic: {
-    features: ["management", "booking", "whatsappManager", "whatsappWorkers", "whatsappClients"],
+    features: ["management", "booking", "appointments", "customers", "analytics", "team5"],
     basePrice: 800,
   },
   pro: {
-    features: ["included", "ads", "performance", "aiAssistant", "campaigns"],
+    features: ["included", "ads", "performance", "aiAssistant", "campaigns", "team5"],
     basePrice: 1200,
     popular: true,
   },
   custom: {
-    features: ["everything", "tailored", "support", "flexible"],
+    features: ["everything", "tailored", "support", "flexible", "teamCustom"],
     basePrice: null,
   },
 };
@@ -166,7 +166,7 @@ export function SubscriptionPlans({
             >
               {isCurrent && (
                 <span
-                  className="absolute end-4 top-4 rounded-full px-2.5 py-1 text-[11px] font-bold"
+                  className="absolute end-4 top-4 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-bold"
                   style={{
                     backgroundColor: card.popular ? theme.onPrimary : theme.primary,
                     color: card.popular ? theme.primary : theme.onPrimary,
@@ -192,7 +192,8 @@ export function SubscriptionPlans({
                 ) : (
                   <>
                     <span
-                      className="text-2xl font-bold tabular-nums sm:text-3xl"
+                      dir="ltr"
+                      className="whitespace-nowrap text-2xl font-bold tabular-nums sm:text-3xl"
                       style={{ color: card.popular ? theme.onPrimary : theme.primary }}
                     >
                       {price.toLocaleString(locale === "ar" ? "ar-EG" : "en-US")}

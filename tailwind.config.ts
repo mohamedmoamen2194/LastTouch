@@ -85,15 +85,17 @@ const config: Config = {
       },
       borderRadius: {
         DEFAULT: "1rem",
-        sm: "0.5rem",
-        md: "1.5rem",
-        lg: "2rem",
-        xl: "3rem",
+        sm: "0.625rem",
+        md: "0.75rem",
+        lg: "1rem",
+        xl: "1.25rem",
+        "2xl": "1.5rem",
         full: "9999px",
       },
       fontFamily: {
         grotesk: ["var(--font-grotesk)", "sans-serif"],
         inter: ["var(--font-inter)", "sans-serif"],
+        arabic: ["var(--font-arabic)", "var(--font-inter)", "sans-serif"],
         mono: ["JetBrains Mono", "monospace"],
       },
       boxShadow: {

@@ -57,7 +57,7 @@ export default async function LandingPage({
           <span className="rounded-full border border-[#c5c6cd] bg-white px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-[#515f74]">
             {t("hero.badge")}
           </span>
-          <h1 className="text-3xl font-bold leading-[1.1] tracking-tight text-[#091426] sm:text-4xl md:text-6xl">
+          <h1 className="text-3xl font-bold leading-tight tracking-tight text-[#091426] sm:text-4xl md:text-5xl lg:text-6xl">
             {t("hero.title")}
           </h1>
           <p className="max-w-md text-base leading-relaxed text-[#45474c] md:text-lg">{t("hero.subtitle")}</p>
@@ -99,10 +99,10 @@ export default async function LandingPage({
           {businessTypes.map((b) => (
             <div
               key={b.type}
-              className="flex h-full flex-col items-center justify-center rounded-xl border border-[#c5c6cd]/60 bg-white p-4 text-center"
+              className="flex h-full min-h-[7.5rem] flex-col items-center justify-center gap-1 rounded-xl border border-[#c5c6cd]/60 bg-white p-4 text-center md:min-h-[8.5rem]"
             >
-              <p className="text-sm font-semibold leading-snug text-[#091426] md:text-base">{b.label}</p>
-              <p className="mt-1 text-xs text-[#45474c] md:text-sm">{b.employeeLabel}</p>
+              <p className="w-full break-words text-sm font-semibold leading-relaxed text-[#091426] md:text-base">{b.label}</p>
+              <p className="w-full break-words text-xs leading-relaxed text-[#45474c] md:text-sm">{b.employeeLabel}</p>
             </div>
           ))}
         </div>
@@ -111,17 +111,17 @@ export default async function LandingPage({
       {/* Features */}
       <section id="features" className="mx-auto w-full max-w-6xl px-4 py-12 md:px-8 md:py-16">
         <div className="mb-8 max-w-2xl md:mb-10">
-          <h2 className="text-2xl font-bold text-[#091426] md:text-4xl">{t("features.title")}</h2>
-          <p className="mt-3 text-base text-[#45474c] md:text-lg">{t("features.subtitle")}</p>
+          <h2 className="text-2xl font-bold text-[#091426] md:text-3xl lg:text-4xl">{t("features.title")}</h2>
+          <p className="mt-3 text-base leading-relaxed text-[#45474c] md:text-lg">{t("features.subtitle")}</p>
         </div>
         <div className="grid gap-3 md:grid-cols-3 md:gap-4">
           {["booking", "customers", "ai", "reports", "marketing", "payments"].map((k) => (
             <div
               key={k}
-              className="flex h-full flex-col rounded-xl border border-[#c5c6cd]/60 bg-white p-5 transition-shadow hover:shadow-md md:p-6"
+              className="flex h-full min-h-[9rem] flex-col rounded-xl border border-[#c5c6cd]/60 bg-white p-5 transition-shadow hover:shadow-md md:p-6"
             >
-              <h3 className="text-base font-semibold text-[#091426] md:text-lg">{t(`features.items.${k}.title`)}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-[#45474c]">{t(`features.items.${k}.desc`)}</p>
+              <h3 className="text-base font-semibold leading-snug text-[#091426] md:text-lg">{t(`features.items.${k}.title`)}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-[#45474c] md:text-[15px]">{t(`features.items.${k}.desc`)}</p>
             </div>
           ))}
         </div>
@@ -133,7 +133,7 @@ export default async function LandingPage({
       {/* CTA */}
       <section className="mx-auto w-full max-w-6xl px-4 pb-16 md:px-8 md:pb-20">
         <div className="flex flex-col items-center gap-5 rounded-2xl bg-[#091426] px-6 py-12 text-center md:gap-6 md:px-8 md:py-14">
-          <h2 className="max-w-xl text-2xl font-bold text-white md:text-4xl">{t("cta.title")}</h2>
+          <h2 className="max-w-xl text-2xl font-bold leading-snug text-white md:text-3xl lg:text-4xl">{t("cta.title")}</h2>
           <Link href="/auth/sign-up" className="rounded-full bg-white px-8 py-3.5 text-base font-semibold text-[#091426] transition-colors hover:bg-[#eff1f3]">
             {t("cta.button")}
           </Link>

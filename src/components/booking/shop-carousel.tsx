@@ -23,7 +23,7 @@ export function ShopCarousel({ images, businessName, theme }: Props) {
   const next = () => setIndex((i) => (i + 1) % count);
 
   return (
-    <div className="mx-auto w-full max-w-[280px]">
+    <div className="mx-auto w-full max-w-[280px] sm:max-w-[340px] md:max-w-[400px]">
       <div
         className="relative w-full overflow-hidden rounded-2xl"
         style={{
@@ -43,19 +43,19 @@ export function ShopCarousel({ images, businessName, theme }: Props) {
             type="button"
             onClick={prev}
             aria-label="Previous photo"
-            className="pointer-events-auto flex h-8 w-8 shrink-0 items-center justify-center rounded-full shadow-sm transition-transform hover:scale-105"
+            className="pointer-events-auto flex h-11 w-11 shrink-0 items-center justify-center rounded-full shadow-sm transition-transform hover:scale-105"
             style={{ backgroundColor: "rgba(255,255,255,0.9)", color: theme.primary }}
           >
-            <ChevronLeft className="h-4 w-4" />
+            <ChevronLeft className="h-5 w-5" />
           </button>
           <button
             type="button"
             onClick={next}
             aria-label="Next photo"
-            className="pointer-events-auto flex h-8 w-8 shrink-0 items-center justify-center rounded-full shadow-sm transition-transform hover:scale-105"
+            className="pointer-events-auto flex h-11 w-11 shrink-0 items-center justify-center rounded-full shadow-sm transition-transform hover:scale-105"
             style={{ backgroundColor: "rgba(255,255,255,0.9)", color: theme.primary }}
           >
-            <ChevronRight className="h-4 w-4" />
+            <ChevronRight className="h-5 w-5" />
           </button>
         </div>
       </div>

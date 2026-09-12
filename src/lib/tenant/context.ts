@@ -103,7 +103,19 @@ export function assertPermission(ctx: Pick<TenantContext, "role">, permission: P
   }
 }
 
-/** Feature flags controlled by subscription (spec section 13). */
+/**
+ * Feature flags controlled by subscription (spec section 13).
+ *
+ * Phase-0 gating convention (keep this list honest as features ship):
+ * - LIVE flags (enforced via assertFeature): employees, gallery,
+ *   branding.advanced, analytics. Core management (services, packages,
+ *   appointments, customers, booking) is covered by the subscription
+ *   paywall instead (assertSubscriptionAccess in admin API routes).
+ * - RESERVED flags (table entries only, no code yet): whatsapp,
+ *   ai_*, promotions, marketing, loyalty, coupons, marketplace,
+ *   custom_domain, multi_location, exports. Wire assertFeature the moment
+ *   a module for one of these lands — never ship the module ungated.
+ */
 const FEATURES_BY_PLAN: Record<SubscriptionPlan, string[]> = {
   free: ["booking", "appointments.basic", "customers.list", "dashboard.basic"],
   pro: [

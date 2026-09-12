@@ -249,7 +249,7 @@ export function PackagesManager({ slug, locale, theme, packages: initial, servic
                 <span className="text-xs" style={{ color: theme.secondary }}>
                   {p.serviceIds.length} {t("servicesCount")}
                 </span>
-                <span className="font-semibold" style={{ color: theme.primary }}>{money(p.price)}</span>
+                <span className="whitespace-nowrap font-semibold tabular-nums" style={{ color: theme.primary }}>{money(p.price)}</span>
               </div>
               <div className="mt-3 flex items-center gap-2">
                 <button

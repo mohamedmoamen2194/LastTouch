@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { tenants } from "@/db/schema";
 import { NotFoundError } from "@/lib/errors";
-import { assertPermission, type TenantContext } from "@/lib/tenant/context";
+import { assertFeature, assertPermission, type TenantContext } from "@/lib/tenant/context";
 import { Permission } from "@/lib/permissions";
 
 async function getTenant(ctx: TenantContext) {
@@ -14,6 +14,7 @@ async function getTenant(ctx: TenantContext) {
 /** Replace the store logo with a Blob URL (null clears it). Returns the previous logo URL. */
 export async function setTenantLogo(ctx: TenantContext, url: string | null) {
   assertPermission(ctx, Permission["branding.manage"]);
+  assertFeature(ctx, "branding.advanced");
   const tenant = await getTenant(ctx);
   await db
     .update(tenants)
@@ -25,6 +26,7 @@ export async function setTenantLogo(ctx: TenantContext, url: string | null) {
 /** Append a shop image Blob URL to the tenant gallery. Returns the new list. */
 export async function addTenantImage(ctx: TenantContext, url: string) {
   assertPermission(ctx, Permission["gallery.manage"]);
+  assertFeature(ctx, "gallery");
   const tenant = await getTenant(ctx);
   const images = tenant.shopImages ?? [];
   const next = images.includes(url) ? images : [...images, url];
@@ -41,6 +43,7 @@ export async function addTenantImage(ctx: TenantContext, url: string) {
  */
 export async function removeTenantImage(ctx: TenantContext, url: string) {
   assertPermission(ctx, Permission["gallery.manage"]);
+  assertFeature(ctx, "gallery");
   const tenant = await getTenant(ctx);
   const current = tenant.shopImages ?? [];
   if (!current.includes(url)) return { images: current, removed: false };

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { ImagePlus, X } from "lucide-react";
 import type { ThemeTokens } from "@/config/business-types";
+import { QrDownload } from "@/components/dashboard/qr-download";
 
 type Props = {
   slug: string;
@@ -13,6 +14,7 @@ type Props = {
   businessName: string;
   businessTypeLabel: string;
   bookingUrl: string;
+  checkinUrl: string;
   plan: string;
   planStatus: string | null;
   renewalDate: string | null;
@@ -25,6 +27,8 @@ type Props = {
   manageHref: string;
   logoUrl: string | null;
   shopImages: string[];
+  /** Max active team members for the current plan; null = enterprise (custom). */
+  maxEmployees: number | null;
 };
 
 const PLAN_KEYS: Record<string, string> = {
@@ -56,6 +60,7 @@ export function SettingsManager({
   businessName,
   businessTypeLabel,
   bookingUrl,
+  checkinUrl,
   plan,
   planStatus,
   renewalDate,
@@ -68,6 +73,7 @@ export function SettingsManager({
   manageHref,
   logoUrl,
   shopImages,
+  maxEmployees,
 }: Props) {
   const t = useTranslations("settings");
   const ts = useTranslations("subscription");
@@ -213,7 +219,11 @@ export function SettingsManager({
             </div>
             <div className="flex flex-col gap-0.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
               <dt className="text-xs font-medium uppercase tracking-wide" style={{ color: theme.onSurfaceVariant }}>{t("address")}</dt>
-              <dd className="truncate" style={{ color: theme.primary }}>{bookingUrl}</dd>
+              <dd className="truncate" dir="ltr" style={{ color: theme.primary }}>{bookingUrl}</dd>
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <QrDownload value={bookingUrl} fileName={`${slug}-booking-qr.png`} label={t("qrBooking")} theme={theme} />
+              <QrDownload value={checkinUrl} fileName={`${slug}-checkin-qr.png`} label={t("qrCheckin")} theme={theme} />
             </div>
           </dl>
         </section>
@@ -241,6 +251,12 @@ export function SettingsManager({
               <dd className="break-words" style={{ color: theme.onSurfaceVariant }}>
                 {periodLabel}
                 {daysLeft !== null && daysLeft >= 0 ? ` · ${ts("daysLeft", { days: daysLeft })}` : ""}
+              </dd>
+            </div>
+            <div className="flex flex-col gap-0.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+              <dt className="text-xs font-medium uppercase tracking-wide" style={{ color: theme.onSurfaceVariant }}>{t("teamSeats")}</dt>
+              <dd className="break-words font-medium" style={{ color: theme.onSurfaceVariant }}>
+                {maxEmployees === null ? t("teamSeatsCustom") : t("teamSeatsUpTo", { max: maxEmployees })}
               </dd>
             </div>
             {subscribed && (

@@ -1,5 +1,5 @@
 import { setRequestLocale, getMessages } from "next-intl/server";
-import { Inter, Space_Grotesk } from "next/font/google";
+import { IBM_Plex_Sans_Arabic, Inter, Space_Grotesk } from "next/font/google";
 import { notFound } from "next/navigation";
 import { routing } from "@/i18n/routing";
 import { AppProviders } from "@/components/providers";
@@ -10,6 +10,14 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "sw
 const grotesk = Space_Grotesk({
   subsets: ["latin"],
   variable: "--font-grotesk",
+  display: "swap",
+});
+// Arabic companion font: Inter/Space Grotesk are latin-only, so Arabic text
+// would fall back to inconsistent system fonts. Applied via :lang(ar) rules.
+const arabic = IBM_Plex_Sans_Arabic({
+  weight: ["400", "500", "600", "700"],
+  subsets: ["arabic", "latin"],
+  variable: "--font-arabic",
   display: "swap",
 });
 
@@ -39,7 +47,7 @@ export default async function LocaleLayout({
   const messages = await getMessages();
 
   return (
-    <html lang={langs[locale]} dir={dir} className={cn(inter.variable, grotesk.variable)}>
+    <html lang={langs[locale]} dir={dir} className={cn(inter.variable, grotesk.variable, arabic.variable)}>
       <body>
         <AppProviders locale={locale} messages={messages}>{children}</AppProviders>
       </body>

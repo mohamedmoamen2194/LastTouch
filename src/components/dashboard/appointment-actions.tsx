@@ -50,7 +50,7 @@ export function AppointmentActions({ slug, appointmentId, status }: Props) {
   return (
     <div className="flex flex-wrap items-stretch justify-stretch gap-2 md:items-center md:justify-end">
       {error && (
-        <span className="w-full text-right text-xs text-[#ba1a1a]">{error}</span>
+        <span className="w-full text-end text-xs text-[#ba1a1a]">{error}</span>
       )}
 
       {status === "pending" && (

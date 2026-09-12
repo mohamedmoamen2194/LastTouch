@@ -1,12 +1,13 @@
 import { setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
+import { headers } from "next/headers";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { subscriptions, tenants } from "@/db/schema";
 import { getDashboardAccess } from "@/lib/tenant/dashboard";
 import { getBusinessTypeConfig, getThemeTokens } from "@/config/business-types";
 import { SettingsManager } from "@/components/dashboard/settings-manager";
-import { getSubscriptionState } from "@/lib/subscriptions";
+import { getMaxEmployeesForPlan, getSubscriptionState } from "@/lib/subscriptions";
 
 export const dynamic = "force-dynamic";
 
@@ -35,6 +36,13 @@ export default async function SettingsPage({
     .limit(1);
   const subState = await getSubscriptionState(ctx.tenantId, { role: ctx.role });
 
+  // Absolute origin for printable QR codes (env override wins, else request host).
+  const h = await headers();
+  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "";
+  const proto = h.get("x-forwarded-proto") ?? "https";
+  const appUrl =
+    process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? (host ? `${proto}://${host}` : "");
+
   return (
     <SettingsManager
       slug={slug}
@@ -42,7 +50,8 @@ export default async function SettingsPage({
       theme={theme}
       businessName={tenant?.businessName ?? ctx.businessName}
       businessTypeLabel={getBusinessTypeConfig(ctx.businessType).label}
-      bookingUrl={`/${locale}/book/${slug}`}
+      bookingUrl={`${appUrl}/${locale}/book/${slug}`}
+      checkinUrl={`${appUrl}/${locale}/checkin/${slug}`}
       plan={tenant?.subscriptionPlan ?? ctx.subscriptionPlan}
       planStatus={subscription?.status ?? "active"}
       renewalDate={subscription?.renewalDate ? subscription.renewalDate.toISOString() : null}
@@ -55,6 +64,7 @@ export default async function SettingsPage({
       manageHref={`/${locale}/${slug}/dashboard#subscription`}
       logoUrl={tenant?.logoUrl ?? null}
       shopImages={tenant?.shopImages ?? []}
+      maxEmployees={getMaxEmployeesForPlan(tenant?.subscriptionPlan ?? ctx.subscriptionPlan)}
     />
   );
 }

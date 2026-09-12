@@ -1,10 +1,16 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { PauseCircle } from "lucide-react";
+import { avg, count, eq } from "drizzle-orm";
+import { db } from "@/db";
+import { reviews } from "@/db/schema";
 import { resolveTenantForBooking, listTenantEmployeesWithServices, listTenantServices } from "@/modules/booking/domain/catalog";
 import { listActivePackagesForBooking } from "@/modules/booking/application/packages";
 import { getBusinessTypeConfig, getThemeTokens } from "@/config/business-types";
 import { BookingWidget } from "@/components/booking/booking-widget";
+import { BookingTabs } from "@/components/booking/booking-tabs";
+import { ScanView } from "@/components/booking/scan-view";
+import { RatingsView } from "@/components/booking/ratings-view";
 import { Logo } from "@/components/booking/logo";
 import { ShopCarousel } from "@/components/booking/shop-carousel";
 import { PoweredByLastTouch } from "@/components/shared/powered-by-lasttouch";
@@ -93,10 +99,14 @@ export default async function BookingPage({
     );
   }
 
-  const [employees, services, packages] = await Promise.all([
+  const [employees, services, packages, [ratingRow]] = await Promise.all([
     listTenantEmployeesWithServices(tenant.id),
     listTenantServices(tenant.id),
     listActivePackagesForBooking(tenant.id),
+    db
+      .select({ avg: avg(reviews.rating), count: count(reviews.id) })
+      .from(reviews)
+      .where(eq(reviews.tenantId, tenant.id)),
   ]);
 
   const pick = (en: string, ar: string | null) => (locale === "ar" && ar ? ar : en);
@@ -127,65 +137,97 @@ export default async function BookingPage({
         </div>
       </header>
 
-      {/* Hero */}
-      <section className="mx-auto flex w-full max-w-screen-xl flex-1 flex-col gap-6 px-4 py-10 md:gap-8 md:px-8 md:py-14">
-        <div className="flex max-w-3xl flex-col items-start gap-3 md:gap-4">
-          <span
-            className="text-xs font-semibold uppercase tracking-widest"
-            style={{ color: theme.secondary }}
-          >
-            {biz.label}
-          </span>
-          <h1 className="text-3xl font-bold leading-tight md:text-5xl" style={{ color: theme.primary }}>
-            {tenant.businessName}
-          </h1>
-          <p className="text-base leading-relaxed md:text-lg" style={{ color: theme.onSurfaceVariant }}>
-            {tenant.tagline ?? tenant.description ?? ""}
-          </p>
-        </div>
+      {/* Tabs: booking | scan | ratings */}
+      <div className="mx-auto w-full max-w-screen-xl flex-1 px-4 py-10 md:px-8 md:py-14">
+        <BookingTabs
+          theme={theme}
+          booking={
+            <>
+              {/* Hero */}
+              <section className="flex w-full flex-col gap-6 md:gap-8">
+                <div className="flex max-w-3xl flex-col items-start gap-3 md:gap-4">
+                  <span
+                    className="text-xs font-semibold uppercase tracking-widest"
+                    style={{ color: theme.secondary }}
+                  >
+                    {biz.label}
+                  </span>
+                  <h1 className="text-3xl font-bold leading-tight md:text-5xl" style={{ color: theme.primary }}>
+                    {tenant.businessName}
+                  </h1>
+                  <p className="text-base leading-relaxed md:text-lg" style={{ color: theme.onSurfaceVariant }}>
+                    {tenant.tagline ?? tenant.description ?? ""}
+                  </p>
+                </div>
 
-        {tenant.shopImages && tenant.shopImages.length > 0 && (
-          <ShopCarousel images={tenant.shopImages.slice(0, 6)} businessName={tenant.businessName} theme={theme} />
-        )}
-      </section>
+                {tenant.shopImages && tenant.shopImages.length > 0 && (
+                  <ShopCarousel images={tenant.shopImages.slice(0, 6)} businessName={tenant.businessName} theme={theme} />
+                )}
+              </section>
 
-      {/* Booking */}
-      <section id="booking" className="mx-auto max-w-4xl px-4 pb-20 md:px-8 md:pb-24">
-        <BookingWidget
-          tenant={{
-            businessName: tenant.businessName,
-            tagline: tenant.tagline,
-            description: tenant.description,
-            employeeLabel,
-            currency: tenant.currency,
-          }}
-          themeId={tenant.theme}
-          services={services.map((s) => ({
-            id: s.id,
-            name: pick(s.name, s.nameAr ?? null),
-            description: s.descriptionAr && locale === "ar" ? s.descriptionAr : s.description,
-            durationMinutes: s.durationMinutes,
-            price: String(s.price),
-          }))}
-          packages={packages.map((p) => ({
-            id: p.id,
-            name: pick(p.name, p.nameAr ?? null),
-            description: p.descriptionAr && locale === "ar" ? p.descriptionAr : p.description,
-            price: p.price,
-            serviceIds: p.serviceIds,
-            serviceNames: p.serviceNames,
-          }))}
-          employees={employees.map((e) => ({
-            id: e.id,
-            displayName: e.displayName,
-            firstName: e.firstName,
-            lastName: e.lastName,
-            yearsExperience: e.yearsExperience,
-            isGeneral: e.isGeneral,
-            serviceIds: e.serviceIds,
-          }))}
+              {/* Booking */}
+              <section id="booking" className="mx-auto mt-6 max-w-4xl md:mt-8">
+                <BookingWidget
+                  tenant={{
+                    businessName: tenant.businessName,
+                    tagline: tenant.tagline,
+                    description: tenant.description,
+                    employeeLabel,
+                    currency: tenant.currency,
+                  }}
+                  themeId={tenant.theme}
+                  services={services.map((s) => ({
+                    id: s.id,
+                    name: pick(s.name, s.nameAr ?? null),
+                    description: s.descriptionAr && locale === "ar" ? s.descriptionAr : s.description,
+                    durationMinutes: s.durationMinutes,
+                    price: String(s.price),
+                  }))}
+                  packages={packages.map((p) => ({
+                    id: p.id,
+                    name: pick(p.name, p.nameAr ?? null),
+                    description: p.descriptionAr && locale === "ar" ? p.descriptionAr : p.description,
+                    price: p.price,
+                    serviceIds: p.serviceIds,
+                    serviceNames: p.serviceNames,
+                  }))}
+                  employees={employees.map((e) => ({
+                    id: e.id,
+                    displayName: e.displayName,
+                    firstName: e.firstName,
+                    lastName: e.lastName,
+                    yearsExperience: e.yearsExperience,
+                    isGeneral: e.isGeneral,
+                    serviceIds: e.serviceIds,
+                  }))}
+                />
+              </section>
+            </>
+          }
+          scan={
+            <section className="py-2">
+              <ScanView theme={theme} slug={slug} />
+            </section>
+          }
+          ratings={
+            <section className="py-2">
+              <RatingsView
+                theme={theme}
+                storeRating={
+                  ratingRow && Number(ratingRow.count) > 0
+                    ? { avg: Number(ratingRow.avg ?? 0), count: Number(ratingRow.count) }
+                    : null
+                }
+                workers={employees.map((e) => ({
+                  name: e.displayName ?? `${e.firstName}${e.lastName ? " " + e.lastName : ""}`,
+                  role: employeeLabel,
+                  rating: Number(e.rating ?? 0),
+                }))}
+              />
+            </section>
+          }
         />
-      </section>
+      </div>
 
       {/* Footer */}
       <PoweredByLastTouch theme={theme} />

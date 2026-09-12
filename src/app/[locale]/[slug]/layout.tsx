@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { tenants } from "@/db/schema";
 import { getDashboardAccess } from "@/lib/tenant/dashboard";
+import { featuresForPlan } from "@/lib/tenant/context";
 import { getThemeTokens } from "@/config/business-types";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { SubscriptionReminder } from "@/components/dashboard/subscription-reminder";
@@ -65,6 +66,7 @@ export default async function TenantLayout({
       businessName={ctx.businessName}
       theme={theme}
       logoUrl={tenantLogo?.logoUrl ?? null}
+      features={featuresForPlan(ctx.subscriptionPlan)}
     >
       {children}
       <SubscriptionReminderGate

@@ -1,25 +1,25 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Check, ChevronLeft, ChevronRight } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 
 const PLANS = [
   {
     key: "basic",
-    features: ["management", "booking", "whatsappManager", "whatsappWorkers", "whatsappClients"] as const,
+    features: ["management", "booking", "appointments", "customers", "analytics", "team5"] as const,
     basePrice: 800,
   },
   {
     key: "pro",
-    features: ["included", "ads", "performance", "aiAssistant", "campaigns"] as const,
+    features: ["included", "ads", "performance", "aiAssistant", "campaigns", "team5"] as const,
     basePrice: 1200,
     popular: true,
   },
   {
     key: "custom",
-    features: ["everything", "tailored", "support", "flexible"] as const,
+    features: ["everything", "tailored", "support", "flexible", "teamCustom"] as const,
     customPrice: true,
   },
 ] as const;
@@ -36,6 +36,10 @@ function discountedPrice(base: number, off: number) {
 
 export function PricingSection() {
   const t = useTranslations("pricing");
+  const locale = useLocale();
+  // Match the dashboard plans: Eastern Arabic numerals for AR, Western for EN.
+  const moneyLocale = locale === "ar" ? "ar-EG" : "en-US";
+  const fmtPrice = (v: number) => v.toLocaleString(moneyLocale);
   const trackRef = useRef<HTMLDivElement>(null);
   const [billing, setBilling] = useState<(typeof BILLING)[number]>(BILLING[0]);
 
@@ -54,8 +58,8 @@ export function PricingSection() {
   return (
     <section id="pricing" className="mx-auto w-full max-w-6xl px-4 py-12 md:px-8 md:py-16">
       <div className="mb-8 max-w-2xl md:mb-10">
-        <h2 className="text-2xl font-bold text-[#091426] md:text-4xl">{t("title")}</h2>
-        <p className="mt-3 text-base text-[#45474c] md:text-lg">{t("subtitle")}</p>
+        <h2 className="text-2xl font-bold text-[#091426] md:text-3xl lg:text-4xl">{t("title")}</h2>
+        <p className="mt-3 text-base leading-relaxed text-[#45474c] md:text-lg">{t("subtitle")}</p>
       </div>
 
       {/* Billing toggle */}
@@ -125,14 +129,14 @@ export function PricingSection() {
               <div
                 key={plan.key}
                 data-pricing-card
-                className={`relative flex min-h-[25rem] w-[88%] max-w-[20rem] shrink-0 snap-center flex-col rounded-2xl border p-4 md:min-h-0 md:w-auto md:max-w-none md:snap-none md:min-w-0 md:p-6 ${
+                className={`relative flex min-h-[25rem] w-[88%] max-w-[20rem] shrink-0 snap-center flex-col rounded-2xl border p-5 md:min-h-[27rem] md:w-auto md:max-w-none md:snap-none md:min-w-0 md:p-6 ${
                   featured
                     ? "border-[#091426] bg-[#091426] text-white shadow-lg"
                     : "border-[#c5c6cd]/60 bg-white"
                 }`}
               >
                 {featured && (
-                  <span className="absolute right-4 top-0 -translate-y-1/2 rounded-full bg-white px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[#091426]">
+                  <span className="absolute end-4 top-0 -translate-y-1/2 whitespace-nowrap rounded-full bg-white px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[#091426]">
                     {t("popular")}
                   </span>
                 )}
@@ -143,22 +147,23 @@ export function PricingSection() {
                 {/* Price */}
                 <div className="mt-3 flex flex-wrap items-baseline gap-x-2 gap-y-1 md:flex-nowrap">
                   {customPrice ? (
-                    <span className={`text-2xl font-bold md:text-4xl ${featured ? "text-white" : "text-[#091426]"}`}>
+                    <span className={`whitespace-nowrap text-2xl font-bold tabular-nums md:text-4xl ${featured ? "text-white" : "text-[#091426]"}`}>
                       {t(`plans.${plan.key}.priceLabel`)}
                     </span>
                   ) : (
                     <>
                       {showOld && (
                         <span
-                          className={`text-base font-semibold line-through md:text-xl ${
+                          dir="ltr"
+                          className={`whitespace-nowrap text-base font-semibold tabular-nums line-through md:text-xl ${
                             featured ? "text-white/50" : "text-[#9aa0a6]"
                           }`}
                         >
-                          {base}
+                          {fmtPrice(base)}
                         </span>
                       )}
-                      <span className={`text-2xl font-bold md:text-4xl ${featured ? "text-white" : "text-[#091426]"}`}>
-                        {current}
+                      <span dir="ltr" className={`whitespace-nowrap text-2xl font-bold tabular-nums md:text-4xl ${featured ? "text-white" : "text-[#091426]"}`}>
+                        {fmtPrice(current ?? base)}
                       </span>
                       <span className={`text-xs md:text-sm ${featured ? "text-white/70" : "text-[#45474c]"}`}>
                         {t("billed")}
@@ -178,12 +183,12 @@ export function PricingSection() {
                   </span>
                 )}
 
-                <p className={`mt-2 text-xs leading-relaxed md:text-sm ${featured ? "text-white/80" : "text-[#45474c]"}`}>
+                <p className={`mt-2 text-sm leading-relaxed md:text-[15px] ${featured ? "text-white/80" : "text-[#45474c]"}`}>
                   {t(`plans.${plan.key}.description`)}
                 </p>
                 <ul className="mt-4 flex flex-1 flex-col gap-2">
                   {plan.features.map((f) => (
-                    <li key={f} className="flex items-start gap-2 text-xs md:text-sm">
+                    <li key={f} className="flex items-start gap-2 text-sm leading-relaxed">
                       <Check
                         className={`mt-0.5 h-3.5 w-3.5 shrink-0 md:h-4 md:w-4 ${featured ? "text-white" : "text-[#091426]"}`}
                         strokeWidth={3}

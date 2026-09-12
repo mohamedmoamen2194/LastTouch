@@ -198,7 +198,7 @@ export function ServicesManager({ slug, locale, theme, services: initial, busine
               )}
               <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t pt-3 text-sm md:mt-auto" style={{ borderColor: theme.outlineVariant }}>
                 <span style={{ color: theme.secondary }}>{s.durationMinutes} min</span>
-                <span className="font-semibold" style={{ color: theme.primary }}>{money(s.price)}</span>
+                <span className="whitespace-nowrap font-semibold tabular-nums" style={{ color: theme.primary }}>{money(s.price)}</span>
               </div>
               <div className="mt-3 flex items-center gap-2">
                 <button

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { getThemeTokens, type ThemeTokens } from "@/config/business-types";
 import type { ThemeName } from "@/db/schema";
 import { cn } from "@/lib/utils";
@@ -59,6 +59,10 @@ type Props = {
 
 export function BookingWidget({ tenant, themeId, services, packages = [], employees }: Props) {
   const t = useTranslations("booking");
+  const locale = useLocale();
+  // Single locale source for every number/date/time in the widget so EN and AR
+  // render consistently (Eastern Arabic numerals + Arabic names for AR).
+  const numTag = locale === "ar" ? "ar-EG" : "en-US";
   const theme = getThemeTokens(themeId);
 
   const [step, setStep] = useState(1);
@@ -148,7 +152,8 @@ export function BookingWidget({ tenant, themeId, services, packages = [], employ
   const names = [t("stepService"), t("stepStaff"), t("stepTime")];
 
   const week = useMemo(() => nextSevenDays(), []);
-  const shortWeekLabels = useMemo(() => shortWeekLabelsFor(week), [week]);
+  const shortWeekLabels = useMemo(() => shortWeekLabelsFor(week, numTag), [week, numTag]);
+  const weekdayNarrow = useMemo(() => narrowWeekdayNames(numTag), [numTag]);
 
   // ---- Slot fetching ----
 
@@ -449,7 +454,7 @@ export function BookingWidget({ tenant, themeId, services, packages = [], employ
 
         {receipt && (
           <div
-            className="mx-auto mt-6 overflow-hidden rounded-2xl border text-left"
+            className="mx-auto mt-6 overflow-hidden rounded-2xl border text-start"
             style={{ borderColor: theme.outlineVariant, backgroundColor: theme.surfaceContainerLowest }}
           >
             <div className="px-5 py-4 text-sm font-semibold" style={{ backgroundColor: theme.surfaceContainerHigh, color: theme.primary }}>
@@ -458,18 +463,18 @@ export function BookingWidget({ tenant, themeId, services, packages = [], employ
             <div className="space-y-3 px-5 py-4 text-sm">
               <div className="flex items-center justify-between gap-3">
                 <span style={{ color: theme.onSurfaceVariant }}>{t("receiptDate")}</span>
-                <span className="font-semibold" style={{ color: theme.primary }}>{formatNice(date ?? "")}</span>
+                <span className="font-semibold" style={{ color: theme.primary }}>{formatNice(date ?? "", numTag)}</span>
               </div>
               <div className="flex items-center justify-between gap-3">
                 <span style={{ color: theme.onSurfaceVariant }}>{t("receiptTime")}</span>
-                <span className="font-semibold" style={{ color: theme.primary }}>
-                  {formatTime(receipt.startTime)} – {formatTime(receipt.endTime)}
+                <span className="whitespace-nowrap font-semibold tabular-nums" style={{ color: theme.primary }}>
+                  {formatTime(receipt.startTime, numTag)} – {formatTime(receipt.endTime, numTag)}
                 </span>
               </div>
               {receipt.services.map((s, idx) => (
                 <div key={`${s.name}-${idx}`} className="flex items-center justify-between gap-3">
                   <span style={{ color: theme.onSurfaceVariant }}>{s.name} · {s.durationMinutes} {t("min")}</span>
-                  <span className="font-medium" style={{ color: theme.primary }}>{formatMoney(s.price, tenant.currency)}</span>
+                  <span dir="ltr" className="whitespace-nowrap font-medium tabular-nums" style={{ color: theme.primary }}>{formatMoney(s.price, tenant.currency, numTag)}</span>
                 </div>
               ))}
               {receipt.assignedWorkers && receipt.assignedWorkers.length > 0 && (
@@ -500,8 +505,8 @@ export function BookingWidget({ tenant, themeId, services, packages = [], employ
               </div>
               <div className="flex items-center justify-between gap-3 border-t pt-3" style={{ borderColor: theme.outlineVariant }}>
                 <span style={{ color: theme.onSurfaceVariant }}>{t("totalPrice")}</span>
-                <span className="text-lg font-bold" style={{ color: theme.primary }}>
-                  {formatMoney(receipt.services.reduce((sum, s) => sum + Number(s.price), 0), tenant.currency)}
+                <span dir="ltr" className="whitespace-nowrap text-lg font-bold tabular-nums" style={{ color: theme.primary }}>
+                  {formatMoney(receipt.services.reduce((sum, s) => sum + Number(s.price), 0), tenant.currency, numTag)}
                 </span>
               </div>
             </div>
@@ -554,7 +559,7 @@ export function BookingWidget({ tenant, themeId, services, packages = [], employ
                   {i + 1}
                 </div>
                 <span
-                  className={cn("hidden text-sm sm:block")}
+                  className={cn("block px-1 text-center text-xs leading-snug sm:text-sm")}
                   style={{ color: active ? theme.primary : theme.onSurfaceVariant }}
                 >
                   {label}
@@ -599,7 +604,7 @@ export function BookingWidget({ tenant, themeId, services, packages = [], employ
                 <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide" style={{ color: theme.secondary }}>
                   {t("packages")}
                 </h3>
-                <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-2">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
                   {packages.map((p) => {
                     const selected = packageId === p.id;
                     return (
@@ -607,7 +612,7 @@ export function BookingWidget({ tenant, themeId, services, packages = [], employ
                         key={p.id}
                         type="button"
                         onClick={() => pickPackage(p.id)}
-                        className="relative flex flex-col gap-2 rounded-lg border p-3 text-left transition-all sm:gap-3 sm:p-4 md:p-5"
+                        className="relative flex flex-col gap-2 rounded-lg border p-3 text-start transition-all sm:gap-3 sm:p-4 md:p-5"
                         style={{
                           borderColor: selected ? theme.primary : theme.outlineVariant,
                           boxShadow: selected ? `0 4px 20px -5px ${theme.primary}` : "none",
@@ -628,8 +633,8 @@ export function BookingWidget({ tenant, themeId, services, packages = [], employ
                           </span>
                         </div>
                         <div className="min-w-0">
-                          <h3 className="truncate text-sm font-semibold sm:text-base" style={{ color: theme.primary }}>{p.name}</h3>
-                          {p.description && <p className="mt-0.5 hidden text-xs sm:mt-1 sm:block sm:text-sm" style={{ color: theme.onSurfaceVariant }}>{p.description}</p>}
+                          <h3 className="line-clamp-2 break-words text-sm font-semibold leading-snug sm:text-base" style={{ color: theme.primary }}>{p.name}</h3>
+                          {p.description && <p className="mt-0.5 line-clamp-2 break-words text-xs leading-relaxed sm:mt-1 sm:text-sm" style={{ color: theme.onSurfaceVariant }}>{p.description}</p>}
                           {p.serviceNames.length > 0 && (
                             <p className="mt-1 truncate text-xs" style={{ color: theme.secondary }}>
                               {p.serviceNames.join(" · ")}
@@ -640,7 +645,7 @@ export function BookingWidget({ tenant, themeId, services, packages = [], employ
                           <span className="text-xs" style={{ color: theme.secondary }}>
                             {p.serviceIds.length} {t("services")}
                           </span>
-                          <span className="text-xs font-semibold sm:text-sm" style={{ color: theme.primary }}>{formatMoney(p.price, tenant.currency)}</span>
+                          <span dir="ltr" className="whitespace-nowrap text-xs font-semibold tabular-nums sm:text-sm" style={{ color: theme.primary }}>{formatMoney(p.price, tenant.currency, numTag)}</span>
                         </div>
                       </button>
                     );
@@ -650,7 +655,7 @@ export function BookingWidget({ tenant, themeId, services, packages = [], employ
                   <button
                     type="button"
                     onClick={() => (customizeOpen ? closeCustomize() : openCustomize())}
-                    className="relative flex flex-col gap-2 rounded-lg border border-dashed p-3 text-left transition-all sm:gap-3 sm:p-4 md:p-5"
+                    className="relative flex flex-col gap-2 rounded-lg border border-dashed p-3 text-start transition-all sm:gap-3 sm:p-4 md:p-5"
                     style={{
                       borderColor: customizeOpen ? theme.primary : theme.outlineVariant,
                       boxShadow: customizeOpen ? `0 4px 20px -5px ${theme.primary}` : "none",
@@ -671,15 +676,15 @@ export function BookingWidget({ tenant, themeId, services, packages = [], employ
                       </span>
                     </div>
                     <div className="min-w-0">
-                      <h3 className="truncate text-sm font-semibold sm:text-base" style={{ color: theme.primary }}>{t("customizePackage")}</h3>
+                      <h3 className="line-clamp-2 break-words text-sm font-semibold leading-snug sm:text-base" style={{ color: theme.primary }}>{t("customizePackage")}</h3>
                       <p className="mt-0.5 hidden text-xs sm:mt-1 sm:block sm:text-sm" style={{ color: theme.onSurfaceVariant }}>{t("customizeHint")}</p>
                     </div>
                     <div className="mt-auto flex items-center justify-between border-t pt-2 text-sm" style={{ borderColor: theme.surfaceContainerHigh }}>
                       <span className="text-xs" style={{ color: theme.secondary }}>
                         {customServices.length} {t("services")}
                       </span>
-                      <span className="text-xs font-semibold sm:text-sm" style={{ color: theme.primary }}>
-                        {customServices.length > 0 ? formatMoney(customPrice(customServices), tenant.currency) : t("buildYours")}
+                      <span className="whitespace-nowrap text-xs font-semibold tabular-nums sm:text-sm" style={{ color: theme.primary }}>
+                        {customServices.length > 0 ? formatMoney(customPrice(customServices), tenant.currency, numTag) : t("buildYours")}
                       </span>
                     </div>
                   </button>
@@ -701,7 +706,7 @@ export function BookingWidget({ tenant, themeId, services, packages = [], employ
                             key={s.id}
                             type="button"
                             onClick={() => toggleCustomService(s.id)}
-                            className="flex items-center gap-3 rounded-lg border p-3 text-left transition-all"
+                            className="flex items-center gap-3 rounded-lg border p-3 text-start transition-all"
                             style={{
                               borderColor: checked ? theme.primary : theme.outlineVariant,
                               boxShadow: checked ? `0 2px 10px -3px ${theme.primary}` : "none",
@@ -720,8 +725,8 @@ export function BookingWidget({ tenant, themeId, services, packages = [], employ
                                 {s.durationMinutes} {t("min")}
                               </span>
                             </span>
-                            <span className="shrink-0 text-sm font-semibold" style={{ color: theme.primary }}>
-                              {formatMoney(s.price, tenant.currency)}
+                            <span dir="ltr" className="shrink-0 whitespace-nowrap text-sm font-semibold tabular-nums" style={{ color: theme.primary }}>
+                              {formatMoney(s.price, tenant.currency, numTag)}
                             </span>
                           </button>
                         );
@@ -740,7 +745,7 @@ export function BookingWidget({ tenant, themeId, services, packages = [], employ
                   </h3>
                   {packages.length > 0 && <span className="text-xs" style={{ color: theme.onSurfaceVariant }}>{t("pickOne")}</span>}
                 </div>
-                <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-2">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
                   {services.map((s) => {
                     const selected = serviceId === s.id;
                     return (
@@ -748,7 +753,7 @@ export function BookingWidget({ tenant, themeId, services, packages = [], employ
                         key={s.id}
                         type="button"
                         onClick={() => pickService(s.id)}
-                        className="relative flex flex-col gap-2 rounded-lg border p-3 text-left transition-all sm:gap-3 sm:p-4 md:p-5"
+                        className="relative flex flex-col gap-2 rounded-lg border p-3 text-start transition-all sm:gap-3 sm:p-4 md:p-5"
                         style={{
                           borderColor: selected ? theme.primary : theme.outlineVariant,
                           boxShadow: selected ? `0 4px 20px -5px ${theme.primary}` : "none",
@@ -769,12 +774,12 @@ export function BookingWidget({ tenant, themeId, services, packages = [], employ
                           </span>
                         </div>
                         <div className="min-w-0">
-                          <h3 className="truncate text-sm font-semibold sm:text-base" style={{ color: theme.primary }}>{s.name}</h3>
-                          {s.description && <p className="mt-0.5 hidden text-xs sm:mt-1 sm:block sm:text-sm" style={{ color: theme.onSurfaceVariant }}>{s.description}</p>}
+                          <h3 className="line-clamp-2 break-words text-sm font-semibold leading-snug sm:text-base" style={{ color: theme.primary }}>{s.name}</h3>
+                          {s.description && <p className="mt-0.5 line-clamp-2 break-words text-xs leading-relaxed sm:mt-1 sm:text-sm" style={{ color: theme.onSurfaceVariant }}>{s.description}</p>}
                         </div>
                         <div className="mt-auto flex flex-col gap-0.5 border-t pt-2 text-sm sm:flex-row sm:items-center sm:justify-between" style={{ borderColor: theme.surfaceContainerHigh, color: theme.secondary }}>
                           <span className="text-xs sm:text-sm">{s.durationMinutes} {t("min")}</span>
-                          <span className="text-xs font-semibold sm:text-sm" style={{ color: theme.primary }}>{formatMoney(s.price, tenant.currency)}</span>
+                          <span dir="ltr" className="whitespace-nowrap text-xs font-semibold tabular-nums sm:text-sm" style={{ color: theme.primary }}>{formatMoney(s.price, tenant.currency, numTag)}</span>
                         </div>
                       </button>
                     );
@@ -980,13 +985,13 @@ export function BookingWidget({ tenant, themeId, services, packages = [], employ
               <button
                 type="button"
                 onClick={() => setCalOpen((o) => !o)}
-                className="flex w-full items-center justify-between gap-3 px-4 py-4 text-left md:px-5"
+                className="flex w-full items-center justify-between gap-3 px-4 py-4 text-start md:px-5"
               >
                 <span
                   className="text-sm font-semibold"
                   style={{ color: date ? theme.primary : theme.onSurfaceVariant }}
                 >
-                  {date ? formatNice(date) : t("chooseDate")}
+                  {date ? formatNice(date, numTag) : t("chooseDate")}
                 </span>
                 <span className="flex items-center gap-2 text-xs font-medium" style={{ color: theme.secondary }}>
                   {date && !calOpen ? t("change") : t("chooseDate")}
@@ -1048,7 +1053,7 @@ export function BookingWidget({ tenant, themeId, services, packages = [], employ
                         >
                           <ChevronIcon className="h-4 w-4 -scale-x-100" color={theme.secondary} />
                         </button>
-                        <span className="text-sm font-semibold" style={{ color: theme.primary }}>{formatMonth(viewMonth)}</span>
+                        <span className="text-sm font-semibold" style={{ color: theme.primary }}>{formatMonth(viewMonth, numTag)}</span>
                         <button
                           type="button"
                           onClick={() => moveMonth(1)}
@@ -1060,7 +1065,7 @@ export function BookingWidget({ tenant, themeId, services, packages = [], employ
                         </button>
                       </div>
                       <div className="grid grid-cols-7 gap-1 text-center text-xs">
-                        {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
+                        {weekdayNarrow.map((d, i) => (
                           <div key={i} className="pb-1 font-medium" style={{ color: theme.secondary }}>{d}</div>
                         ))}
                         {monthGrid(viewMonth).map((c, i) => {
@@ -1102,7 +1107,7 @@ export function BookingWidget({ tenant, themeId, services, packages = [], employ
             {/* Slots — hourly, then fraction within the hour */}
             <div className="mt-6">
               <h3 className="mb-3 text-sm font-semibold" style={{ color: theme.primary }}>
-                {date ? formatNice(date) : t("chooseDate")}
+                {date ? formatNice(date, numTag) : t("chooseDate")}
               </h3>
               {!date ? (
                 <p className="rounded-lg border border-dashed p-6 text-center text-sm" style={{ borderColor: theme.outlineVariant, color: theme.onSurfaceVariant }}>
@@ -1131,7 +1136,7 @@ export function BookingWidget({ tenant, themeId, services, packages = [], employ
                           type="time"
                           value={arrivalTime}
                           onChange={(e) => setArrivalTime(e.target.value)}
-                          className="rounded-lg border px-3 py-2 text-sm outline-none"
+                          className="rounded-lg border px-3 py-2 text-base outline-none"
                           style={{ borderColor: theme.outlineVariant, backgroundColor: theme.surfaceContainerLowest, color: theme.onSurfaceVariant }}
                         />
                         <button
@@ -1158,14 +1163,14 @@ export function BookingWidget({ tenant, themeId, services, packages = [], employ
                           setHour((h) => (h === g.label ? null : g.label));
                           setTime(null);
                         }}
-                        className="rounded-full border px-4 py-2 text-sm font-semibold transition-colors"
+                        className="whitespace-nowrap rounded-full border px-4 py-2 text-sm font-semibold tabular-nums transition-colors"
                         style={{
                           borderColor: hour === g.label ? theme.primary : theme.outlineVariant,
                           backgroundColor: hour === g.label ? theme.primary : "transparent",
                           color: hour === g.label ? theme.onPrimary : theme.secondary,
                         }}
                       >
-                        {formatTime(g.label)}
+                        {formatTime(g.label, numTag)}
                       </button>
                     ))}
                   </div>
@@ -1173,7 +1178,7 @@ export function BookingWidget({ tenant, themeId, services, packages = [], employ
                   {hour && (
                     <div className="mt-4 rounded-lg border p-3" style={{ borderColor: theme.outlineVariant, backgroundColor: theme.surface }}>
                       <p className="mb-2 text-xs font-medium uppercase tracking-wide" style={{ color: theme.secondary }}>
-                        {t("pickSlot")} · {formatTime(hour)}
+                        {t("pickSlot")} · {formatTime(hour, numTag)}
                       </p>
                       <div className="flex flex-wrap gap-2">
                         {hourGroups.find((g) => g.label === hour)?.times.map((s) => (
@@ -1183,7 +1188,7 @@ export function BookingWidget({ tenant, themeId, services, packages = [], employ
                             onClick={() => s.available && setTime(s.start)}
                             disabled={!s.available}
                             className={cn(
-                              "rounded-md border px-4 py-2 text-sm transition-colors",
+                              "whitespace-nowrap rounded-md border px-4 py-2 text-sm tabular-nums transition-colors",
                               !s.available && "cursor-not-allowed"
                             )}
                             style={{
@@ -1193,7 +1198,7 @@ export function BookingWidget({ tenant, themeId, services, packages = [], employ
                               textDecoration: !s.available ? "line-through" : "none",
                             }}
                           >
-                            {formatTime(s.start)}
+                            {formatTime(s.start, numTag)}
                           </button>
                         ))}
                       </div>
@@ -1208,21 +1213,21 @@ export function BookingWidget({ tenant, themeId, services, packages = [], employ
                 value={form.firstName}
                 onChange={(e) => setForm({ ...form, firstName: e.target.value })}
                 placeholder={t("firstNamePlaceholder")}
-                className="w-full rounded-lg border px-4 py-3 text-sm outline-none"
+                className="w-full rounded-lg border px-4 py-3 text-base outline-none"
                 style={{ borderColor: theme.outlineVariant, backgroundColor: theme.surfaceContainerLowest, color: theme.onSurfaceVariant }}
               />
               <input
                 value={form.phone}
                 onChange={(e) => setForm({ ...form, phone: e.target.value })}
                 placeholder={t("phonePlaceholder")}
-                className="w-full rounded-lg border px-4 py-3 text-sm outline-none"
+                className="w-full rounded-lg border px-4 py-3 text-base outline-none"
                 style={{ borderColor: theme.outlineVariant, backgroundColor: theme.surfaceContainerLowest, color: theme.onSurfaceVariant }}
               />
               <textarea
                 value={form.notes}
                 onChange={(e) => setForm({ ...form, notes: e.target.value })}
                 placeholder={t("notesOptional")}
-                className="w-full rounded-lg border px-4 py-3 text-sm outline-none"
+                className="w-full rounded-lg border px-4 py-3 text-base outline-none"
                 style={{ borderColor: theme.outlineVariant, backgroundColor: theme.surfaceContainerLowest, color: theme.onSurfaceVariant }}
               />
             </div>
@@ -1230,13 +1235,13 @@ export function BookingWidget({ tenant, themeId, services, packages = [], employ
             <div className="mt-8 flex flex-col items-center justify-between gap-4 border-t pt-4 sm:flex-row" style={{ borderColor: theme.outlineVariant }}>
               <div>
                 <p className="text-sm" style={{ color: theme.secondary }}>{t("totalPrice")}</p>
-                <p className="text-xl font-bold" style={{ color: theme.primary }}>
+                <p dir="ltr" className="whitespace-nowrap text-xl font-bold tabular-nums" style={{ color: theme.primary }}>
                   {customServices.length > 0
-                    ? formatMoney(customPrice(customServices), tenant.currency)
+                    ? formatMoney(customPrice(customServices), tenant.currency, numTag)
                     : pkg
-                      ? formatMoney(pkg.price, tenant.currency)
+                      ? formatMoney(pkg.price, tenant.currency, numTag)
                       : service
-                        ? formatMoney(service.price, tenant.currency)
+                        ? formatMoney(service.price, tenant.currency, numTag)
                         : "0"}
                 </p>
               </div>
@@ -1262,8 +1267,8 @@ export function BookingWidget({ tenant, themeId, services, packages = [], employ
 function Heading({ title, subtitle, theme }: { title: string; subtitle?: string; theme: ThemeTokens }) {
   return (
     <div className="mb-6">
-      <h2 className="text-xl font-semibold md:text-2xl" style={{ color: theme.primary }}>{title}</h2>
-      {subtitle && <p className="mt-2 text-sm" style={{ color: theme.onSurfaceVariant }}>{subtitle}</p>}
+      <h2 className="text-2xl font-bold leading-snug md:text-3xl" style={{ color: theme.primary }}>{title}</h2>
+      {subtitle && <p className="mt-2 text-sm leading-relaxed md:text-base" style={{ color: theme.onSurfaceVariant }}>{subtitle}</p>}
     </div>
   );
 }
@@ -1272,7 +1277,7 @@ function Back({ theme, onClick }: { theme: ThemeTokens; onClick: () => void }) {
   const tc = useTranslations("common");
   return (
     <button type="button" onClick={onClick} className="mb-6 flex items-center gap-2 text-sm font-medium" style={{ color: theme.secondary }}>
-      <ArrowIcon /> {tc("back")}
+      <span className="inline-flex rtl:rotate-180"><ArrowIcon /></span> {tc("back")}
     </button>
   );
 }
@@ -1289,13 +1294,21 @@ function nextSevenDays() {
   return out;
 }
 
-function shortWeekLabelsFor(week: { value: string }[]) {
-  return week.map((d) => dayLabel(d.value));
+function shortWeekLabelsFor(week: { value: string }[], tag = "en-US") {
+  return week.map((d) => dayLabel(d.value, tag));
 }
 
-function dayLabel(ymd: string): string {
+function dayLabel(ymd: string, tag = "en-US"): string {
   const dt = new Date(`${ymd}T00:00:00`);
-  return ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"][dt.getDay()];
+  return dt.toLocaleDateString(tag, { weekday: "short" });
+}
+
+/** Narrow (single-letter) weekday names starting Sunday, in the page locale. */
+function narrowWeekdayNames(tag = "en-US"): string[] {
+  return Array.from({ length: 7 }, (_, i) => {
+    const dt = new Date(2024, 0, 7 + i); // 2024-01-07 was a Sunday
+    return dt.toLocaleDateString(tag, { weekday: "narrow" });
+  });
 }
 
 function todayYM(): string {
@@ -1353,27 +1366,26 @@ function monthGrid(ym: string): Array<{ date: string; inMonth: boolean; day: num
   return cells;
 }
 
-function formatMonth(ym: string): string {
+function formatMonth(ym: string, tag = "en-US"): string {
   const [y, m] = ym.split("-").map(Number);
   const d = new Date(y, (m ?? 1) - 1, 1);
-  return d.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  return d.toLocaleDateString(tag, { month: "long", year: "numeric" });
 }
 
-function formatTime(hhmm: string) {
+function formatTime(hhmm: string, tag = "en-US") {
   const [h, m] = hhmm.split(":").map(Number);
-  const ampm = h >= 12 ? "PM" : "AM";
-  const hr = h % 12 === 0 ? 12 : h % 12;
-  return `${hr}:${String(m).padStart(2, "0")} ${ampm}`;
+  const d = new Date(2024, 0, 1, h ?? 0, m ?? 0);
+  return d.toLocaleTimeString(tag, { hour: "numeric", minute: "2-digit" });
 }
 
-function formatNice(ymd: string) {
+function formatNice(ymd: string, tag = "en-US") {
   if (!ymd) return "";
   const d = new Date(`${ymd}T00:00:00`);
-  return d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+  return d.toLocaleDateString(tag, { weekday: "long", month: "long", day: "numeric" });
 }
 
-function formatMoney(v: string | number, currency: string) {
-  return `${Number(v).toLocaleString(undefined, { maximumFractionDigits: 2 })} ${currency}`;
+function formatMoney(v: string | number, currency: string, tag = "en-US") {
+  return `${Number(v).toLocaleString(tag, { maximumFractionDigits: 2 })} ${currency}`;
 }
 
 function SectionDivider({ label, theme }: { label: string; theme: ThemeTokens }) {
@@ -1406,7 +1418,7 @@ function WorkerCard({
     <button
       type="button"
       onClick={onClick}
-      className="flex items-center gap-3 rounded-xl border p-3 text-left transition-all sm:p-4"
+      className="flex items-center gap-3 rounded-xl border p-3 text-start transition-all sm:p-4"
       style={{
         borderColor: selected ? theme.primary : theme.outlineVariant,
         boxShadow: selected ? `0 4px 20px -5px ${theme.primary}` : "none",
@@ -1423,7 +1435,7 @@ function WorkerCard({
         <span className="flex flex-wrap items-center gap-1.5">
           <span className="truncate text-sm font-semibold" style={{ color: theme.primary }}>{fullName}</span>
           {badge && (
-            <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ backgroundColor: theme.primaryContainer, color: theme.onSurfaceVariant }}>
+            <span className="whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-semibold" style={{ backgroundColor: theme.primaryContainer, color: theme.onSurfaceVariant }}>
               {badge}
             </span>
           )}

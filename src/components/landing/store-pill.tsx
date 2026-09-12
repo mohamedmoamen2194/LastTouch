@@ -21,7 +21,8 @@ export function StorePill({ store, businessTypeLabel }: { store: PartnerStore; b
   return (
     <Link
       href={`/${locale}/book/${store.slug}`}
-      className="flex w-28 flex-col items-center gap-2 rounded-2xl border border-white/15 bg-white/10 px-3 py-3 text-center backdrop-blur-sm transition-colors hover:border-white/30 hover:bg-white/15 sm:w-32"
+      className="flex min-h-[7.5rem] w-28 flex-col items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/10 px-3 py-3 text-center backdrop-blur-sm transition-colors hover:border-white/30 hover:bg-white/15 sm:w-32"
+      title={store.businessName}
     >
       <span
         className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full"
@@ -33,9 +34,9 @@ export function StorePill({ store, businessTypeLabel }: { store: PartnerStore; b
           className={store.logoUrl ? "h-full w-full object-cover" : "h-6 w-auto object-contain"}
         />
       </span>
-      <span className="flex w-full flex-col leading-tight">
-        <span className="w-full truncate text-sm font-semibold text-white">{store.businessName}</span>
-        {businessTypeLabel && <span className="w-full truncate text-[11px] text-white/60">{businessTypeLabel}</span>}
+      <span className="flex w-full flex-col leading-snug">
+        <span className="w-full break-words text-sm font-semibold leading-snug text-white line-clamp-2">{store.businessName}</span>
+        {businessTypeLabel && <span className="w-full truncate text-xs text-white/60">{businessTypeLabel}</span>}
       </span>
     </Link>
   );

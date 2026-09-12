@@ -1,9 +1,10 @@
 import { and, eq, gte, inArray, lte, ne, or } from "drizzle-orm";
 import { db } from "@/db";
 import { appointmentServices, appointmentEmployees, appointments, customers, employees, employeeServices, reviews, workingHours } from "@/db/schema";
-import { NotFoundError, ValidationAppError } from "@/lib/errors";
-import { assertPermission, type TenantContext } from "@/lib/tenant/context";
+import { ForbiddenError, NotFoundError, ValidationAppError } from "@/lib/errors";
+import { assertFeature, assertPermission, type TenantContext } from "@/lib/tenant/context";
 import { Permission } from "@/lib/permissions";
+import { getMaxEmployeesForPlan } from "@/lib/subscriptions";
 import { listTenantServicesForAdmin } from "@/modules/booking/domain/catalog";
 
 export type EmployeeOverview = {
@@ -64,9 +65,36 @@ async function validateServiceIds(ctx: TenantContext, serviceIds?: string[]): Pr
   return [...new Set(serviceIds)].filter((id) => owned.has(id));
 }
 
+/** Counts active (non-removed) workers — removed workers are soft-deleted via active=false and free their seat. */
+export async function countActiveEmployees(tenantId: string): Promise<number> {
+  const rows = await db
+    .select({ id: employees.id })
+    .from(employees)
+    .where(and(eq(employees.tenantId, tenantId), eq(employees.active, true)));
+  return rows.length;
+}
+
+/** Throws when the tenant's plan has no free employee seat left. */
+export async function assertEmployeeSeatAvailable(tenantId: string, plan: TenantContext["subscriptionPlan"]) {
+  const max = getMaxEmployeesForPlan(plan);
+  if (max === null) return; // enterprise: unlimited, sized per client needs
+  const used = await countActiveEmployees(tenantId);
+  if (used >= max) {
+    throw new ForbiddenError(
+      `Employee limit reached for your plan (max ${max}). Remove a team member or upgrade to Enterprise for more.`
+    );
+  }
+}
+
 /** Create a new worker for the tenant, links them to services and gives a default schedule. */
 export async function createEmployee(ctx: TenantContext, input: EmployeeInput) {
   assertPermission(ctx, Permission["employees.manage"]);
+  assertFeature(ctx, "employees");
+
+  // Inactive creates don't consume a seat, so only guard active creates.
+  if (input.active ?? true) {
+    await assertEmployeeSeatAvailable(ctx.tenantId, ctx.subscriptionPlan);
+  }
 
   const displayName = buildDisplayName(input.firstName, input.lastName);
   const [created] = await db
@@ -98,6 +126,7 @@ export async function createEmployee(ctx: TenantContext, input: EmployeeInput) {
 /** Update a worker's profile, service links and weekly schedule. */
 export async function updateEmployee(ctx: TenantContext, id: string, input: EmployeeInput) {
   assertPermission(ctx, Permission["employees.manage"]);
+  assertFeature(ctx, "employees");
 
   const [existing] = await db
     .select()
@@ -105,6 +134,12 @@ export async function updateEmployee(ctx: TenantContext, id: string, input: Empl
     .where(and(eq(employees.id, id), eq(employees.tenantId, ctx.tenantId)))
     .limit(1);
   if (!existing) throw new NotFoundError("Employee not found");
+
+  // Guard re-activation: an inactive worker becoming active consumes a seat.
+  const willBeActive = input.active ?? existing.active;
+  if (willBeActive && !existing.active) {
+    await assertEmployeeSeatAvailable(ctx.tenantId, ctx.subscriptionPlan);
+  }
 
   const [updated] = await db
     .update(employees)
@@ -144,6 +179,7 @@ export async function updateEmployee(ctx: TenantContext, id: string, input: Empl
 /** Soft-delete a worker (marks them inactive). Appointments keep their FK. */
 export async function deleteEmployee(ctx: TenantContext, id: string) {
   assertPermission(ctx, Permission["employees.manage"]);
+  assertFeature(ctx, "employees");
 
   const [existing] = await db
     .select()
@@ -214,6 +250,7 @@ export function validateEmployeeInput(input: unknown): EmployeeInput {
 /** Aggregate stats shown in the team detail popup (upcoming + current-month workload). */
 export async function getEmployeeOverview(ctx: TenantContext, id: string): Promise<EmployeeOverview> {
   assertPermission(ctx, Permission["employees.read"]);
+  assertFeature(ctx, "employees");
 
   const [emp] = await db
     .select()
