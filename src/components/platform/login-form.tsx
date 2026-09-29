@@ -42,23 +42,32 @@ export function PlatformLoginForm({ email, next }: { email: string; next: string
         Email
         <span className="relative mt-1 block">
           <Mail className="absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-          <input value={email} readOnly suppressHydrationWarning dir="ltr" className={`${input} bg-gray-50 text-gray-500`} />
+          <input
+            value={email}
+            readOnly
+            suppressHydrationWarning
+            dir="ltr"
+            tabIndex={0}
+            onFocus={(e) => e.target.select()}
+            className={`${input} bg-gray-50 text-gray-500`}
+          />
         </span>
       </label>
       <label className="text-xs font-semibold text-gray-500">
         Password
         <span className="relative mt-1 block">
           <Lock className="absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-          <input
-            value={password}
-            suppressHydrationWarning
-            onChange={(e) => setPassword(e.target.value)}
-            type="password"
-            autoComplete="current-password"
-            dir="ltr"
-            placeholder="••••••••"
-            className={input}
-          />
+<input
+              value={password}
+              suppressHydrationWarning
+              onChange={(e) => setPassword(e.target.value)}
+              type="password"
+              autoComplete="current-password"
+              dir="ltr"
+              tabIndex={0}
+              placeholder="••••••••"
+              className={input}
+            />
         </span>
       </label>
       {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{error}</p>}

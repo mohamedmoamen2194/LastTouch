@@ -44,7 +44,14 @@ export async function MarketplaceFooter({ locale }: { locale: string }) {
           <p className="flex items-center gap-2 text-xs font-medium text-[#45474c]">
             {t("footerPoweredBy")}
             {/* TAB.svg is 176×245 — fixed height keeps the ratio exact. */}
-            <img src="/TAB.svg" alt="LastTouch" className="h-8 w-auto" />
+            <a
+              href="https://tabtech-eg.vercel.app/"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="tabtech-eg.vercel.app"
+            >
+              <img src="/TAB.svg" alt="LastTouch" className="h-8 w-auto" />
+            </a>
           </p>
         </div>
       </div>
