@@ -2,6 +2,7 @@ import { and, eq, gte, inArray, lte } from "drizzle-orm";
 import { db } from "@/db";
 import { appointments, appointmentEmployees, appointmentServices, employees, type AppointmentStatus } from "@/db/schema";
 import { ConflictError, NotFoundError, ValidationAppError } from "@/lib/errors";
+import { completeAppointment as completeAppointmentWithPoints } from "@/lib/marketplace/client";
 import { assertPermission, type TenantContext } from "@/lib/tenant/context";
 import { Permission } from "@/lib/permissions";
 import { buildDaySlots } from "../../availability/domain/engine";
@@ -285,7 +286,7 @@ export async function confirmAppointment(ctx: TenantContext, id: string) {
   return updated;
 }
 
-/** Mark a confirmed appointment as completed. */
+/** Mark a confirmed appointment as completed (locks it + grants points). */
 export async function completeAppointment(ctx: TenantContext, id: string) {
   assertPermission(ctx, Permission["appointments.update"]);
 
@@ -297,12 +298,8 @@ export async function completeAppointment(ctx: TenantContext, id: string) {
   if (!appt) throw new NotFoundError("Appointment not found");
   if (appt.status !== "confirmed") throw new ConflictError("Only confirmed appointments can be completed");
 
-  const [updated] = await db
-    .update(appointments)
-    .set({ status: "completed", updatedAt: new Date() })
-    .where(eq(appointments.id, appt.id))
-    .returning();
-  return updated;
+  const { appointment } = await completeAppointmentWithPoints(appt.id);
+  return appointment;
 }
 
 /** Mark a confirmed appointment as a no-show. */

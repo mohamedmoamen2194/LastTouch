@@ -65,6 +65,7 @@ export default async function SettingsPage({
       logoUrl={tenant?.logoUrl ?? null}
       shopImages={tenant?.shopImages ?? []}
       maxEmployees={getMaxEmployeesForPlan(tenant?.subscriptionPlan ?? ctx.subscriptionPlan)}
+      marketplaceListed={tenant?.marketplaceEnabled ?? false}
     />
   );
 }

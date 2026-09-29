@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { ImagePlus, X } from "lucide-react";
 import type { ThemeTokens } from "@/config/business-types";
 import { QrDownload } from "@/components/dashboard/qr-download";
+import { MarketplaceToggle } from "@/components/marketplace/marketplace-toggle";
 
 type Props = {
   slug: string;
@@ -29,6 +30,8 @@ type Props = {
   shopImages: string[];
   /** Max active team members for the current plan; null = enterprise (custom). */
   maxEmployees: number | null;
+  /** Whether this store appears on the public client marketplace. */
+  marketplaceListed: boolean;
 };
 
 const PLAN_KEYS: Record<string, string> = {
@@ -74,6 +77,7 @@ export function SettingsManager({
   logoUrl,
   shopImages,
   maxEmployees,
+  marketplaceListed,
 }: Props) {
   const t = useTranslations("settings");
   const ts = useTranslations("subscription");
@@ -225,6 +229,11 @@ export function SettingsManager({
               <QrDownload value={bookingUrl} fileName={`${slug}-booking-qr.png`} label={t("qrBooking")} theme={theme} />
               <QrDownload value={checkinUrl} fileName={`${slug}-checkin-qr.png`} label={t("qrCheckin")} theme={theme} />
             </div>
+            {canManage && (
+              <div className="mt-4">
+                <MarketplaceToggle slug={slug} initial={marketplaceListed} />
+              </div>
+            )}
           </dl>
         </section>
 

@@ -56,6 +56,7 @@ export async function createTenant(input: CreateTenantInput) {
       tagline: biz.label,
       phone: input.phone ?? null,
       currency: input.currency ?? "EGP",
+      marketplaceEnabled: true,
     })
     .returning();
 

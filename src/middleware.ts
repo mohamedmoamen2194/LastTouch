@@ -5,15 +5,20 @@ import { routing } from "./i18n/routing";
 
 const intlMiddleware = createMiddleware(routing);
 
-// Public routes that never require auth. Everything else is protected
-// (dashboards, onboarding, settings, etc.). The public booking flow and
-// landing + ALL auth pages (sign-in, sign-up, sso-callback, factor pages)
-// stay open. Using a single `/auth(.*)` matcher avoids OAuth loops where
-// Clerk's `.../sso-callback` sub-route would otherwise be treated as
-// protected and bounced back to sign-in.
+// Public routes that never require auth. The client marketplace (home,
+// partners landing, bookings/history info pages, public booking flow), the
+// owner platform panel (self-guarded), and ALL auth pages stay open.
+// Signed-in-only content inside public pages gates itself (info + login
+// CTA for guests, real data for clients).
 const isPublicRoute = createRouteMatcher([
   "/",
   "/:locale",
+  "/:locale/partners",
+  "/:locale/reservations",
+  "/:locale/history",
+  "/:locale/privacy",
+  "/:locale/terms",
+  "/:locale/platform(.*)",
   "/:locale/auth(.*)",
   "/:locale/book(.*)",
 ]);

@@ -55,9 +55,15 @@ type Props = {
   services: WidgetService[];
   packages?: WidgetPackage[];
   employees: WidgetEmployee[];
+  /** Signed-in client info used to prefill the details form. */
+  initialCustomer?: { firstName: string; phone: string } | null;
+  /** "Book again" deep-link: preselected services (date/time still chosen). */
+  initialServiceIds?: string[] | null;
+  /** "Book again" deep-link: preselected per-service workers. */
+  initialAssignments?: { serviceId: string; employeeId: string }[] | null;
 };
 
-export function BookingWidget({ tenant, themeId, services, packages = [], employees }: Props) {
+export function BookingWidget({ tenant, themeId, services, packages = [], employees, initialCustomer, initialServiceIds, initialAssignments }: Props) {
   const t = useTranslations("booking");
   const locale = useLocale();
   // Single locale source for every number/date/time in the widget so EN and AR
@@ -66,13 +72,22 @@ export function BookingWidget({ tenant, themeId, services, packages = [], employ
   const theme = getThemeTokens(themeId);
 
   const [step, setStep] = useState(1);
-  const [serviceId, setServiceId] = useState<string | null>(null);
+  const [serviceId, setServiceId] = useState<string | null>(() =>
+    initialServiceIds && initialServiceIds.length === 1 ? (initialServiceIds[0] ?? null) : null
+  );
   const [packageId, setPackageId] = useState<string | null>(null);
-  const [customServices, setCustomServices] = useState<string[]>([]);
+  const [customServices, setCustomServices] = useState<string[]>(() =>
+    initialServiceIds && initialServiceIds.length > 1 ? initialServiceIds : []
+  );
   const [customizeOpen, setCustomizeOpen] = useState(false);
-  const [employeeId, setEmployeeId] = useState<string>("any");
+  const [employeeId, setEmployeeId] = useState<string>(() => {
+    const workers = [...new Set((initialAssignments ?? []).map((a) => a.employeeId))];
+    return workers.length === 1 && initialServiceIds?.length === 1 ? (workers[0] as string) : "any";
+  });
   const [generalWorkerId, setGeneralWorkerId] = useState<string | null>(null);
-  const [assignments, setAssignments] = useState<Record<string, string>>({});
+  const [assignments, setAssignments] = useState<Record<string, string>>(() =>
+    Object.fromEntries((initialAssignments ?? []).map((a) => [a.serviceId, a.employeeId]))
+  );
   const [teamOpen, setTeamOpen] = useState(false);
   const [calOpen, setCalOpen] = useState(false);
   const [fullOpen, setFullOpen] = useState(false);
@@ -90,7 +105,11 @@ export function BookingWidget({ tenant, themeId, services, packages = [], employ
   const [done, setDone] = useState(false);
   const [receipt, setReceipt] = useState<Receipt | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [form, setForm] = useState({ firstName: "", phone: "", notes: "" });
+  const [form, setForm] = useState({
+    firstName: initialCustomer?.firstName ?? "",
+    phone: initialCustomer?.phone ?? "",
+    notes: "",
+  });
 
   const service = useMemo(() => services.find((s) => s.id === serviceId) ?? null, [serviceId, services]);
   const pkg = useMemo(() => packages.find((p) => p.id === packageId) ?? null, [packageId, packages]);

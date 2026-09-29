@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { SignIn } from "@clerk/nextjs";
 import { isClerkConfigured, getOptionalUserId } from "@/lib/auth/session";
 import { getUserFirstTenantSlug } from "@/lib/tenant/home";
+import { isPlatformAdminByUserId } from "@/lib/platform/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -37,8 +38,8 @@ export default async function SignInPage({
             routing="path"
             path={`/${locale}/auth/sign-in`}
             signUpUrl={`/${locale}/auth/sign-up`}
-            fallbackRedirectUrl={`/${locale}/onboard`}
-            signUpFallbackRedirectUrl={`/${locale}/onboard`}
+            fallbackRedirectUrl={`/${locale}/auth/welcome`}
+            signUpFallbackRedirectUrl={`/${locale}/auth/welcome`}
           />
           )}
         </div>
@@ -50,8 +51,13 @@ export default async function SignInPage({
 async function AlreadySignedInRedirect({ locale }: { locale: string }) {
   const userId = await getOptionalUserId();
   if (userId) {
+    // Platform admins go straight to the admin panel.
+    if (await isPlatformAdminByUserId(userId)) redirect(`/${locale}/platform`);
     const slug = await getUserFirstTenantSlug(userId);
-    redirect(slug ? `/${locale}/${slug}/dashboard` : `/${locale}/onboard`);
+    // Owners go straight to their dashboard; everyone else goes through
+    // the welcome router (finished profiles bounce home, new users get
+    // the client info form — nobody lands anywhere unfinished).
+    redirect(slug ? `/${locale}/${slug}/dashboard` : `/${locale}/auth/welcome`);
   }
   return null;
 }

@@ -14,8 +14,11 @@ export function OnboardForm() {
   const [businessType, setBusinessType] = useState("");
   const [businessName, setBusinessName] = useState("");
   const [slug, setSlug] = useState("");
+  const [referralCode, setReferralCode] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
+  const [doneSlug, setDoneSlug] = useState<string | null>(null);
 
   const types = Object.values(BUSINESS_TYPE_CONFIGS);
 
@@ -26,6 +29,7 @@ export function OnboardForm() {
     }
     setSubmitting(true);
     setError(null);
+    setWarning(null);
     try {
       const res = await fetch("/api/onboard/tenant", {
         method: "POST",
@@ -34,11 +38,18 @@ export function OnboardForm() {
           businessName,
           businessType,
           slug: slug || undefined,
+          referralCode: referralCode.trim() || undefined,
         }),
       });
       const json = await res.json();
       if (!json.success) {
         setError(json.message);
+        return;
+      }
+      if (json.data?.referralWarning) {
+        // Invalid code: store is created, user reads the note, then continues.
+        setWarning(json.data.referralWarning);
+        setDoneSlug(json.data.slug as string);
         return;
       }
       router.push(`/${locale}/${json.data.slug}/dashboard`);
@@ -104,14 +115,41 @@ export function OnboardForm() {
           />
         </div>
 
-        <button
-          type="button"
-          onClick={submit}
-          disabled={submitting}
-          className="mt-8 w-full rounded-full bg-[#091426] px-8 py-3.5 text-base font-semibold text-white transition-colors hover:bg-[#1e293b] disabled:opacity-50"
-        >
-          {submitting ? t("creating") : t("create")}
-        </button>
+        {/* Referral code (optional) */}
+        <label className="mt-4 block text-sm font-semibold text-[#091426]">
+          {t("referralLabel")}
+          <span className="ms-2 text-xs font-normal text-[#45474c]">{t("referralOptional")}</span>
+        </label>
+        <input
+          value={referralCode}
+          onChange={(e) => setReferralCode(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""))}
+          placeholder={t("referralPlaceholder")}
+          dir="ltr"
+          className="mt-2 w-full rounded-lg border border-[#c5c6cd] px-4 py-3 text-sm outline-none focus:border-[#091426]"
+        />
+        {warning && <p className="mt-3 rounded-lg bg-amber-50 px-4 py-2.5 text-xs text-amber-800">{warning}</p>}
+
+        {doneSlug ? (
+          <button
+            type="button"
+            onClick={() => {
+              router.push(`/${locale}/${doneSlug}/dashboard`);
+              router.refresh();
+            }}
+            className="mt-8 w-full rounded-full bg-[#091426] px-8 py-3.5 text-base font-semibold text-white transition-colors hover:bg-[#1e293b]"
+          >
+            {t("continueToDashboard")}
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={submit}
+            disabled={submitting}
+            className="mt-8 w-full rounded-full bg-[#091426] px-8 py-3.5 text-base font-semibold text-white transition-colors hover:bg-[#1e293b] disabled:opacity-50"
+          >
+            {submitting ? t("creating") : t("create")}
+          </button>
+        )}
       </div>
     </div>
   );

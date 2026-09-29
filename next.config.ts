@@ -27,10 +27,12 @@ const nextConfig: NextConfig = {
           { key: "X-Content-Type-Options", value: "nosniff" },
           // Reduce referrer leakage to third parties.
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-          // Limit what browser features pages can request.
+          // Limit what browser features pages can request. Geolocation is
+          // allowed for same-origin pages (the marketplace "near me" flow
+          // needs navigator.geolocation); everything else stays disabled.
           {
             key: "Permissions-Policy",
-            value: "camera=(), microphone=(), geolocation=(), payment=(), usb=()",
+            value: "camera=(), microphone=(), geolocation=(self), payment=(), usb=()",
           },
           // Force HTTPS and enable preload once the site is on a stable domain.
           {

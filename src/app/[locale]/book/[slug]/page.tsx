@@ -9,6 +9,8 @@ import { listActivePackagesForBooking } from "@/modules/booking/application/pack
 import { getBusinessTypeConfig, getThemeTokens } from "@/config/business-types";
 import { BookingWidget } from "@/components/booking/booking-widget";
 import { BookingTabs } from "@/components/booking/booking-tabs";
+import { RecordRecentStore } from "@/components/marketplace/continue-row";
+import { Link } from "@/i18n/navigation";
 import { ScanView } from "@/components/booking/scan-view";
 import { RatingsView } from "@/components/booking/ratings-view";
 import { Logo } from "@/components/booking/logo";
@@ -16,6 +18,8 @@ import { ShopCarousel } from "@/components/booking/shop-carousel";
 import { PoweredByLastTouch } from "@/components/shared/powered-by-lasttouch";
 import { LangSwitcher } from "@/components/shared/lang-switcher";
 import { getSubscriptionState } from "@/lib/subscriptions";
+import { getOptionalUserId } from "@/lib/auth/session";
+import { getClientProfile, getRebookSelection } from "@/lib/marketplace/client";
 
 export const dynamic = "force-dynamic";
 
@@ -40,10 +44,13 @@ export async function generateMetadata({
 
 export default async function BookingPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string; slug: string }>;
+  searchParams: Promise<{ rebook?: string }>;
 }) {
   const { locale, slug } = await params;
+  const sp = await searchParams;
   setRequestLocale(locale);
 
   let tenant;
@@ -111,8 +118,19 @@ export default async function BookingPage({
 
   const pick = (en: string, ar: string | null) => (locale === "ar" && ar ? ar : en);
 
+  // Signed-in clients get their details prefilled (booking still works for guests).
+  const bookerId = await getOptionalUserId();
+  const bookerProfile = bookerId ? await getClientProfile(bookerId) : null;
+  const mt = await getTranslations("marketplace");
+
+  // "Book again" deep-link: same services + same workers preselected,
+  // date/time left for the client to choose.
+  const rebook =
+    bookerId && sp.rebook ? await getRebookSelection(bookerId, sp.rebook) : null;
+
   return (
     <main className="flex min-h-screen flex-col" style={{ backgroundColor: theme.background }}>
+      <RecordRecentStore slug={slug} />
       {/* Nav */}
       <header
         className="sticky top-0 z-50 border-b border-black/5 backdrop-blur-md"
@@ -125,6 +143,9 @@ export default async function BookingPage({
             <Logo />
           )}
           <div className="flex items-center gap-3">
+            <Link href="/" className="text-xs font-semibold underline" style={{ color: theme.secondary }}>
+              {mt("allStores")}
+            </Link>
             <LangSwitcher theme={theme} />
             <a
               href="#booking"
@@ -200,6 +221,13 @@ export default async function BookingPage({
                     isGeneral: e.isGeneral,
                     serviceIds: e.serviceIds,
                   }))}
+                  initialCustomer={
+                    bookerProfile?.fullName || bookerProfile?.phone
+                      ? { firstName: bookerProfile.fullName ?? "", phone: bookerProfile.phone ?? "" }
+                      : null
+                  }
+                  initialServiceIds={rebook?.serviceIds ?? null}
+                  initialAssignments={rebook?.assignments ?? null}
                 />
               </section>
             </>

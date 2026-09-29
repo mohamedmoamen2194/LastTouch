@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { eq } from "drizzle-orm";
 import { withApi, readJson } from "@/lib/api";
 import { ok, HttpStatus } from "@/lib/response";
 import { createTenant } from "@/modules/onboarding/application/create-tenant";
 import { requireUserId } from "@/lib/auth/session";
+import { clientIp, rateLimit } from "@/lib/rate-limit";
+import { db } from "@/db";
+import { clientProfiles, referrals } from "@/db/schema";
 import { BUSINESS_TYPES, THEMES, type BusinessType, type ThemeName } from "@/db/schema";
 
 const bodySchema = z.object({
@@ -14,6 +18,7 @@ const bodySchema = z.object({
   slug: z.string().regex(/^[a-z0-9][a-z0-9-]*$/).min(2).max(80).optional(),
   tagline: z.string().max(200).optional(),
   phone: z.string().max(30).optional(),
+  referralCode: z.string().max(60).optional(),
 });
 
 /**
@@ -28,6 +33,8 @@ export async function POST(req: Request) {
 
     // Real authenticated user (Clerk is required to create a store).
     const userId = await requireUserId();
+    // Each store seeds a full catalog — cap runaway creation per user.
+    rateLimit(`onboard:${userId}:${clientIp(req)}`, 3);
 
     const tenant = await createTenant({
       userId,
@@ -40,7 +47,33 @@ export async function POST(req: Request) {
       phone: input.data.phone,
     });
 
-    return NextResponse.json(ok({ slug: tenant.slug, businessName: tenant.businessName }), {
+    // Optional referral: credit the referrer (100 EGP earned). Invalid
+    // codes and self-referrals never block setup — warn and continue.
+    let referralWarning: string | null = null;
+    const code = input.data.referralCode?.trim().toLowerCase();
+    if (code) {
+      try {
+        const [referrer] = await db
+          .select({ userId: clientProfiles.userId })
+          .from(clientProfiles)
+          .where(eq(clientProfiles.referralCode, code))
+          .limit(1);
+        if (!referrer) {
+          referralWarning = "This referral code does not exist — your store was created without a referral.";
+        } else if (referrer.userId === userId) {
+          referralWarning = "You cannot refer your own store — it was created without a referral.";
+        } else {
+          await db
+            .insert(referrals)
+            .values({ code, referrerUserId: referrer.userId, tenantId: tenant.id, amount: 100, status: "earned" })
+            .onConflictDoNothing();
+        }
+      } catch {
+        referralWarning = "Referral could not be applied — your store was created normally.";
+      }
+    }
+
+    return NextResponse.json(ok({ slug: tenant.slug, businessName: tenant.businessName, referralWarning }), {
       status: HttpStatus.Created,
     });
   });

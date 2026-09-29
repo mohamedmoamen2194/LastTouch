@@ -10,6 +10,8 @@ import { db } from "@/db";
 import { appointmentServices, appointmentEmployees, employees } from "@/db/schema";
 import { eq, inArray } from "drizzle-orm";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
+import { getOptionalUserId } from "@/lib/auth/session";
+import { getClientProfile, upsertClientProfile } from "@/lib/marketplace/client";
 
 const bodySchema = z.object({
   slug: z.string().min(1),
@@ -44,6 +46,25 @@ export async function POST(req: Request) {
     const tenant = await resolveTenantForBooking(input.data.slug);
     await assertBookingOpen(tenant.id);
 
+    // Signed-in marketplace clients get the booking linked to their account
+    // (upcoming/history pages), and their profile picks up name/phone/email
+    // the first time they book.
+    const clientUserId = await getOptionalUserId();
+    if (clientUserId) {
+      try {
+        // Fill in profile blanks from the booking form — never overwrite
+        // info the client set deliberately (they may book for someone else).
+        const existing = await getClientProfile(clientUserId);
+        await upsertClientProfile(clientUserId, {
+          ...(existing?.fullName ? {} : { fullName: input.data.customer.firstName }),
+          ...(existing?.phone ? {} : { phone: input.data.customer.phone }),
+          ...(existing?.email ? {} : { email: input.data.customer.email || undefined }),
+        });
+      } catch {
+        // Profile sync must never block a booking.
+      }
+    }
+
     const result = await createBooking({
       tenantId: tenant.id,
       slug: tenant.slug,
@@ -59,6 +80,7 @@ export async function POST(req: Request) {
         notes: input.data.customer.notes || undefined,
         marketingConsent: input.data.customer.marketingConsent ?? false,
       },
+      clientUserId: clientUserId ?? undefined,
       source: "website",
     });
 

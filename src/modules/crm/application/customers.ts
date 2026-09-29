@@ -2,6 +2,7 @@ import { and, desc, eq, ilike, or, type SQL } from "drizzle-orm";
 import { db } from "@/db";
 import { customers } from "@/db/schema";
 import { NotFoundError } from "@/lib/errors";
+import { normalizePhone } from "@/lib/marketplace/client";
 import { assertPermission, type TenantContext } from "@/lib/tenant/context";
 import { Permission } from "@/lib/permissions";
 
@@ -80,7 +81,7 @@ export async function updateCustomer(ctx: TenantContext, id: string, input: Upda
     .set({
       firstName: input.firstName ?? existing.firstName,
       lastName: input.lastName === undefined ? existing.lastName : input.lastName,
-      phone: input.phone === undefined ? existing.phone : input.phone,
+      phone: input.phone === undefined ? existing.phone : (normalizePhone(input.phone) ?? input.phone),
       email: input.email === undefined ? existing.email : input.email,
       birthday: input.birthday === undefined ? existing.birthday : input.birthday ? new Date(input.birthday) : null,
       gender: input.gender === undefined ? existing.gender : input.gender,

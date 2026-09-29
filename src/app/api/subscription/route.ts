@@ -9,11 +9,13 @@ import { ForbiddenError } from "@/lib/errors";
 import { db } from "@/db";
 import { subscriptions, tenants, BILLING_PERIODS, SUBSCRIPTION_PLANS, type BillingPeriod, type SubscriptionPlan } from "@/db/schema";
 import { periodEnd } from "@/lib/subscriptions";
+import { createCycleInvoice } from "@/lib/platform/invoices";
 
 const bodySchema = z.object({
   slug: z.string().min(1),
   plan: z.enum(SUBSCRIPTION_PLANS as unknown as [SubscriptionPlan, ...SubscriptionPlan[]]),
   billingPeriod: z.enum(BILLING_PERIODS as unknown as [BillingPeriod, ...BillingPeriod[]]).default("monthly"),
+  customMonthlyPrice: z.number().positive().max(10000000).optional(),
 });
 
 /**
@@ -54,6 +56,8 @@ export async function POST(req: Request) {
           },
         });
     } else {
+      const customPrice =
+        input.data.plan === "enterprise" ? input.data.customMonthlyPrice ?? null : null;
       await db
         .insert(subscriptions)
         .values({
@@ -61,6 +65,7 @@ export async function POST(req: Request) {
           plan: input.data.plan,
           status: "active",
           billingPeriod: input.data.billingPeriod,
+          customMonthlyPrice: customPrice !== null ? String(customPrice) : "0",
           startedAt: now,
           renewalDate: end,
           expirationDate: end,
@@ -71,12 +76,27 @@ export async function POST(req: Request) {
             plan: input.data.plan,
             status: "active",
             billingPeriod: input.data.billingPeriod,
+            ...(customPrice !== null ? { customMonthlyPrice: String(customPrice) } : {}),
             startedAt: now,
             renewalDate: end,
             expirationDate: end,
             updatedAt: new Date(),
           },
         });
+      // Auto-invoice every paid activation so platform revenue is tracked.
+      // Enterprise without a custom price yet creates no invoice (admin prices it).
+      try {
+        await createCycleInvoice({
+          tenantId: ctx.tenantId,
+          plan: input.data.plan,
+          billingPeriod: input.data.billingPeriod,
+          customMonthlyPrice: customPrice,
+          paymentMethod: "manual",
+          status: "paid",
+        });
+      } catch (e) {
+        console.error("[subscription] invoice creation failed", e);
+      }
     }
 
     await db

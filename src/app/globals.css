@@ -64,4 +64,39 @@
   .text-balance {
     text-wrap: balance;
   }
+
+  /* Marketplace identity: professional offwhite with a subtle gloss —
+     faint men-navy / women-terracotta sheens over a warm paper base.
+     (Brand tokens: men #091426 · women #964735.) */
+  .mp-bg {
+    background:
+      radial-gradient(1100px 480px at 88% -6%, rgba(150, 71, 53, 0.1), transparent 60%),
+      radial-gradient(900px 480px at 8% -4%, rgba(9, 20, 38, 0.09), transparent 60%),
+      linear-gradient(#faf8f5, #f3efe9);
+    background-attachment: fixed;
+  }
+  /* Marketplace accent: solid men-palette blue (Modern Men primary
+     container #1e293b), overridden per-request to women terracotta via
+     `--mp-accent` when the signed-in client's gender is female.
+     White text on top. */
+  .mp-solid {
+    background: var(--mp-accent, #1e293b);
+  }
+  /* Design-system dropdowns: pill-friendly native selects with a custom
+     chevron (no OS arrow), logical padding so RTL mirrors correctly. */
+  .mp-select {
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2345474c' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.9rem center;
+    background-size: 0.9rem;
+    padding-inline-end: 2.4rem;
+  }
+  [dir="rtl"] .mp-select {
+    background-position: left 0.9rem center;
+  }
+  .mp-select:focus {
+    outline: none;
+  }
 }

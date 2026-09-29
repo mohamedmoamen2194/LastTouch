@@ -1,152 +1,295 @@
+import { Suspense } from "react";
+import Image from "next/image";
+import { Search } from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
-import { eq } from "drizzle-orm";
+import { getOptionalUserId } from "@/lib/auth/session";
 import { db } from "@/db";
-import { tenants } from "@/db/schema";
+import { clientFavorites } from "@/db/schema";
+import { eq } from "drizzle-orm";
+import { listMarketplaceStores, orderedBusinessTypes } from "@/lib/marketplace/stores";
+import { clientAccentForGender, getClientBookings, getClientPointsTotal, getClientProfile } from "@/lib/marketplace/client";
+import { getReferralStats } from "@/lib/marketplace/referrals";
+import { ForYouRow, NumbersStrip, QuickRebookRow, UpNextCard } from "@/components/marketplace/personal-section";
+import { ContinueRow } from "@/components/marketplace/continue-row";
 import { Logo } from "@/components/booking/logo";
-import { LangSwitcher } from "@/components/shared/lang-switcher";
-import { PricingSection } from "@/components/shared/pricing-section";
-import { BUSINESS_TYPE_CONFIGS, getBusinessTypeConfig } from "@/config/business-types";
-import { StoresMarquee } from "@/components/landing/stores-marquee";
-import { StorePill, type PartnerStore } from "@/components/landing/store-pill";
-import type { BusinessType } from "@/db/schema";
+import { MarketplaceTopbar } from "@/components/marketplace/topbar";
+import { MarketplaceTabs } from "@/components/marketplace/tabs";
+import { NearbyStores } from "@/components/marketplace/nearby-stores";
+import { HotDeals } from "@/components/marketplace/hot-deals";
+import { SectionSeparator } from "@/components/marketplace/section-separator";
+import { MarketplaceFooter } from "@/components/marketplace/footer";
+import { FilterSelects } from "@/components/marketplace/filter-selects";
+import { StoreCard } from "@/components/marketplace/store-card";
+import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-export default async function LandingPage({
+type SearchParams = { q?: string; type?: string; city?: string; sort?: string };
+
+export default async function MarketplaceHome({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string }>;
+  searchParams: Promise<SearchParams>;
 }) {
   const { locale } = await params;
+  const sp = await searchParams;
   setRequestLocale(locale);
-  const t = await getTranslations("landing");
-  const businessTypes = Object.values(BUSINESS_TYPE_CONFIGS);
+  const t = await getTranslations("marketplace");
 
-  const partnerStores = (await db
-    .select({ slug: tenants.slug, businessName: tenants.businessName, businessType: tenants.businessType, logoUrl: tenants.logoUrl })
-    .from(tenants)
-    .where(eq(tenants.active, true))
-    .limit(20)) as unknown as PartnerStore[];
+  const q = (sp.q ?? "").trim().toLowerCase();
+  const typeFilter = sp.type ?? "";
+  const cityFilter = sp.city ?? "";
+  const sort = sp.sort ?? "recommended";
+
+  const allStores = await listMarketplaceStores();
+  const cities = [...new Set(allStores.map((s) => s.city).filter((c): c is string => Boolean(c)))].sort();
+
+  const userId = await getOptionalUserId();
+  const clientProfile = userId ? await getClientProfile(userId) : null;
+  const gender = clientProfile?.gender ?? null;
+  const accent = clientAccentForGender(gender);
+  const typeOrder = orderedBusinessTypes(gender);
+  let favIds = new Set<string>();
+  if (userId) {
+    const favs = await db
+      .select({ tenantId: clientFavorites.tenantId })
+      .from(clientFavorites)
+      .where(eq(clientFavorites.userId, userId));
+    favIds = new Set(favs.map((f) => f.tenantId));
+  }
+
+  const filtered = allStores.filter((s) => {
+    if (typeFilter && s.businessType !== typeFilter) return false;
+    if (cityFilter && s.city !== cityFilter) return false;
+    if (q && !`${s.businessName} ${s.city ?? ""}`.toLowerCase().includes(q)) return false;
+    return true;
+  });
+
+  const sorted = [...filtered].sort((a, b) => {
+    if (sort === "rating") return b.ratingAvg - a.ratingAvg || b.ratingCount - a.ratingCount;
+    if (sort === "name") return a.businessName.localeCompare(b.businessName, locale);
+    // recommended: rated stores first, then most-reviewed
+    return b.ratingAvg - a.ratingAvg || b.ratingCount - a.ratingCount;
+  });
+
+  // Logged-in personal rails (compact carousels below the stores, so
+  // browsing + filters always stay near the top).
+  const upcoming = userId ? await getClientBookings(userId, "upcoming") : [];
+  const historyList = userId ? await getClientBookings(userId, "history") : [];
+  const upNext = upcoming[0] ?? null;
+  const seenSlugs = new Set<string>();
+  const quickRebook = historyList
+    .filter((b) => (seenSlugs.has(b.slug) ? false : (seenSlugs.add(b.slug), true)))
+    .slice(0, 6);
+  const visitedTenants = new Set([...upcoming, ...historyList].map((b) => b.tenantId));
+  const forYou = allStores
+    .filter((s) => !visitedTenants.has(s.id))
+    .sort((a, b) => b.ratingAvg - a.ratingAvg || b.ratingCount - a.ratingCount)
+    .slice(0, 6);
+  const points = userId ? await getClientPointsTotal(userId) : 0;
+  const referralBalance = userId ? (await getReferralStats(userId)).balance : 0;
+
+  const hrefWith = (over: Partial<SearchParams>) => {
+    const p = new URLSearchParams();
+    const next = { q: sp.q ?? "", type: typeFilter, city: cityFilter, sort, ...over };
+    if (next.q) p.set("q", next.q);
+    if (next.type) p.set("type", next.type);
+    if (next.city) p.set("city", next.city);
+    if (next.sort && next.sort !== "recommended") p.set("sort", next.sort);
+    const qs = p.toString();
+    return qs ? `/?${qs}` : "/";
+  };
 
   return (
-    <main className="flex min-h-screen flex-col bg-[#f7f9fb] text-[#191c1e]">
-      {/* Nav */}
-      <header className="sticky top-0 z-50 border-b border-[#c5c6cd]/40 bg-[#f7f9fb]/80 backdrop-blur-md">
-        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-2 px-3 sm:gap-3 sm:px-4 md:h-16 md:px-8">
-          <Logo className="h-4 w-auto shrink-0 sm:h-5 md:h-6" />
-          <nav className="hidden items-center gap-8 md:flex">
-            <a href="#features" className="text-sm font-medium text-[#45474c] hover:text-[#091426]">{t("nav.features")}</a>
-            <a href="#pricing" className="text-sm font-medium text-[#45474c] hover:text-[#091426]">{t("nav.pricing")}</a>
-          </nav>
-          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-            <LangSwitcher />
-            <Link
-              href="/auth/sign-up"
-              className="whitespace-nowrap rounded-full bg-[#091426] px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-[#1e293b] sm:px-5 sm:py-2 sm:text-sm md:px-6 md:py-2.5"
-            >
-              {t("nav.getStarted")}
-            </Link>
-          </div>
-        </div>
-      </header>
+    <main className="mp-bg flex min-h-screen min-h-dvh flex-col text-[#191c1e]" style={{ "--mp-accent": accent } as Record<string, string>}>
+      <MarketplaceTopbar signedIn={Boolean(userId)} />
 
-      {/* Hero */}
-      <section className="mx-auto grid w-full max-w-6xl flex-1 grid-cols-1 items-center gap-8 px-4 py-12 md:grid-cols-2 md:gap-12 md:px-8 md:py-24">
-        <div className="flex flex-col items-start gap-5 md:gap-6">
-          <span className="rounded-full border border-[#c5c6cd] bg-white px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-[#515f74]">
-            {t("hero.badge")}
-          </span>
-          <h1 className="text-3xl font-bold leading-tight tracking-tight text-[#091426] sm:text-4xl md:text-5xl lg:text-6xl">
-            {t("hero.title")}
-          </h1>
-          <p className="max-w-md text-base leading-relaxed text-[#45474c] md:text-lg">{t("hero.subtitle")}</p>
-          <div className="flex w-full flex-col gap-3 pt-1 sm:w-auto sm:flex-row sm:flex-wrap sm:gap-4 sm:pt-2">
-            <Link href="/auth/sign-up" className="rounded-full bg-[#091426] px-8 py-3.5 text-center text-base font-semibold text-white shadow-sm transition-colors hover:bg-[#1e293b]">
-              {t("hero.cta")}
-            </Link>
-            <a href="#businesses" className="rounded-full border border-[#75777d] px-8 py-3.5 text-center text-base font-medium text-[#091426] transition-colors hover:border-[#091426]">
-              {t("hero.seeBusinesses")}
-            </a>
-          </div>
-        </div>
-        <div
-          className="relative flex h-56 w-full flex-col justify-center overflow-hidden rounded-2xl md:h-96"
-          style={{ background: "linear-gradient(135deg, #1e293b, #091426 60%, #3c475a)" }}
-        >
-          <div className="absolute inset-0 rounded-2xl bg-[radial-gradient(circle_at_70%_30%,rgba(188,199,222,0.3),transparent_55%)]" />
-          <div className="relative z-10 flex flex-col items-center gap-4 px-5 md:gap-6">
-            <p className="text-center text-sm font-medium text-white/70 md:text-base">
-              {t("hero.storesLabel")}
+      <div className="mx-auto flex min-h-[calc(100vh-3.5rem)] min-h-[calc(100dvh-3.5rem)] w-full max-w-7xl flex-1 flex-col gap-6 px-4 pb-10 pt-6 md:min-h-[calc(100vh-4rem)] md:min-h-[calc(100dvh-4rem)] md:px-8 md:pt-10">
+        {/* Hero banner */}
+        <section className="relative h-52 overflow-hidden rounded-3xl sm:h-64 md:h-80">
+          <Image
+            src="/hero.jpg"
+            alt=""
+            fill
+            priority
+            sizes="(max-width: 768px) 100vw, 1152px"
+            className="object-cover"
+          />
+          <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, rgba(9,20,38,0.88) 0%, rgba(9,20,38,0.45) 45%, rgba(150,71,53,0.55) 62%, rgba(150,71,53,0.88) 100%)" }} />
+          <div className="absolute inset-0 flex flex-col justify-end gap-2 p-5 md:gap-3 md:p-8">
+            <Logo className="h-6 w-auto brightness-0 invert md:h-9" />
+            <h1 className="max-w-xl text-xl font-bold leading-tight tracking-tight text-white sm:text-2xl md:text-4xl">
+              {t("title")}
+            </h1>
+            <p className="max-w-xl text-xs leading-relaxed text-white/85 sm:text-sm md:text-base">
+              {t("subtitle")}
             </p>
-            <StoresMarquee className="max-w-full">
-              {partnerStores.map((s) => (
-                <StorePill
-                  key={s.slug}
-                  store={s}
-                  businessTypeLabel={getBusinessTypeConfig(s.businessType as BusinessType).label}
-                />
-              ))}
-            </StoresMarquee>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Businesses supported */}
-      <section id="businesses" className="mx-auto w-full max-w-6xl px-4 py-12 md:px-8 md:py-16">
-        <p className="mb-6 text-center text-xs font-semibold uppercase tracking-widest text-[#515f74] md:mb-8">{t("businesses.label")}</p>
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
-          {businessTypes.map((b) => (
-            <div
-              key={b.type}
-              className="flex h-full min-h-[7.5rem] flex-col items-center justify-center gap-1 rounded-xl border border-[#c5c6cd]/60 bg-white p-4 text-center md:min-h-[8.5rem]"
-            >
-              <p className="w-full break-words text-sm font-semibold leading-relaxed text-[#091426] md:text-base">{b.label}</p>
-              <p className="w-full break-words text-xs leading-relaxed text-[#45474c] md:text-sm">{b.employeeLabel}</p>
+        {/* Search */}
+        <section>
+          <form method="GET" className="flex gap-2">
+            {typeFilter && <input type="hidden" name="type" value={typeFilter} />}
+            {cityFilter && <input type="hidden" name="city" value={cityFilter} />}
+            {sort !== "recommended" && <input type="hidden" name="sort" value={sort} />}
+            <div className="relative min-w-0 flex-1">
+              <Search className="absolute start-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9aa0a6]" />
+              <input
+                name="q"
+                suppressHydrationWarning
+                defaultValue={sp.q ?? ""}
+                placeholder={t("searchPlaceholder")}
+                className="w-full rounded-full border border-[#c5c6cd]/60 bg-white py-3 pe-4 ps-10 text-sm outline-none placeholder:text-[#9aa0a6] focus:border-[#091426]"
+              />
             </div>
-          ))}
-        </div>
-      </section>
+            <button suppressHydrationWarning className="mp-solid shrink-0 rounded-full px-5 py-3 text-sm font-semibold text-white">
+              {t("searchPlaceholder").split("…")[0]}
+            </button>
+          </form>
+        </section>
 
-      {/* Features */}
-      <section id="features" className="mx-auto w-full max-w-6xl px-4 py-12 md:px-8 md:py-16">
-        <div className="mb-8 max-w-2xl md:mb-10">
-          <h2 className="text-2xl font-bold text-[#091426] md:text-3xl lg:text-4xl">{t("features.title")}</h2>
-          <p className="mt-3 text-base leading-relaxed text-[#45474c] md:text-lg">{t("features.subtitle")}</p>
-        </div>
-        <div className="grid gap-3 md:grid-cols-3 md:gap-4">
-          {["booking", "customers", "ai", "reports", "marketing", "payments"].map((k) => (
-            <div
-              key={k}
-              className="flex h-full min-h-[9rem] flex-col rounded-xl border border-[#c5c6cd]/60 bg-white p-5 transition-shadow hover:shadow-md md:p-6"
-            >
-              <h3 className="text-base font-semibold leading-snug text-[#091426] md:text-lg">{t(`features.items.${k}.title`)}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-[#45474c] md:text-[15px]">{t(`features.items.${k}.desc`)}</p>
-            </div>
-          ))}
-        </div>
-      </section>
+        {/* Hot deals ad space */}
+        <HotDeals locale={locale} />
 
-      {/* Pricing */}
-      <PricingSection />
+        {/* Nearby (location permission → distance-ranked carousel) */}
+        <NearbyStores />
 
-      {/* CTA */}
-      <section className="mx-auto w-full max-w-6xl px-4 pb-16 md:px-8 md:pb-20">
-        <div className="flex flex-col items-center gap-5 rounded-2xl bg-[#091426] px-6 py-12 text-center md:gap-6 md:px-8 md:py-14">
-          <h2 className="max-w-xl text-2xl font-bold leading-snug text-white md:text-3xl lg:text-4xl">{t("cta.title")}</h2>
-          <Link href="/auth/sign-up" className="rounded-full bg-white px-8 py-3.5 text-base font-semibold text-[#091426] transition-colors hover:bg-[#eff1f3]">
-            {t("cta.button")}
+        {/* Type chips */}
+        <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <Link
+            href={hrefWith({ type: "" })}
+            className={cn(
+              "shrink-0 rounded-full border px-4 py-2 text-xs font-semibold",
+              !typeFilter ? "mp-solid border-transparent text-white" : "border-[#c5c6cd]/60 bg-white text-[#45474c]",
+            )}
+          >
+            {t("allTypes")}
           </Link>
+          {typeOrder.map((b) => (
+            <Link
+              key={b}
+              href={hrefWith({ type: b })}
+              className={cn(
+                "shrink-0 rounded-full border px-4 py-2 text-xs font-semibold",
+                typeFilter === b ? "mp-solid border-transparent text-white" : "border-[#c5c6cd]/60 bg-white text-[#45474c]",
+              )}
+            >
+              {t(`type_${b}` as never)}
+            </Link>
+          ))}
         </div>
-      </section>
 
-      {/* Footer */}
-      <footer className="border-t border-[#c5c6cd]/40 py-10">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-4 md:flex-row md:px-8">
-          <Logo className="h-5 w-auto" />
-          <p className="text-sm text-[#45474c]">© 2026 LastTouch. All rights reserved.</p>
+        {/* City + sort */}
+        <div className="flex flex-wrap items-center gap-2">
+          <Suspense fallback={null}>
+            <FilterSelects cities={cities} />
+          </Suspense>
+          {(q || typeFilter || cityFilter) && (
+            <Link href="/" className="text-xs font-semibold text-[#45474c] underline">
+              {t("allTypes")} ✕
+            </Link>
+          )}
         </div>
-      </footer>
+
+        {/* Store grid */}
+        <section>
+          <h2 className="mb-3 text-lg font-bold text-[#091426]">
+            {t("allStores")} <span className="text-sm font-medium text-[#9aa0a6]">({sorted.length})</span>
+          </h2>
+          {allStores.length === 0 ? (
+            <p className="rounded-2xl border border-dashed border-[#c5c6cd] bg-white px-5 py-10 text-center text-sm text-[#45474c]">
+              {t("noStoresYet")}
+            </p>
+          ) : sorted.length === 0 ? (
+            <p className="rounded-2xl border border-dashed border-[#c5c6cd] bg-white px-5 py-10 text-center text-sm text-[#45474c]">
+              {t("noStores")}
+            </p>
+          ) : (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 md:gap-4">
+              {sorted.map((s) => (
+                <StoreCard key={s.id} store={s} locale={locale} isFavorite={favIds.has(s.id)} signedIn={Boolean(userId)} />
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* Personal rails for signed-in clients (compact carousels AFTER
+            the stores, so browsing + filters stay near the top). Guests see
+            About + partner CTA instead (below). */}
+        {userId ? (
+          <>
+            {upNext && <UpNextCard booking={upNext} />}
+            <NumbersStrip points={points} referralBalance={referralBalance} locale={locale} />
+            <QuickRebookRow items={quickRebook} />
+            <ForYouRow stores={forYou} locale={locale} />
+            <ContinueRow />
+          </>
+        ) : (
+          <>
+        {/* About us */}
+        <SectionSeparator />
+        <section className="overflow-hidden rounded-3xl border border-[#c5c6cd]/60 bg-white">
+          <div className="grid gap-6 p-6 md:grid-cols-[1.1fr_1fr] md:gap-8 md:p-8">
+            <div className="flex flex-col justify-center">
+              <span className="mp-solid w-fit rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-widest text-white">
+                {t("aboutEyebrow")}
+              </span>
+              <h2 className="mt-3 text-xl font-bold text-[#091426] md:text-2xl">{t("aboutTitle")}</h2>
+              <p className="mt-2 text-sm leading-relaxed text-[#45474c] md:text-base">{t("aboutBody")}</p>
+            </div>
+            <ul className="flex flex-col">
+              {[
+                { n: "01", title: t("aboutPoint1Title"), body: t("aboutPoint1Body") },
+                { n: "02", title: t("aboutPoint2Title"), body: t("aboutPoint2Body") },
+                { n: "03", title: t("aboutPoint3Title"), body: t("aboutPoint3Body") },
+              ].map((p) => (
+                <li key={p.n} className="flex items-baseline gap-4 border-t border-[#c5c6cd]/50 py-5 first:border-t-0 first:pt-1 last:pb-1">
+                  <span className="shrink-0 text-3xl font-bold tabular-nums text-[#c5c6cd] md:text-4xl">
+                    {p.n}
+                  </span>
+                  <span>
+                    <span className="block text-sm font-bold text-[#091426] md:text-base">{p.title}</span>
+                    <span className="mt-0.5 block text-xs leading-relaxed text-[#45474c] md:text-sm">{p.body}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+
+        {/* Partner CTA */}
+        <SectionSeparator />
+        <section className="relative overflow-hidden rounded-3xl">
+          <Image
+            src="/about.jpg"
+            alt=""
+            fill
+            sizes="(max-width: 768px) 100vw, 1152px"
+            className="object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/45 to-black/15" />
+          <div className="relative flex flex-col items-center gap-4 px-6 py-10 text-center md:py-14">
+            <h2 className="max-w-xl text-xl font-bold leading-snug text-white md:text-2xl">{t("partnerCtaTitle")}</h2>
+            <p className="max-w-xl text-sm leading-relaxed text-white/85 md:text-base">{t("partnerCtaBody")}</p>
+            <Link
+              href="/partners"
+              className="rounded-full bg-white px-8 py-3 text-sm font-bold text-[#091426] transition-colors hover:bg-[#eff1f3] md:text-base"
+            >
+              {t("partnerCtaButton")}
+            </Link>
+          </div>
+        </section>
+          </>
+        )}
+      </div>
+
+      <MarketplaceFooter locale={locale} />
+
+      <MarketplaceTabs guest={!userId} />
     </main>
   );
 }

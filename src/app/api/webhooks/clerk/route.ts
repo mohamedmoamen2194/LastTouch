@@ -4,7 +4,11 @@ import { and, eq, ne } from "drizzle-orm";
 import { db } from "@/db";
 import {
   aiLogs,
+  appointments,
   auditLogs,
+  clientFavorites,
+  clientPaymentMethods,
+  clientProfiles,
   employees,
   memberships,
   notifications,
@@ -110,6 +114,17 @@ async function handleUserDeleted(userId: string) {
 
   // Remove all of the user's memberships.
   await db.delete(memberships).where(eq(memberships.userId, userId));
+
+  // Forget the marketplace client entirely (PII): profile, favorites,
+  // saved payment references. Bookings stay for the store's records but
+  // are unlinked from the deleted account.
+  await db.delete(clientPaymentMethods).where(eq(clientPaymentMethods.userId, userId));
+  await db.delete(clientFavorites).where(eq(clientFavorites.userId, userId));
+  await db.delete(clientProfiles).where(eq(clientProfiles.userId, userId));
+  await db
+    .update(appointments)
+    .set({ clientUserId: null })
+    .where(eq(appointments.clientUserId, userId));
 
   // Nullify loose references (no FK to Clerk, so no cascade).
   await db

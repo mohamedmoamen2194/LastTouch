@@ -23,8 +23,11 @@ export function LangSwitcher({ theme }: { theme?: ThemeTokens }) {
   const target = LOCALES.find((l) => l !== locale) ?? "en";
 
   return (
+    // suppressHydrationWarning: form-filler extensions stamp attributes
+    // (e.g. `fdprocessedid`) onto buttons before React hydrates.
     <button
       type="button"
+      suppressHydrationWarning
       onClick={() => switchTo(target)}
       className="whitespace-nowrap rounded-full border border-[#c5c6cd]/60 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide transition-colors sm:px-3 sm:text-sm"
       style={{

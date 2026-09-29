@@ -1,7 +1,8 @@
 import { db } from "@/db";
-import { appointmentServices, appointmentEmployees, appointments, customers, employees, employeeServices, services, type AppointmentSource } from "@/db/schema";
-import { and, eq, inArray } from "drizzle-orm";
+import { appointmentServices, appointmentEmployees, appointments, customers, employees, employeeServices, services, tenants, type AppointmentSource } from "@/db/schema";
+import { and, eq, gte, inArray, lte } from "drizzle-orm";
 import { ConflictError, NotFoundError, ValidationAppError } from "@/lib/errors";
+import { normalizePhone } from "@/lib/marketplace/client";
 import { buildDaySlots, buildSequentialChainSlots } from "../../availability/domain/engine";
 
 export type EmployeeAssignment = {
@@ -24,6 +25,8 @@ export type CreateBookingInput = {
     notes?: string;
     marketingConsent?: boolean;
   };
+  /** Signed-in marketplace client (Clerk user id) — links the booking to their account. */
+  clientUserId?: string;
   source?: AppointmentSource;
 };
 
@@ -71,6 +74,50 @@ function workerCoversAll(worker: { isGeneral: boolean; serviceIds: string[] }, s
   if (worker.isGeneral || worker.serviceIds.length === 0) return true;
   const has = new Set(worker.serviceIds);
   return serviceIds.every((id) => has.has(id));
+}
+
+/**
+ * Rejects when the account already holds a live (pending/confirmed)
+ * appointment on the same calendar day whose [start, end) window
+ * intersects the requested one — across ALL stores. Guests (no account)
+ * cannot be tracked and are exempt. Exported for verification.
+ */
+export async function assertNoClientOverlap(
+  clientUserId: string,
+  appointmentDate: Date,
+  startTime: string,
+  endTime: string,
+): Promise<void> {
+  const dayStart = new Date(appointmentDate);
+  dayStart.setHours(0, 0, 0, 0);
+  const dayEnd = new Date(appointmentDate);
+  dayEnd.setHours(23, 59, 59, 999);
+
+  const existing = await db
+    .select({
+      id: appointments.id,
+      startTime: appointments.startTime,
+      endTime: appointments.endTime,
+      businessName: tenants.businessName,
+    })
+    .from(appointments)
+    .innerJoin(tenants, eq(tenants.id, appointments.tenantId))
+    .where(
+      and(
+        eq(appointments.clientUserId, clientUserId),
+        gte(appointments.appointmentDate, dayStart),
+        lte(appointments.appointmentDate, dayEnd),
+        inArray(appointments.status, ["pending", "confirmed"]),
+      ),
+    )
+    .limit(20);
+
+  const clash = existing.find((e) => e.startTime < endTime && startTime < e.endTime);
+  if (clash) {
+    throw new ConflictError(
+      `You already have a booking at ${clash.businessName} (${clash.startTime}–${clash.endTime}). It must end before the new one starts.`,
+    );
+  }
 }
 
 /**
@@ -221,11 +268,24 @@ export async function createBooking(input: CreateBookingInput) {
     startTime: input.startTime,
   });
 
+  // One client, one body: a signed-in account cannot hold two live
+  // bookings whose time windows intersect (any store). Checked BEFORE
+  // insert so the new row can never match itself.
+  if (input.clientUserId) {
+    await assertNoClientOverlap(
+      input.clientUserId,
+      appointmentDate,
+      input.startTime,
+      availability.endTime,
+    );
+  }
+
   let customerId: string | null = null;
   if (input.customer.firstName) {
+    const phoneKey = normalizePhone(input.customer.phone) ?? input.customer.phone;
     const existing = await db.query.customers.findFirst({
       where: (c, { and, eq: op }) =>
-        and(op(c.tenantId, input.tenantId), op(c.phone, input.customer.phone)),
+        and(op(c.tenantId, input.tenantId), op(c.phone, phoneKey)),
     });
 
     let id: string;
@@ -237,12 +297,14 @@ export async function createBooking(input: CreateBookingInput) {
         .values({
           tenantId: input.tenantId,
           firstName: input.customer.firstName,
-          phone: input.customer.phone,
+          phone: normalizePhone(input.customer.phone) ?? input.customer.phone,
           email: input.customer.email ?? null,
           notes: input.customer.notes ?? null,
           marketingConsent: input.customer.marketingConsent ?? false,
         })
-        .returning();
+    .returning();
+
+  // Persist snapshot rows for immutable history (spec section 18).
       id = created.id;
     }
     customerId = id;
@@ -253,6 +315,7 @@ export async function createBooking(input: CreateBookingInput) {
     .values({
       tenantId: input.tenantId,
       customerId,
+      clientUserId: input.clientUserId ?? null,
       employeeId: availability.employeeId,
       appointmentDate,
       startTime: input.startTime,
@@ -264,8 +327,6 @@ export async function createBooking(input: CreateBookingInput) {
       notes: input.customer.notes ?? null,
     })
     .returning();
-
-  // Persist snapshot rows for immutable history (spec section 18).
   let sortOrder = 0;
   for (const serviceId of input.serviceIds) {
     const [svc] = await db.select().from(services).where(eq(services.id, serviceId)).limit(1);

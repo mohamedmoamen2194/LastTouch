@@ -151,7 +151,7 @@ export const tenants = pgTable(
     timezone: varchar("timezone", { length: 60 }).default("Africa/Cairo").notNull(),
     locale: varchar("locale", { length: 10 }).default("en").notNull(),
     currency: varchar("currency", { length: 10 }).default("EGP").notNull(),
-    marketplaceEnabled: boolean("marketplace_enabled").default(false).notNull(),
+    marketplaceEnabled: boolean("marketplace_enabled").default(true).notNull(),
     marketplaceVisibility: varchar("marketplace_visibility", { length: 20 }).default("private").notNull(),
     active: boolean("active").default(true).notNull(),
     createdAt,
@@ -483,6 +483,8 @@ export const appointments = pgTable(
       .notNull(),
     locationId: uuid("location_id").references(() => locations.id, { onDelete: "set null" }),
     customerId: uuid("customer_id").references(() => customers.id, { onDelete: "set null" }),
+    /** Platform client account (Clerk user id) that made this booking, if signed in. */
+    clientUserId: text("client_user_id"),
     employeeId: uuid("employee_id").references(() => employees.id, { onDelete: "set null" }),
     packageId: uuid("package_id").references(() => packages.id, { onDelete: "set null" }),
     appointmentDate: timestamp("appointment_date", { withTimezone: true }).notNull(),
@@ -509,6 +511,7 @@ export const appointments = pgTable(
     index("appointments_tenant_status_idx").on(t.tenantId, t.status),
     index("appointments_tenant_employee_idx").on(t.tenantId, t.employeeId),
     index("appointments_tenant_customer_idx").on(t.tenantId, t.customerId),
+    index("appointments_client_idx").on(t.clientUserId),
   ]
 );
 
@@ -742,6 +745,8 @@ export const visits = pgTable(
     customerName: text("customer_name"),
     phone: varchar("phone", { length: 30 }),
     deviceKey: varchar("device_key", { length: 64 }),
+    /** Appointment this visit belongs to (null = plain store walk-in). */
+    appointmentId: uuid("appointment_id").references(() => appointments.id, { onDelete: "set null" }),
     status: varchar("status", { length: 20 }).$type<VisitStatus>().default("checked_in").notNull(),
     checkInAt: timestamp("check_in_at", { withTimezone: true }).defaultNow().notNull(),
     checkOutAt: timestamp("check_out_at", { withTimezone: true }),
@@ -752,6 +757,7 @@ export const visits = pgTable(
     index("visits_tenant_idx").on(t.tenantId),
     index("visits_tenant_status_idx").on(t.tenantId, t.status),
     index("visits_tenant_device_idx").on(t.tenantId, t.deviceKey),
+    index("visits_appointment_idx").on(t.appointmentId),
   ]
 );
 
@@ -800,6 +806,9 @@ export const subscriptions = pgTable(
     plan: subscriptionPlanEnum("plan").default("free").notNull(),
     status: subscriptionStatusEnum("status").default("active").notNull(),
     billingPeriod: billingPeriodEnum("billing_period").default("monthly").notNull(),
+    /** Enterprise/custom monthly list price in EGP (Basic=800, AI=1200 are fixed in code). */
+    customMonthlyPrice: numeric("custom_monthly_price", { precision: 12, scale: 2 }).default("0").notNull(),
+    notes: text("notes"),
     startedAt: timestamp("started_at", { withTimezone: true }).defaultNow().notNull(),
     renewalDate: timestamp("renewal_date", { withTimezone: true }),
     expirationDate: timestamp("expiration_date", { withTimezone: true }),
@@ -886,3 +895,124 @@ export const announcements = pgTable("announcements", {
   publishedAt: timestamp("published_at", { withTimezone: true }).defaultNow(),
   createdAt,
 });
+
+/**
+ * Platform client accounts (marketplace customers). One row per Clerk user;
+ * holds cross-store identity so bookings, history and favorites follow the
+ * client no matter which store they visit.
+ */
+export const clientProfiles = pgTable(
+  "client_profiles",
+  {
+    id,
+    userId: text("user_id").notNull(),
+    fullName: text("full_name"),
+    phone: varchar("phone", { length: 30 }),
+    email: text("email"),
+    /** male | female | null (not specified) */
+    gender: varchar("gender", { length: 10 }),
+    age: integer("age"),
+    /** Permanent referral code (e.g. mohamedmoamen_123). Set once, never changes. */
+    referralCode: varchar("referral_code", { length: 60 }),
+    birthdate: timestamp("birthdate", { withTimezone: true }),
+    avatarUrl: text("avatar_url"),
+    createdAt,
+    updatedAt,
+  },
+  (t) => [
+    uniqueIndex("client_profiles_user_unique").on(t.userId),
+    // A phone number or email may belong to exactly one account. NULLs are
+    // exempt (Postgres unique skips NULL), so optional emails stay flexible.
+    uniqueIndex("client_profiles_phone_unique").on(t.phone),
+    uniqueIndex("client_profiles_email_unique").on(t.email),
+    uniqueIndex("client_profiles_referral_unique").on(t.referralCode),
+  ]
+);
+
+/**
+ * Saved payment references per client account. Only non-sensitive display
+ * data is stored (brand, last4, expiry) — full card numbers NEVER touch the
+ * server (the form extracts them client-side before upload).
+ */
+export const clientPaymentMethods = pgTable(
+  "client_payment_methods",
+  {
+    id,
+    userId: text("user_id").notNull(),
+    brand: varchar("brand", { length: 20 }).default("card").notNull(),
+    last4: varchar("last4", { length: 4 }).notNull(),
+    expMonth: integer("exp_month"),
+    expYear: integer("exp_year"),
+    holderName: text("holder_name"),
+    isDefault: boolean("is_default").default(false).notNull(),
+    createdAt,
+  },
+  (t) => [index("client_payments_user_idx").on(t.userId)]
+);
+
+/**
+ * Points ledger per client account. Spend points accrue when an appointment
+ * completes; referral conversions add bonus rows. Total = SUM(amount).
+ * Unique refs make every grant idempotent (no double-grant on races).
+ */
+export const clientPointsLedger = pgTable(
+  "client_points_ledger",
+  {
+    id,
+    userId: text("user_id").notNull(),
+    amount: integer("amount").notNull(),
+    reason: varchar("reason", { length: 30 }).notNull(),
+    refAppointmentId: uuid("ref_appointment_id"),
+    refReferralId: uuid("ref_referral_id"),
+    createdAt,
+  },
+  (t) => [
+    index("points_ledger_user_idx").on(t.userId),
+    uniqueIndex("points_ledger_appt_unique").on(t.userId, t.refAppointmentId),
+    uniqueIndex("points_ledger_referral_unique").on(t.userId, t.refReferralId),
+  ]
+);
+
+/**
+ * Referrals: a client invites a store. One row per referred store;
+ * amount is fixed 100 (EGP). Status: earned → converted (points) |
+ * requested (cash-out) | paid.
+ */
+export const referrals = pgTable(
+  "referrals",
+  {
+    id,
+    code: varchar("code", { length: 60 }).notNull(),
+    referrerUserId: text("referrer_user_id").notNull(),
+    tenantId: uuid("tenant_id")
+      .references(() => tenants.id, { onDelete: "cascade" })
+      .notNull(),
+    amount: integer("amount").default(100).notNull(),
+    status: varchar("status", { length: 20 }).default("earned").notNull(),
+    createdAt,
+    updatedAt,
+  },
+  (t) => [
+    uniqueIndex("referrals_tenant_unique").on(t.tenantId),
+    index("referrals_referrer_idx").on(t.referrerUserId),
+    index("referrals_status_idx").on(t.status),
+  ]
+);
+
+/**
+ * Saved stores per client account.
+ */
+export const clientFavorites = pgTable(
+  "client_favorites",
+  {
+    userId: text("user_id").notNull(),
+    tenantId: uuid("tenant_id")
+      .references(() => tenants.id, { onDelete: "cascade" })
+      .notNull(),
+    createdAt,
+  },
+  (t) => [
+    primaryKey({ columns: [t.userId, t.tenantId] }),
+    index("client_favorites_user_idx").on(t.userId),
+  ]
+);
