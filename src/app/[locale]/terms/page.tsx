@@ -1,3 +1,4 @@
+import { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { MarketplaceTopbar } from "@/components/marketplace/topbar";
 import { MarketplaceTabs } from "@/components/marketplace/tabs";
@@ -5,6 +6,15 @@ import { MarketplaceFooter } from "@/components/marketplace/footer";
 import { getOptionalUserId } from "@/lib/auth/session";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "legal" });
+  return {
+    title: t("termsTitle"),
+    description: t("termsIntro"),
+  };
+}
 
 export default async function TermsPage({
   params,

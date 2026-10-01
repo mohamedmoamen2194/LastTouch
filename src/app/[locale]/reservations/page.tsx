@@ -1,3 +1,4 @@
+import { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { CalendarCheck } from "lucide-react";
@@ -9,6 +10,15 @@ import { BookingsList } from "@/components/marketplace/bookings-list";
 import { MarketplaceTopbar } from "@/components/marketplace/topbar";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "client" });
+  return {
+    title: t("bookingsTitle"),
+    description: t("bookingsSubtitle"),
+  };
+}
 
 export default async function ReservationsPage({
   params,

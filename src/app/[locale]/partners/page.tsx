@@ -1,3 +1,4 @@
+import { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { eq } from "drizzle-orm";
@@ -14,6 +15,15 @@ import { getOptionalUserId } from "@/lib/auth/session";
 import type { BusinessType } from "@/db/schema";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "landing" });
+  return {
+    title: t("meta.title"),
+    description: t("meta.description"),
+  };
+}
 
 export default async function LandingPage({
   params,

@@ -1,3 +1,4 @@
+import { Metadata } from "next";
 import { Suspense } from "react";
 import Image from "next/image";
 import { Search } from "lucide-react";
@@ -24,6 +25,15 @@ import { StoreCard } from "@/components/marketplace/store-card";
 import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "marketplace" });
+  return {
+    title: t("title"),
+    description: t("subtitle"),
+  };
+}
 
 type SearchParams = { q?: string; type?: string; city?: string; sort?: string };
 
