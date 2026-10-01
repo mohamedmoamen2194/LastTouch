@@ -1,3 +1,4 @@
+import { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { SignOutButton } from "@clerk/nextjs";
@@ -21,6 +22,15 @@ import { StoreCard } from "@/components/marketplace/store-card";
 import { MarketplaceTopbar } from "@/components/marketplace/topbar";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "client" });
+  return {
+    title: t("accountTitle"),
+    description: t("accountSubtitle"),
+  };
+}
 
 export default async function AccountPage({
   params,
