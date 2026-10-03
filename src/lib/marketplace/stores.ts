@@ -1,8 +1,9 @@
-import { and, avg, count, desc, eq, min, sql } from "drizzle-orm";
+import { and, avg, count, desc, eq, inArray, min, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
   locations,
   packages,
+  packageServices,
   reviews,
   services,
   subscriptions,
@@ -194,11 +195,16 @@ export type HotPackage = {
   id: string;
   name: string;
   price: number;
+  fullPrice: number;
+  serviceNames: string[];
+  servicesCount: number;
   tenantId: string;
   slug: string;
   businessName: string;
   businessType: string;
   logoUrl: string | null;
+  coverUrl: string | null;
+  shopImage: string | null;
 };
 
 /** Active packages from listed stores — the "hot deals" ad space. */
@@ -215,6 +221,8 @@ export async function listHotPackages(limit = 8): Promise<HotPackage[]> {
       businessName: tenants.businessName,
       businessType: tenants.businessType,
       logoUrl: tenants.logoUrl,
+      coverUrl: tenants.coverUrl,
+      shopImages: tenants.shopImages,
     })
     .from(packages)
     .innerJoin(tenants, eq(tenants.id, packages.tenantId))
@@ -226,7 +234,48 @@ export async function listHotPackages(limit = 8): Promise<HotPackage[]> {
     )
     .orderBy(desc(packages.createdAt))
     .limit(limit);
-  return rows.map((r) => ({ ...r, price: Number(r.price ?? 0) }));
+  if (rows.length === 0) return [];
+
+  // Linked services per package (for included-services list + full price).
+  const pkgIds = rows.map((r) => r.id);
+  const links = await db
+    .select({ packageId: packageServices.packageId, serviceId: packageServices.serviceId })
+    .from(packageServices)
+    .where(inArray(packageServices.packageId, pkgIds));
+  const serviceIds = [...new Set(links.map((l) => l.serviceId))];
+  const svcRows = serviceIds.length
+    ? await db
+        .select({ id: services.id, name: services.name, price: services.price })
+        .from(services)
+        .where(inArray(services.id, serviceIds))
+    : [];
+  const svcById = new Map(svcRows.map((s) => [s.id, s]));
+  const idsByPkg = new Map<string, string[]>();
+  for (const l of links) {
+    idsByPkg.set(l.packageId, [...(idsByPkg.get(l.packageId) ?? []), l.serviceId]);
+  }
+
+  return rows.map((r) => {
+    const sids = idsByPkg.get(r.id) ?? [];
+    const svcs = sids.map((id) => svcById.get(id)).filter((s): s is NonNullable<typeof s> => Boolean(s));
+    const fullPrice = svcs.reduce((sum, s) => sum + Number(s.price ?? 0), 0);
+    const images = (r.shopImages as string[] | null) ?? [];
+    return {
+      id: r.id,
+      name: r.name,
+      price: Number(r.price ?? 0),
+      fullPrice,
+      serviceNames: svcs.map((s) => s.name),
+      servicesCount: svcs.length,
+      tenantId: r.tenantId,
+      slug: r.slug,
+      businessName: r.businessName,
+      businessType: r.businessType,
+      logoUrl: r.logoUrl,
+      coverUrl: r.coverUrl,
+      shopImage: images[0] ?? null,
+    };
+  });
 }
 
 /** Haversine distance in km. */

@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { ImagePlus, X } from "lucide-react";
 import type { ThemeTokens } from "@/config/business-types";
 import { QrDownload } from "@/components/dashboard/qr-download";
+import { LocationManager, type LocationValue } from "@/components/dashboard/location-manager";
 import { MarketplaceToggle } from "@/components/marketplace/marketplace-toggle";
 
 type Props = {
@@ -32,6 +33,8 @@ type Props = {
   maxEmployees: number | null;
   /** Whether this store appears on the public client marketplace. */
   marketplaceListed: boolean;
+  /** Primary branch location (editable below). */
+  initialLocation: LocationValue | null;
 };
 
 const PLAN_KEYS: Record<string, string> = {
@@ -78,6 +81,7 @@ export function SettingsManager({
   shopImages,
   maxEmployees,
   marketplaceListed,
+  initialLocation,
 }: Props) {
   const t = useTranslations("settings");
   const ts = useTranslations("subscription");
@@ -425,6 +429,9 @@ export function SettingsManager({
           )}
         </section>
       </div>
+
+      {/* Store location (booking page + nearby sorting) */}
+      <LocationManager slug={slug} theme={theme} initial={initialLocation} />
 
       {/* Current-subscription popup (subscribed stores only) */}
       {popupOpen && (

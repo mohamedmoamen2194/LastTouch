@@ -7,7 +7,7 @@ const SESSION_TTL_MS = 12 * 60 * 60 * 1000; // 12 hours
  * Password gate for /platform (owner-only, no Clerk account needed).
  *
  * Env:
- *   PLATFORM_ADMIN_EMAIL          — shown + enforced on the login form
+ *   PLATFORM_ADMIN_EMAIL          — enforced on the login form (never sent to the client)
  *   PLATFORM_ADMIN_PASSWORD_HASH  — scrypt hash (see scripts/make-platform-password.ts)
  *   PLATFORM_SESSION_SECRET       — signs the session cookie
  */

@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Check, ChevronDown } from "lucide-react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
+import { useRouter } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 
@@ -104,7 +105,8 @@ export function FilterSelects({ cities }: { cities: string[] }) {
     if (value) p.set(key, value);
     else p.delete(key);
     const qs = p.toString();
-    router.push(qs ? `/?${qs}` : "/");
+    // replace + scroll:false keeps the user exactly where they are.
+    router.replace(qs ? `/?${qs}` : "/", { scroll: false });
   };
 
   return (

@@ -1,7 +1,6 @@
 import { Metadata } from "next";
 import { Suspense } from "react";
 import Image from "next/image";
-import { Search } from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { getOptionalUserId } from "@/lib/auth/session";
@@ -9,6 +8,7 @@ import { db } from "@/db";
 import { clientFavorites } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { listMarketplaceStores, orderedBusinessTypes } from "@/lib/marketplace/stores";
+import { distanceKm } from "@/lib/marketplace/geo";
 import { clientAccentForGender, getClientBookings, getClientPointsTotal, getClientProfile } from "@/lib/marketplace/client";
 import { getReferralStats } from "@/lib/marketplace/referrals";
 import { ForYouRow, NumbersStrip, QuickRebookRow, UpNextCard } from "@/components/marketplace/personal-section";
@@ -16,7 +16,8 @@ import { ContinueRow } from "@/components/marketplace/continue-row";
 import { Logo } from "@/components/booking/logo";
 import { MarketplaceTopbar } from "@/components/marketplace/topbar";
 import { MarketplaceTabs } from "@/components/marketplace/tabs";
-import { NearbyStores } from "@/components/marketplace/nearby-stores";
+import { NearbyToggle } from "@/components/marketplace/nearby-toggle";
+import { MarketplaceSearch } from "@/components/marketplace/search-bar";
 import { HotDeals } from "@/components/marketplace/hot-deals";
 import { SectionSeparator } from "@/components/marketplace/section-separator";
 import { MarketplaceFooter } from "@/components/marketplace/footer";
@@ -35,7 +36,7 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   };
 }
 
-type SearchParams = { q?: string; type?: string; city?: string; sort?: string };
+type SearchParams = { q?: string; type?: string; city?: string; sort?: string; nearby?: string; lat?: string; lng?: string };
 
 export default async function MarketplaceHome({
   params,
@@ -53,6 +54,10 @@ export default async function MarketplaceHome({
   const typeFilter = sp.type ?? "";
   const cityFilter = sp.city ?? "";
   const sort = sp.sort ?? "recommended";
+  const nearbyOn = sp.nearby === "1";
+  const userLat = sp.lat != null && sp.lat !== "" ? Number(sp.lat) : null;
+  const userLng = sp.lng != null && sp.lng !== "" ? Number(sp.lng) : null;
+  const hasCoords = nearbyOn && userLat != null && userLng != null && !Number.isNaN(userLat) && !Number.isNaN(userLng);
 
   const allStores = await listMarketplaceStores();
   const cities = [...new Set(allStores.map((s) => s.city).filter((c): c is string => Boolean(c)))].sort();
@@ -78,11 +83,27 @@ export default async function MarketplaceHome({
     return true;
   });
 
-  const sorted = [...filtered].sort((a, b) => {
-    if (sort === "rating") return b.ratingAvg - a.ratingAvg || b.ratingCount - a.ratingCount;
-    if (sort === "name") return a.businessName.localeCompare(b.businessName, locale);
+  // Distance per store when nearby mode has coords; nearby always wins over
+  // the sort dropdown (even with filters active). Stores without coords sink.
+  const withDistance = filtered.map((s) => ({
+    store: s,
+    km:
+      hasCoords && s.latitude != null && s.longitude != null
+        ? distanceKm(userLat as number, userLng as number, s.latitude, s.longitude)
+        : null,
+  }));
+
+  const sorted = [...withDistance].sort((a, b) => {
+    if (hasCoords) {
+      if (a.km == null && b.km == null) return b.store.ratingAvg - a.store.ratingAvg;
+      if (a.km == null) return 1;
+      if (b.km == null) return -1;
+      return a.km - b.km;
+    }
+    if (sort === "rating") return b.store.ratingAvg - a.store.ratingAvg || b.store.ratingCount - a.store.ratingCount;
+    if (sort === "name") return a.store.businessName.localeCompare(b.store.businessName, locale);
     // recommended: rated stores first, then most-reviewed
-    return b.ratingAvg - a.ratingAvg || b.ratingCount - a.ratingCount;
+    return b.store.ratingAvg - a.store.ratingAvg || b.store.ratingCount - a.store.ratingCount;
   });
 
   // Logged-in personal rails (compact carousels below the stores, so
@@ -104,11 +125,25 @@ export default async function MarketplaceHome({
 
   const hrefWith = (over: Partial<SearchParams>) => {
     const p = new URLSearchParams();
-    const next = { q: sp.q ?? "", type: typeFilter, city: cityFilter, sort, ...over };
+    const next = {
+      q: sp.q ?? "",
+      type: typeFilter,
+      city: cityFilter,
+      sort,
+      nearby: sp.nearby ?? "",
+      lat: sp.lat ?? "",
+      lng: sp.lng ?? "",
+      ...over,
+    };
     if (next.q) p.set("q", next.q);
     if (next.type) p.set("type", next.type);
     if (next.city) p.set("city", next.city);
     if (next.sort && next.sort !== "recommended") p.set("sort", next.sort);
+    if (next.nearby) {
+      p.set("nearby", next.nearby);
+      if (next.lat) p.set("lat", next.lat);
+      if (next.lng) p.set("lng", next.lng);
+    }
     const qs = p.toString();
     return qs ? `/?${qs}` : "/";
   };
@@ -129,8 +164,8 @@ export default async function MarketplaceHome({
             className="object-cover"
           />
           <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, rgba(9,20,38,0.88) 0%, rgba(9,20,38,0.45) 45%, rgba(150,71,53,0.55) 62%, rgba(150,71,53,0.88) 100%)" }} />
-          <div className="absolute inset-0 flex flex-col justify-end gap-2 p-5 md:gap-3 md:p-8">
-            <Logo className="h-6 w-auto brightness-0 invert md:h-9" />
+          <div className="absolute inset-0 flex flex-col items-center justify-end gap-2 p-5 pb-6 text-center md:gap-3 md:p-8 md:pb-10">
+            <Logo className="h-6 w-auto -translate-y-1 brightness-0 invert md:h-9" />
             <h1 className="max-w-xl text-xl font-bold leading-tight tracking-tight text-white sm:text-2xl md:text-4xl">
               {t("title")}
             </h1>
@@ -140,38 +175,31 @@ export default async function MarketplaceHome({
           </div>
         </section>
 
-        {/* Search */}
+        {/* Search (instant suggestions + results panel under the bar, no scroll jump) */}
         <section>
-          <form method="GET" className="flex gap-2">
-            {typeFilter && <input type="hidden" name="type" value={typeFilter} />}
-            {cityFilter && <input type="hidden" name="city" value={cityFilter} />}
-            {sort !== "recommended" && <input type="hidden" name="sort" value={sort} />}
-            <div className="relative min-w-0 flex-1">
-              <Search className="absolute start-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9aa0a6]" />
-              <input
-                name="q"
-                suppressHydrationWarning
-                defaultValue={sp.q ?? ""}
-                placeholder={t("searchPlaceholder")}
-                className="w-full rounded-full border border-[#c5c6cd]/60 bg-white py-3 pe-4 ps-10 text-sm outline-none placeholder:text-[#9aa0a6] focus:border-[#091426]"
-              />
-            </div>
-            <button suppressHydrationWarning className="mp-solid shrink-0 rounded-full px-5 py-3 text-sm font-semibold text-white">
-              {t("searchPlaceholder").split("…")[0]}
-            </button>
-          </form>
+          <MarketplaceSearch
+            keep={{
+              type: typeFilter || undefined,
+              city: cityFilter || undefined,
+              sort: sort !== "recommended" ? sort : undefined,
+              nearby: sp.nearby ?? undefined,
+              lat: sp.lat ?? undefined,
+              lng: sp.lng ?? undefined,
+            }}
+          />
         </section>
 
         {/* Hot deals ad space */}
         <HotDeals locale={locale} />
 
-        {/* Nearby (location permission → distance-ranked carousel) */}
-        <NearbyStores />
+        {/* Nearby toggle (sorts the grid below by distance) */}
+        <NearbyToggle />
 
-        {/* Type chips */}
+        {/* Type chips (scroll:false so filters never jump to top) */}
         <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <Link
             href={hrefWith({ type: "" })}
+            scroll={false}
             className={cn(
               "shrink-0 rounded-full border px-4 py-2 text-xs font-semibold",
               !typeFilter ? "mp-solid border-transparent text-white" : "border-[#c5c6cd]/60 bg-white text-[#45474c]",
@@ -183,6 +211,7 @@ export default async function MarketplaceHome({
             <Link
               key={b}
               href={hrefWith({ type: b })}
+              scroll={false}
               className={cn(
                 "shrink-0 rounded-full border px-4 py-2 text-xs font-semibold",
                 typeFilter === b ? "mp-solid border-transparent text-white" : "border-[#c5c6cd]/60 bg-white text-[#45474c]",
@@ -199,13 +228,13 @@ export default async function MarketplaceHome({
             <FilterSelects cities={cities} />
           </Suspense>
           {(q || typeFilter || cityFilter) && (
-            <Link href="/" className="text-xs font-semibold text-[#45474c] underline">
+            <Link href="/" scroll={false} className="text-xs font-semibold text-[#45474c] underline">
               {t("allTypes")} ✕
             </Link>
           )}
         </div>
 
-        {/* Store grid */}
+        {/* Store grid (nearby distance shown on cards when enabled) */}
         <section>
           <h2 className="mb-3 text-lg font-bold text-[#091426]">
             {t("allStores")} <span className="text-sm font-medium text-[#9aa0a6]">({sorted.length})</span>
@@ -220,8 +249,8 @@ export default async function MarketplaceHome({
             </p>
           ) : (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 md:gap-4">
-              {sorted.map((s) => (
-                <StoreCard key={s.id} store={s} locale={locale} isFavorite={favIds.has(s.id)} signedIn={Boolean(userId)} />
+              {sorted.map(({ store: s, km }) => (
+                <StoreCard key={s.id} store={s} locale={locale} distanceKm={km} isFavorite={favIds.has(s.id)} signedIn={Boolean(userId)} />
               ))}
             </div>
           )}

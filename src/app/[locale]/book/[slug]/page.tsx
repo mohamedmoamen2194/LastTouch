@@ -1,10 +1,10 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
-import { PauseCircle } from "lucide-react";
+import { MapPin, PauseCircle } from "lucide-react";
 import { avg, count, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { reviews } from "@/db/schema";
-import { resolveTenantForBooking, listTenantEmployeesWithServices, listTenantServices } from "@/modules/booking/domain/catalog";
+import { resolveTenantForBooking, getTenantLocation, listTenantEmployeesWithServices, listTenantServices } from "@/modules/booking/domain/catalog";
 import { listActivePackagesForBooking } from "@/modules/booking/application/packages";
 import { getBusinessTypeConfig, getThemeTokens } from "@/config/business-types";
 import { BookingWidget } from "@/components/booking/booking-widget";
@@ -75,12 +75,14 @@ export default async function BookingPage({
           className="sticky top-0 z-50 border-b border-black/5 backdrop-blur-md"
           style={{ backgroundColor: "rgba(255,255,255,0.7)" }}
         >
-          <div className="mx-auto flex h-16 max-w-screen-xl items-center justify-between px-4 md:px-8">
-            {tenant.logoUrl ? (
-              <img src={tenant.logoUrl} alt={tenant.businessName} className="h-10 w-auto max-w-[170px] object-contain" />
-            ) : (
-              <Logo />
-            )}
+          <div className="mx-auto flex h-14 w-full max-w-screen-xl items-center justify-between gap-2 px-3 sm:h-16 sm:px-4 md:px-8">
+            <div className="min-w-0 flex-shrink">
+              {tenant.logoUrl ? (
+                <img src={tenant.logoUrl} alt={tenant.businessName} className="h-8 w-auto max-w-[110px] object-contain sm:h-10 sm:max-w-[170px]" />
+              ) : (
+                <Logo className="h-4 w-auto sm:h-5 md:h-6" />
+              )}
+            </div>
             <LangSwitcher theme={theme} />
           </div>
         </header>
@@ -106,7 +108,7 @@ export default async function BookingPage({
     );
   }
 
-  const [employees, services, packages, [ratingRow]] = await Promise.all([
+  const [employees, services, packages, [ratingRow], storeLocation] = await Promise.all([
     listTenantEmployeesWithServices(tenant.id),
     listTenantServices(tenant.id),
     listActivePackagesForBooking(tenant.id),
@@ -114,7 +116,15 @@ export default async function BookingPage({
       .select({ avg: avg(reviews.rating), count: count(reviews.id) })
       .from(reviews)
       .where(eq(reviews.tenantId, tenant.id)),
+    getTenantLocation(tenant.id),
   ]);
+  const locationLabel = [storeLocation?.address, storeLocation?.city].filter(Boolean).join(" · ");
+  const directionsUrl =
+    storeLocation?.latitude != null && storeLocation?.longitude != null
+      ? `https://www.google.com/maps/search/?api=1&query=${storeLocation.latitude},${storeLocation.longitude}`
+      : locationLabel
+        ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locationLabel)}`
+        : null;
 
   const pick = (en: string, ar: string | null) => (locale === "ar" && ar ? ar : en);
 
@@ -122,6 +132,7 @@ export default async function BookingPage({
   const bookerId = await getOptionalUserId();
   const bookerProfile = bookerId ? await getClientProfile(bookerId) : null;
   const mt = await getTranslations("marketplace");
+  const bt = await getTranslations("booking");
 
   // "Book again" deep-link: same services + same workers preselected,
   // date/time left for the client to choose.
@@ -131,25 +142,31 @@ export default async function BookingPage({
   return (
     <main className="flex min-h-screen flex-col" style={{ backgroundColor: theme.background }}>
       <RecordRecentStore slug={slug} />
-      {/* Nav */}
+      {/* Nav — compact + wrapping-safe on small phones */}
       <header
         className="sticky top-0 z-50 border-b border-black/5 backdrop-blur-md"
         style={{ backgroundColor: "rgba(255,255,255,0.7)" }}
       >
-        <div className="mx-auto flex h-16 max-w-screen-xl items-center justify-between px-4 md:px-8">
-          {tenant.logoUrl ? (
-            <img src={tenant.logoUrl} alt={tenant.businessName} className="h-10 w-auto max-w-[170px] object-contain" />
-          ) : (
-            <Logo />
-          )}
-          <div className="flex items-center gap-3">
-            <Link href="/" className="text-xs font-semibold underline" style={{ color: theme.secondary }}>
+        <div className="mx-auto flex h-14 w-full max-w-screen-xl items-center justify-between gap-2 px-3 sm:h-16 sm:gap-3 sm:px-4 md:px-8">
+          <div className="min-w-0 flex-shrink">
+            {tenant.logoUrl ? (
+              <img src={tenant.logoUrl} alt={tenant.businessName} className="h-8 w-auto max-w-[110px] object-contain sm:h-10 sm:max-w-[170px]" />
+            ) : (
+              <Logo className="h-4 w-auto sm:h-5 md:h-6" />
+            )}
+          </div>
+          <div className="flex min-w-0 shrink-0 items-center gap-1.5 sm:gap-3">
+            <Link
+              href="/"
+              className="hidden max-w-[110px] truncate text-xs font-semibold underline min-[400px]:block"
+              style={{ color: theme.secondary }}
+            >
               {mt("allStores")}
             </Link>
             <LangSwitcher theme={theme} />
             <a
               href="#booking"
-              className="rounded-full px-5 py-2.5 text-sm font-semibold"
+              className="whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-semibold sm:px-5 sm:py-2.5 sm:text-sm"
               style={{ backgroundColor: theme.primary, color: theme.onPrimary }}
             >
               Book Now
@@ -166,19 +183,38 @@ export default async function BookingPage({
             <>
               {/* Hero */}
               <section className="flex w-full flex-col gap-6 md:gap-8">
-                <div className="flex max-w-3xl flex-col items-start gap-3 md:gap-4">
+                <div className="flex max-w-3xl flex-col items-start gap-2.5 sm:gap-3 md:gap-4">
                   <span
-                    className="text-xs font-semibold uppercase tracking-widest"
+                    className="text-[11px] font-semibold uppercase tracking-widest sm:text-xs"
                     style={{ color: theme.secondary }}
                   >
                     {biz.label}
                   </span>
-                  <h1 className="text-3xl font-bold leading-tight md:text-5xl" style={{ color: theme.primary }}>
+                  <h1 className="break-words text-2xl font-bold leading-tight sm:text-3xl md:text-5xl" style={{ color: theme.primary }}>
                     {tenant.businessName}
                   </h1>
-                  <p className="text-base leading-relaxed md:text-lg" style={{ color: theme.onSurfaceVariant }}>
+                  <p className="text-sm leading-relaxed sm:text-base md:text-lg" style={{ color: theme.onSurfaceVariant }}>
                     {tenant.tagline ?? tenant.description ?? ""}
                   </p>
+                  {locationLabel && (
+                    <p className="flex max-w-full flex-wrap items-center gap-1.5 text-xs sm:text-sm" style={{ color: theme.secondary }}>
+                      <MapPin className="h-3.5 w-3.5 shrink-0" />
+                      <span className="min-w-0 break-words">
+                        {bt("storeLocation")} · {locationLabel}
+                      </span>
+                      {directionsUrl && (
+                        <a
+                          href={directionsUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="shrink-0 font-semibold underline"
+                          style={{ color: theme.primary }}
+                        >
+                          {bt("getDirections")}
+                        </a>
+                      )}
+                    </p>
+                  )}
                 </div>
 
                 {tenant.shopImages && tenant.shopImages.length > 0 && (

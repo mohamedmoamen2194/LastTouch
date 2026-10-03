@@ -1,7 +1,17 @@
 import { db } from "@/db";
-import { employeeServices, employees, serviceCategories, services, tenants, workingHours } from "@/db/schema";
+import { employeeServices, employees, locations, serviceCategories, services, tenants, workingHours } from "@/db/schema";
 import { and, eq, inArray } from "drizzle-orm";
 import { NotFoundError } from "@/lib/errors";
+
+/** Primary active branch of a tenant (shown on the booking page / nearby). */
+export async function getTenantLocation(tenantId: string) {
+  const [row] = await db
+    .select()
+    .from(locations)
+    .where(and(eq(locations.tenantId, tenantId), eq(locations.active, true)))
+    .limit(1);
+  return row ?? null;
+}
 
 /** Resolve a public tenant by slug (active only). */
 export async function resolveTenantForBooking(slug: string) {

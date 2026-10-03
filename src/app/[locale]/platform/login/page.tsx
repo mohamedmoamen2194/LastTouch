@@ -1,6 +1,5 @@
 import { setRequestLocale } from "next-intl/server";
 import { redirect } from "next/navigation";
-import { getPlatformEmail } from "@/lib/platform/session";
 import { hasPlatformSession } from "@/lib/platform/admin";
 import { PlatformLoginForm } from "@/components/platform/login-form";
 
@@ -26,7 +25,6 @@ export default async function PlatformLoginPage({
     // not logged in — show the form below
   }
 
-  const email = getPlatformEmail() ?? "";
   const next = sp.next?.startsWith("/") ? sp.next : `/${locale}/platform`;
 
   return (
@@ -42,7 +40,7 @@ export default async function PlatformLoginPage({
           </div>
         </div>
         <div className="mt-4">
-          <PlatformLoginForm email={email} next={next} />
+          <PlatformLoginForm next={next} />
         </div>
       </div>
     </div>

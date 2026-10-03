@@ -1,9 +1,9 @@
 import { setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { headers } from "next/headers";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { subscriptions, tenants } from "@/db/schema";
+import { locations, subscriptions, tenants } from "@/db/schema";
 import { getDashboardAccess } from "@/lib/tenant/dashboard";
 import { getBusinessTypeConfig, getThemeTokens } from "@/config/business-types";
 import { SettingsManager } from "@/components/dashboard/settings-manager";
@@ -33,6 +33,11 @@ export default async function SettingsPage({
     .select()
     .from(subscriptions)
     .where(eq(subscriptions.tenantId, ctx.tenantId))
+    .limit(1);
+  const [location] = await db
+    .select()
+    .from(locations)
+    .where(and(eq(locations.tenantId, ctx.tenantId), eq(locations.active, true)))
     .limit(1);
   const subState = await getSubscriptionState(ctx.tenantId, { role: ctx.role });
 
@@ -66,6 +71,16 @@ export default async function SettingsPage({
       shopImages={tenant?.shopImages ?? []}
       maxEmployees={getMaxEmployeesForPlan(tenant?.subscriptionPlan ?? ctx.subscriptionPlan)}
       marketplaceListed={tenant?.marketplaceEnabled ?? false}
+      initialLocation={
+        location
+          ? {
+              address: location.address,
+              city: location.city,
+              latitude: location.latitude != null ? Number(location.latitude) : null,
+              longitude: location.longitude != null ? Number(location.longitude) : null,
+            }
+          : null
+      }
     />
   );
 }

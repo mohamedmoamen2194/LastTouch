@@ -74,12 +74,14 @@ export default async function CheckinPage({
         className="sticky top-0 z-50 border-b border-black/5 backdrop-blur-md"
         style={{ backgroundColor: "rgba(255,255,255,0.7)" }}
       >
-        <div className="mx-auto flex h-16 max-w-screen-xl items-center justify-between px-4 md:px-8">
-          {tenant.logoUrl ? (
-            <img src={tenant.logoUrl} alt={tenant.businessName} className="h-10 w-auto max-w-[170px] object-contain" />
-          ) : (
-            <Logo />
-          )}
+        <div className="mx-auto flex h-14 w-full max-w-screen-xl items-center justify-between gap-2 px-3 sm:h-16 sm:px-4 md:px-8">
+          <div className="min-w-0 flex-shrink">
+            {tenant.logoUrl ? (
+              <img src={tenant.logoUrl} alt={tenant.businessName} className="h-8 w-auto max-w-[110px] object-contain sm:h-10 sm:max-w-[170px]" />
+            ) : (
+              <Logo className="h-4 w-auto sm:h-5 md:h-6" />
+            )}
+          </div>
           <LangSwitcher theme={theme} />
         </div>
       </header>

@@ -14,8 +14,9 @@ declare global {
 }
 
 /**
- * Generic QR scanner: live camera (BarcodeDetector) with photo-upload
- * fallback (jsQR). Reports the raw value via onScan — the caller decides
+ * Generic QR scanner: live camera (BarcodeDetector when available,
+ * otherwise live jsQR frame decoding) with photo-upload fallback (jsQR).
+ * Reports the raw value via onScan — the caller decides
  * what a code means. Camera stops itself after a successful read.
  */
 export function QrScanner({ onScan }: { onScan: (value: string) => void }) {
@@ -24,12 +25,14 @@ export function QrScanner({ onScan }: { onScan: (value: string) => void }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const rafRef = useRef<number>(0);
+  const lastJsqrAt = useRef(0);
   const fileRef = useRef<HTMLInputElement>(null);
   const cbRef = useRef(onScan);
   cbRef.current = onScan;
 
   const [live, setLive] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [denied, setDenied] = useState(false);
 
   const stop = () => {
     cancelAnimationFrame(rafRef.current);
@@ -45,7 +48,7 @@ export function QrScanner({ onScan }: { onScan: (value: string) => void }) {
     cbRef.current(value);
   };
 
-  const tick = async (detector: Detector) => {
+  const tick = async (detector: Detector | null) => {
     const video = videoRef.current;
     const canvas = canvasRef.current;
     if (!video || !canvas || video.readyState < 2) {
@@ -53,10 +56,31 @@ export function QrScanner({ onScan }: { onScan: (value: string) => void }) {
       return;
     }
     try {
-      const codes = await detector.detect(video);
-      if (codes.length > 0 && codes[0]?.rawValue) {
-        handleValue(codes[0].rawValue);
-        return;
+      if (detector) {
+        const codes = await detector.detect(video);
+        if (codes.length > 0 && codes[0]?.rawValue) {
+          handleValue(codes[0].rawValue);
+          return;
+        }
+      } else {
+        // jsQR fallback for browsers without BarcodeDetector: decode live
+        // frames, throttled to ~3fps to keep phones smooth.
+        const now = Date.now();
+        if (now - lastJsqrAt.current > 300 && video.videoWidth > 0) {
+          lastJsqrAt.current = now;
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          const g = canvas.getContext("2d", { willReadFrequently: true });
+          if (g) {
+            g.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const data = g.getImageData(0, 0, canvas.width, canvas.height);
+            const code = jsQR(data.data, data.width, data.height);
+            if (code?.data) {
+              handleValue(code.data);
+              return;
+            }
+          }
+        }
       }
     } catch {
       /* keep scanning */
@@ -66,23 +90,36 @@ export function QrScanner({ onScan }: { onScan: (value: string) => void }) {
 
   const startCamera = async () => {
     setError(null);
-    if (!window.BarcodeDetector || !navigator.mediaDevices?.getUserMedia) {
+    setDenied(false);
+    if (typeof window === "undefined" || !window.isSecureContext) {
+      setError(t("scanNeedsHttps"));
+      return;
+    }
+    if (!navigator.mediaDevices?.getUserMedia) {
       setError(t("scanUnsupported"));
       return;
     }
-    try {
-      const supported =
-        "getSupportedFormats" in window.BarcodeDetector
-          ? await (
-              window.BarcodeDetector as unknown as {
-                getSupportedFormats: () => Promise<string[]>;
-              }
-            ).getSupportedFormats()
-          : ["qr_code"];
-      if (!supported.includes("qr_code")) {
-        setError(t("scanUnsupported"));
-        return;
+    // BarcodeDetector is a fast path only — its absence must NOT block the
+    // camera. Browsers without it fall back to live jsQR decoding.
+    let detector: Detector | null = null;
+    if (window.BarcodeDetector) {
+      try {
+        const supported =
+          "getSupportedFormats" in window.BarcodeDetector
+            ? await (
+                window.BarcodeDetector as unknown as {
+                  getSupportedFormats: () => Promise<string[]>;
+                }
+              ).getSupportedFormats()
+            : ["qr_code"];
+        if (supported.includes("qr_code")) {
+          detector = new window.BarcodeDetector({ formats: ["qr_code"] });
+        }
+      } catch {
+        detector = null;
       }
+    }
+    try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: "environment" },
         audio: false,
@@ -101,11 +138,18 @@ export function QrScanner({ onScan }: { onScan: (value: string) => void }) {
       stream.getVideoTracks()[0]?.addEventListener("ended", stop);
       await video.play();
       setLive(true);
-      const detector = new window.BarcodeDetector({ formats: ["qr_code"] });
+      lastJsqrAt.current = 0;
       rafRef.current = requestAnimationFrame(() => void tick(detector));
     } catch (e) {
       stop();
-      setError(e instanceof DOMException && e.name === "NotAllowedError" ? t("scanDenied") : t("scanError"));
+      if (e instanceof DOMException && (e.name === "NotFoundError" || e.name === "OverconstrainedError")) {
+        setError(t("scanNoCamera"));
+      } else if (e instanceof DOMException && e.name === "NotAllowedError") {
+        setError(t("scanDenied"));
+        setDenied(true);
+      } else {
+        setError(t("scanError"));
+      }
     }
   };
 
@@ -147,7 +191,10 @@ export function QrScanner({ onScan }: { onScan: (value: string) => void }) {
       </div>
       <canvas ref={canvasRef} className="hidden" aria-hidden />
       {error && (
-        <p className="rounded-xl bg-[#ba1a1a] px-4 py-2.5 text-center text-sm font-medium text-white">{error}</p>
+        <div className="rounded-xl bg-[#ba1a1a] px-4 py-2.5 text-center text-sm font-medium text-white">
+          {error}
+          {denied && <p className="mt-1 text-xs font-normal leading-relaxed opacity-90">{t("scanDeniedHint")}</p>}
+        </div>
       )}
       <div className="grid grid-cols-2 gap-2">
         {live ? (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { getThemeTokens, type ThemeTokens } from "@/config/business-types";
 import type { ThemeName } from "@/db/schema";
@@ -110,6 +110,25 @@ export function BookingWidget({ tenant, themeId, services, packages = [], employ
     phone: initialCustomer?.phone ?? "",
     notes: "",
   });
+
+  // Sticky "continue" CTA: visible only when a selection exists but the
+  // regular continue button is scrolled out of view. The anchor ref is
+  // attached to whichever regular continue row is rendered (step 1 / 2).
+  const continueAnchorRef = useRef<HTMLDivElement | null>(null);
+  const [anchorVisible, setAnchorVisible] = useState(true);
+
+  useEffect(() => {
+    setAnchorVisible(true);
+    const el = continueAnchorRef.current;
+    if (!el) return;
+    if (typeof IntersectionObserver === "undefined") return;
+    const obs = new IntersectionObserver(
+      ([entry]) => setAnchorVisible(entry?.isIntersecting ?? true),
+      { threshold: 0.1 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [step]);
 
   const service = useMemo(() => services.find((s) => s.id === serviceId) ?? null, [serviceId, services]);
   const pkg = useMemo(() => packages.find((p) => p.id === packageId) ?? null, [packageId, packages]);
@@ -237,6 +256,15 @@ export function BookingWidget({ tenant, themeId, services, packages = [], employ
 
   const anySelected = employeeId === "any" && !generalWorkerId && Object.keys(assignments).length === 0;
 
+  // Sticky CTA readiness mirrors the regular continue buttons: step 1 needs
+  // a service/package selection, step 2 needs a staff choice.
+  const step1Ready = activeServiceIds.length > 0;
+  const step2Ready = multiSelection
+    ? Boolean(anySelected || generalWorkerId || assignmentsComplete)
+    : Boolean(employeeId);
+  const stickyReady = step === 1 ? step1Ready : step === 2 ? step2Ready : false;
+  const showStickyContinue = stickyReady && !anchorVisible;
+
   // The worker currently picked in the "choose from team" flow, used to label
   // the toggle button once a selection is made.
   const workerSelected = !anySelected && (Boolean(generalWorkerId) || Object.keys(assignments).length > 0 || (Boolean(employeeId) && employeeId !== "any"));
@@ -300,6 +328,12 @@ export function BookingWidget({ tenant, themeId, services, packages = [], employ
     const ym = `${nd.getFullYear()}-${String(nd.getMonth() + 1).padStart(2, "0")}`;
     setViewMonth(ym);
     void loadMonth(ym);
+  };
+
+  const handleStickyContinue = () => {
+    if (!stickyReady) return;
+    if (step === 1) setStep(2);
+    else if (step === 2) enterTimeStep();
   };
 
   // ---- Step-1 selection ----
@@ -806,7 +840,7 @@ export function BookingWidget({ tenant, themeId, services, packages = [], employ
                 </div>
               </>
             )}
-            <div className="mt-8 flex justify-end">
+            <div ref={continueAnchorRef} className="mt-8 flex justify-end">
               <button
                 type="button"
                 onClick={() => {
@@ -980,7 +1014,7 @@ export function BookingWidget({ tenant, themeId, services, packages = [], employ
               </div>
             )}
 
-            <div className="mt-8 flex justify-end">
+            <div ref={continueAnchorRef} className="mt-8 flex justify-end">
               <button
                 type="button"
                 onClick={enterTimeStep}
@@ -1277,6 +1311,36 @@ export function BookingWidget({ tenant, themeId, services, packages = [], employ
           </div>
         )}
       </div>
+
+      {/* Floating continue CTA: appears once a service/staff choice exists,
+          sits just above the bottom tab bar, and hides as soon as the
+          regular continue button scrolls into view (tracked via
+          continueAnchorRef). Responsive: full-width on mobile, auto on sm+. */}
+      {(step === 1 || step === 2) && (
+        <div
+          aria-hidden={!showStickyContinue}
+          className={cn(
+            "pointer-events-none fixed inset-x-3 z-40 flex justify-center transition-all duration-300 md:inset-x-4",
+            "bottom-[calc(84px+env(safe-area-inset-bottom))] md:bottom-[calc(96px+env(safe-area-inset-bottom))]",
+            showStickyContinue ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-4 opacity-0"
+          )}
+        >
+          <button
+            type="button"
+            onClick={handleStickyContinue}
+            tabIndex={showStickyContinue ? 0 : -1}
+            className="pointer-events-auto w-full max-w-md rounded-full px-8 py-3.5 text-sm font-semibold shadow-lg transition-transform active:scale-[0.98] sm:w-auto sm:min-w-[240px]"
+            style={{
+              backgroundColor: theme.primary,
+              color: theme.onPrimary,
+              boxShadow: `0 8px 24px -6px ${theme.primary}`,
+              visibility: showStickyContinue ? "visible" : "hidden",
+            }}
+          >
+            {t("continue")}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
