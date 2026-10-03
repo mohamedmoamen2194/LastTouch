@@ -51,7 +51,7 @@ export function DashboardShell({ slug, businessName, theme, logoUrl, features, c
   return (
     <div className="flex min-h-screen flex-col" style={{ backgroundColor: theme.background }}>
       {/* Top bar */}
-      <header className="sticky top-0 z-40 border-b bg-white/80 backdrop-blur-md" style={{ borderColor: theme.outlineVariant }}>
+      <header className="sticky top-0 z-40 border-b bg-white [transform:translateZ(0)] sm:bg-white/80 sm:backdrop-blur-md" style={{ borderColor: theme.outlineVariant }}>
         <div className="flex h-16 items-center justify-between gap-4 px-4 md:px-8">
           <div className="flex items-center gap-3">
             <Link href={`/${locale}/${slug}/dashboard`}>

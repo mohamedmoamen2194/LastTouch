@@ -71,8 +71,7 @@ export default async function CheckinPage({
   return (
     <main className="flex min-h-screen flex-col" style={{ backgroundColor: theme.background }}>
       <header
-        className="sticky top-0 z-50 border-b border-black/5 backdrop-blur-md"
-        style={{ backgroundColor: "rgba(255,255,255,0.7)" }}
+        className="sticky top-0 z-50 border-b border-black/5 bg-white [transform:translateZ(0)] sm:bg-white/70 sm:backdrop-blur-md"
       >
         <div className="mx-auto flex h-14 w-full max-w-screen-xl items-center justify-between gap-2 px-3 sm:h-16 sm:px-4 md:px-8">
           <div className="min-w-0 flex-shrink">

@@ -100,7 +100,7 @@ export function HotDealsCarousel({ deals }: { deals: HotPackage[] }) {
                   {/* faint cover backdrop, tinted with the theme color */}
                   {bg && (
                     <>
-                      <img src={bg} alt="" aria-hidden className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-20" />
+                      <img src={bg} alt="" aria-hidden loading="lazy" decoding="async" className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-20" />
                       <div
                         className="pointer-events-none absolute inset-0"
                         style={{ background: `linear-gradient(to top, ${th.primary} 15%, transparent 90%)` }}
@@ -196,7 +196,7 @@ export function HotDealsCarousel({ deals }: { deals: HotPackage[] }) {
               type="button"
               aria-label="previous"
               onClick={() => go(isRtl ? 1 : -1)}
-              className="pointer-events-auto flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-[#091426] shadow-md backdrop-blur transition-transform active:scale-95"
+              className="pointer-events-auto flex h-8 w-8 items-center justify-center rounded-full bg-white text-[#091426] shadow-md transition-transform active:scale-95"
             >
               <ChevronLeft className={cn("h-4 w-4", isRtl && "rotate-180")} />
             </button>
@@ -206,7 +206,7 @@ export function HotDealsCarousel({ deals }: { deals: HotPackage[] }) {
               type="button"
               aria-label="next"
               onClick={() => go(isRtl ? -1 : 1)}
-              className="pointer-events-auto flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-[#091426] shadow-md backdrop-blur transition-transform active:scale-95"
+              className="pointer-events-auto flex h-8 w-8 items-center justify-center rounded-full bg-white text-[#091426] shadow-md transition-transform active:scale-95"
             >
               <ChevronRight className={cn("h-4 w-4", isRtl && "rotate-180")} />
             </button>

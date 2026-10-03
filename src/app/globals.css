@@ -67,13 +67,20 @@
 
   /* Marketplace identity: professional offwhite with a subtle gloss —
      faint men-navy / women-terracotta sheens over a warm paper base.
-     (Brand tokens: men #091426 · women #964735.) */
+     (Brand tokens: men #091426 · women #964735.)
+     NOTE: never use `background-attachment: fixed` here — on mobile it
+     forces a full repaint on every scroll frame (severe stutter). The
+     fixed effect is only enabled on precise pointers (desktop). */
   .mp-bg {
     background:
       radial-gradient(1100px 480px at 88% -6%, rgba(150, 71, 53, 0.1), transparent 60%),
       radial-gradient(900px 480px at 8% -4%, rgba(9, 20, 38, 0.09), transparent 60%),
       linear-gradient(#faf8f5, #f3efe9);
-    background-attachment: fixed;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .mp-bg {
+      background-attachment: fixed;
+    }
   }
   /* Marketplace accent: solid men-palette blue (Modern Men primary
      container #1e293b), overridden per-request to women terracotta via

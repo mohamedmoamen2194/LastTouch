@@ -30,7 +30,7 @@ export async function UpNextCard({ booking }: { booking: ClientBooking }) {
       >
         <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[#eff1f3] text-lg font-bold text-[#091426]">
           {booking.logoUrl ? (
-            <img src={booking.logoUrl} alt="" className="h-full w-full object-cover" />
+            <img src={booking.logoUrl} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
           ) : (
             booking.businessName.charAt(0).toUpperCase()
           )}
@@ -103,7 +103,7 @@ export async function QuickRebookRow({ items }: { items: ClientBooking[] }) {
           >
             <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[#eff1f3] text-base font-bold text-[#091426]">
               {b.logoUrl ? (
-                <img src={b.logoUrl} alt="" className="h-full w-full object-cover" />
+                <img src={b.logoUrl} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
               ) : (
                 b.businessName.charAt(0).toUpperCase()
               )}
@@ -141,7 +141,7 @@ export async function ForYouRow({
           >
             <div className="flex h-20 items-center justify-center bg-gradient-to-br from-[#1e293b] to-[#091426] text-xl font-bold text-white">
               {s.logoUrl ? (
-                <img src={s.logoUrl} alt="" className="h-full w-full object-cover" />
+                <img src={s.logoUrl} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
               ) : (
                 s.businessName.charAt(0).toUpperCase()
               )}

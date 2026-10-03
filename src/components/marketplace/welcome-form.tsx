@@ -78,7 +78,7 @@ export function WelcomeForm({ initialEmail }: { initialEmail: string }) {
         aria-label={t("avatar")}
       >
         {preview ? (
-          <img src={preview} alt="" className="h-full w-full object-cover" />
+          <img src={preview} alt="" decoding="async" className="h-full w-full object-cover" />
         ) : (
           <Camera className="h-6 w-6" />
         )}

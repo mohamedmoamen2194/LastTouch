@@ -169,7 +169,7 @@ export function MarketplaceSearch({ keep = {} }: Props) {
                     className="flex items-center gap-3 rounded-xl px-2.5 py-2.5 transition-colors hover:bg-[#f7f9fb]"
                   >
                     <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[#eff1f3] text-sm font-bold text-[#091426]">
-                      {s.logoUrl ? <img src={s.logoUrl} alt="" className="h-full w-full object-cover" /> : s.businessName.charAt(0).toUpperCase()}
+                      {s.logoUrl ? <img src={s.logoUrl} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" /> : s.businessName.charAt(0).toUpperCase()}
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-bold text-[#091426]">{s.businessName}</span>
@@ -224,7 +224,7 @@ export function MarketplaceSearch({ keep = {} }: Props) {
                     className="flex items-center gap-3 rounded-xl px-2.5 py-2.5 transition-colors hover:bg-[#f7f9fb]"
                   >
                     <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[#eff1f3] text-sm font-bold text-[#091426]">
-                      {s.logoUrl ? <img src={s.logoUrl} alt="" className="h-full w-full object-cover" /> : s.businessName.charAt(0).toUpperCase()}
+                      {s.logoUrl ? <img src={s.logoUrl} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" /> : s.businessName.charAt(0).toUpperCase()}
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-bold text-[#091426]">{s.businessName}</span>

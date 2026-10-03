@@ -35,6 +35,7 @@ export function ShopCarousel({ images, businessName, theme }: Props) {
         <img
           src={images[index]}
           alt={`${businessName} photo ${index + 1}`}
+          decoding="async"
           className="h-full w-full object-cover"
         />
 

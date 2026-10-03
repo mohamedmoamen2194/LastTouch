@@ -44,9 +44,9 @@ export async function StoreCard({
           style={{ backgroundImage: `linear-gradient(135deg, ${th.primaryContainer} 0%, ${th.primary} 100%)` }}
         >
           {store.coverUrl ? (
-            <img src={store.coverUrl} alt="" className="h-full w-full object-cover" />
+            <img src={store.coverUrl} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
           ) : store.shopImages[0] ? (
-            <img src={store.shopImages[0]} alt="" className="h-full w-full object-cover" />
+            <img src={store.shopImages[0]} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
           ) : null}
           <div
             className="absolute inset-0"
@@ -65,7 +65,7 @@ export async function StoreCard({
               className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl text-lg font-bold"
               style={{ backgroundColor: th.onPrimary, color: th.primary }}
             >
-              {store.logoUrl ? <img src={store.logoUrl} alt="" className="h-full w-full object-cover" /> : initials}
+              {store.logoUrl ? <img src={store.logoUrl} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" /> : initials}
             </span>
             <div className="min-w-0 flex-1">
               <h3 className="truncate text-sm font-bold" style={{ color: th.onPrimary }}>{store.businessName}</h3>

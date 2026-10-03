@@ -48,7 +48,7 @@ export function BookingTabs({
       <div className={tab === "ratings" ? undefined : "hidden"}>{ratings}</div>
 
       <div
-        className="fixed inset-x-2 bottom-2 z-40 md:inset-x-4 md:bottom-4"
+        className="fixed inset-x-2 bottom-2 z-40 [transform:translateZ(0)] md:inset-x-4 md:bottom-4"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
         <nav

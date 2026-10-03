@@ -31,6 +31,8 @@ export function StorePill({ store, businessTypeLabel }: { store: PartnerStore; b
         <img
           src={store.logoUrl ?? "/logo.svg"}
           alt={store.businessName}
+          loading="lazy"
+          decoding="async"
           className={store.logoUrl ? "h-full w-full object-cover" : "h-6 w-auto object-contain"}
         />
       </span>

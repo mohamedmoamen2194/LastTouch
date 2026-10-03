@@ -48,7 +48,7 @@ export function QrDownload({
         {label}
       </span>
       {src ? (
-        <img src={src} alt={label} className="h-28 w-28 rounded-lg bg-white object-contain" />
+        <img src={src} alt={label} loading="lazy" decoding="async" className="h-28 w-28 rounded-lg bg-white object-contain" />
       ) : (
         <span
           className="flex h-28 w-28 items-center justify-center rounded-lg text-xs"

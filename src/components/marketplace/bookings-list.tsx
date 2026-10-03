@@ -175,7 +175,7 @@ export function BookingsList({ bookings, emptyHint, rebook = false }: { bookings
             <li key={b.id} className="rounded-2xl border border-[#c5c6cd]/60 bg-white shadow-sm">
               <button type="button" onClick={() => setOpenId(expanded ? null : b.id)} className="flex w-full items-start gap-3 p-4 text-start">
                 <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[#eff1f3] text-lg font-bold text-[#091426]">
-                  {b.logoUrl ? <img src={b.logoUrl} alt="" className="h-full w-full object-cover" /> : b.businessName.charAt(0).toUpperCase()}
+                  {b.logoUrl ? <img src={b.logoUrl} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" /> : b.businessName.charAt(0).toUpperCase()}
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-bold text-[#091426]">{b.businessName}</span>

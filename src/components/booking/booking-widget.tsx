@@ -1320,7 +1320,7 @@ export function BookingWidget({ tenant, themeId, services, packages = [], employ
         <div
           aria-hidden={!showStickyContinue}
           className={cn(
-            "pointer-events-none fixed inset-x-3 z-40 flex justify-center transition-all duration-300 md:inset-x-4",
+            "pointer-events-none fixed inset-x-3 z-40 flex justify-center [transform:translateZ(0)] transition-all duration-300 md:inset-x-4",
             "bottom-[calc(84px+env(safe-area-inset-bottom))] md:bottom-[calc(96px+env(safe-area-inset-bottom))]",
             showStickyContinue ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-4 opacity-0"
           )}

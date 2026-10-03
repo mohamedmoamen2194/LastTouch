@@ -80,7 +80,7 @@ export function ProfileForm({ initial }: { initial: ClientProfile | null }) {
           aria-label={t("avatar")}
         >
           {currentAvatar ? (
-            <img src={currentAvatar} alt="" className="h-full w-full object-cover" />
+            <img src={currentAvatar} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
           ) : (
             <Camera className="h-5 w-5" />
           )}

@@ -25,11 +25,11 @@ export function MarketplaceTabs({ guest = false }: { guest?: boolean }) {
 
   return (
 <nav
-        className="fixed inset-x-3 bottom-3 z-40 sm:inset-x-6 sm:bottom-5"
+        className="fixed inset-x-3 bottom-3 z-40 [transform:translateZ(0)] sm:inset-x-6 sm:bottom-5"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
         aria-label="marketplace"
       >
-        <div className="mx-auto grid max-w-md grid-cols-4 gap-1 rounded-full border border-black/5 bg-white/95 p-1 shadow-2xl shadow-black/20 backdrop-blur-md">
+        <div className="mx-auto grid max-w-md grid-cols-4 gap-1 rounded-full border border-black/5 bg-white p-1 shadow-lg shadow-black/10 sm:bg-white/95 sm:shadow-2xl sm:shadow-black/20 sm:backdrop-blur-md">
         {tabs.map((tab) => (
           <Link
             key={tab.href}

@@ -93,7 +93,7 @@ export function NearbyStores() {
             className="flex w-44 shrink-0 snap-start flex-col overflow-hidden rounded-2xl border border-[#c5c6cd]/60 bg-white"
           >
             <div className="flex h-20 items-center justify-center bg-gradient-to-br from-[#1e293b] to-[#091426] text-xl font-bold text-white">
-              {s.logoUrl ? <img src={s.logoUrl} alt="" className="h-full w-full object-cover" /> : s.businessName.charAt(0).toUpperCase()}
+              {s.logoUrl ? <img src={s.logoUrl} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" /> : s.businessName.charAt(0).toUpperCase()}
             </div>
             <div className="flex flex-1 flex-col gap-0.5 p-2.5">
               <p className="truncate text-xs font-bold text-[#091426]">{s.businessName}</p>

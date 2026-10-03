@@ -66,7 +66,7 @@ export function ContinueRow() {
           >
             <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[#eff1f3] text-base font-bold text-[#091426]">
               {s.logoUrl ? (
-                <img src={s.logoUrl} alt="" className="h-full w-full object-cover" />
+                <img src={s.logoUrl} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
               ) : (
                 s.businessName.charAt(0).toUpperCase()
               )}

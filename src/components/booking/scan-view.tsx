@@ -4,8 +4,11 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Camera, QrCode, Upload } from "lucide-react";
-import jsQR from "jsqr";
 import type { ThemeTokens } from "@/config/business-types";
+
+// jsQR is loaded on demand (dynamic import) so its weight never lands in
+// the initial booking-page bundle — only when scanning is actually used.
+type JsQr = (data: Uint8ClampedArray, width: number, height: number) => { data: string } | null;
 
 type Detector = { detect: (source: CanvasImageSource, opts?: object) => Promise<{ rawValue: string }[]> };
 
@@ -30,7 +33,17 @@ export function ScanView({ theme, slug }: { theme: ThemeTokens; slug: string }) 
   const streamRef = useRef<MediaStream | null>(null);
   const rafRef = useRef<number>(0);
   const lastJsqrAt = useRef(0);
+  const jsqrRef = useRef<JsQr | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  const loadJsqr = async (): Promise<JsQr | null> => {
+    try {
+      if (!jsqrRef.current) jsqrRef.current = (await import("jsqr")).default as JsQr;
+      return jsqrRef.current;
+    } catch {
+      return null;
+    }
+  };
 
   const [live, setLive] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -85,13 +98,18 @@ export function ScanView({ theme, slug }: { theme: ThemeTokens; slug: string }) 
         const now = Date.now();
         if (now - lastJsqrAt.current > 300 && video.videoWidth > 0) {
           lastJsqrAt.current = now;
+          const decode = await loadJsqr();
+          if (!decode) {
+            rafRef.current = requestAnimationFrame(() => void tick(detector));
+            return;
+          }
           canvas.width = video.videoWidth;
           canvas.height = video.videoHeight;
           const g = canvas.getContext("2d", { willReadFrequently: true });
           if (g) {
             g.drawImage(video, 0, 0, canvas.width, canvas.height);
             const data = g.getImageData(0, 0, canvas.width, canvas.height);
-            const code = jsQR(data.data, data.width, data.height);
+            const code = decode(data.data, data.width, data.height);
             if (code?.data) {
               handleValue(code.data);
               return;
@@ -173,8 +191,11 @@ export function ScanView({ theme, slug }: { theme: ThemeTokens; slug: string }) 
   const onFile = async (file: File | undefined) => {
     if (!file) return;
     setError(null);
+    setDenied(false);
     setFound(null);
     try {
+      const decode = await loadJsqr();
+      if (!decode) throw new Error("decoder");
       const bitmap = await createImageBitmap(file);
       const canvas = canvasRef.current ?? document.createElement("canvas");
       canvas.width = bitmap.width;
@@ -183,7 +204,7 @@ export function ScanView({ theme, slug }: { theme: ThemeTokens; slug: string }) 
       if (!g) throw new Error("canvas");
       g.drawImage(bitmap, 0, 0);
       const data = g.getImageData(0, 0, canvas.width, canvas.height);
-      const code = jsQR(data.data, data.width, data.height);
+      const code = decode(data.data, data.width, data.height);
       if (code?.data) handleValue(code.data);
       else setError(t("scanBadQr"));
     } catch {

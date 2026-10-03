@@ -344,7 +344,7 @@ export function SettingsManager({
               style={{ borderColor: theme.outlineVariant, backgroundColor: theme.surfaceContainerHigh }}
             >
               {logo ? (
-                <img src={logo} alt={businessName} className="h-full w-full object-contain" />
+                <img src={logo} alt={businessName} loading="lazy" decoding="async" className="h-full w-full object-contain" />
               ) : (
                 <span className="text-2xl font-bold" style={{ color: theme.onSurfaceVariant }}>{initials}</span>
               )}
@@ -412,7 +412,7 @@ export function SettingsManager({
             <div className="mt-4 grid grid-cols-2 gap-3 min-[420px]:grid-cols-3">
               {images.map((url) => (
                 <div key={url} className="group relative aspect-square overflow-hidden rounded-xl border" style={{ borderColor: theme.outlineVariant, backgroundColor: theme.surfaceContainerHigh }}>
-                  <img src={url} alt="" className="h-full w-full object-cover" />
+                  <img src={url} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
                   <button
                     type="button"
                     onClick={() => removeImage(url)}
