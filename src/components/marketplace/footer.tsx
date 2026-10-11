@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { Logo } from "@/components/booking/logo";
+import { SocialLinks } from "@/components/shared/social-links";
 
 /**
  * Marketplace footer: brand, explore links, business links, and the
@@ -16,6 +17,8 @@ export async function MarketplaceFooter({ locale }: { locale: string }) {
         <div>
           <Logo className="h-6 w-auto" />
           <p className="mt-3 max-w-xs text-xs leading-relaxed text-[#45474c]">{t("subtitle")}</p>
+          <p className="mt-4 text-xs font-bold uppercase tracking-widest text-[#9aa0a6]">{t("footerFollow")}</p>
+          <SocialLinks className="mt-2" linkClassName="border border-black/10 bg-white text-[#091426]" />
         </div>
         <nav aria-label="explore">
           <p className="text-xs font-bold uppercase tracking-widest text-[#9aa0a6]">{t("footerExplore")}</p>

@@ -17,6 +17,7 @@ import {
 import { periodEnd } from "@/lib/subscriptions";
 import { assertPlatformApi } from "@/lib/platform/admin";
 import { createCycleInvoice } from "@/lib/platform/invoices";
+import { unlockReferralsForTenant } from "@/lib/marketplace/referrals";
 
 const planEnum = z.enum(SUBSCRIPTION_PLANS as unknown as [SubscriptionPlan, ...SubscriptionPlan[]]);
 const periodEnum = z.enum(BILLING_PERIODS as unknown as [BillingPeriod, ...BillingPeriod[]]);
@@ -94,6 +95,15 @@ export async function POST(req: Request) {
       .update(tenants)
       .set({ subscriptionPlan: d.plan, updatedAt: new Date() })
       .where(eq(tenants.id, d.tenantId));
+
+    // A paid activation unlocks pending referral prizes for this store's referrer.
+    if (d.plan !== "free" && (d.status === "active" || d.status === "trial" || d.status === "grace")) {
+      try {
+        await unlockReferralsForTenant(d.tenantId);
+      } catch (e) {
+        console.error("[platform] referral unlock failed", e);
+      }
+    }
 
     let invoice: { invoiceNumber: string; amount: number | null } | null = null;
     if (d.createInvoice && d.plan !== "free" && d.status === "active") {
@@ -200,6 +210,16 @@ export async function PATCH(req: Request) {
         .update(subscriptions)
         .set({ autoRenew: !sub.autoRenew, updatedAt: now })
         .where(eq(subscriptions.tenantId, tenantId));
+    }
+
+    // Lifecycle actions that (re)activate the subscription unlock pending
+    // referral prizes for this store's referrer.
+    if (action === "extend" || action === "renew" || action === "reactivate") {
+      try {
+        await unlockReferralsForTenant(tenantId);
+      } catch (e) {
+        console.error("[platform] referral unlock failed", e);
+      }
     }
 
     return NextResponse.json(ok({ tenantId, action }), { status: HttpStatus.Ok });

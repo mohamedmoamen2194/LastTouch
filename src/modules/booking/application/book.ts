@@ -140,10 +140,17 @@ export async function validateBookingAvailability(args: {
 }): Promise<BookingAvailability> {
   if (args.serviceIds.length === 0) throw new ValidationAppError("Select at least one service");
 
+  // Single batched fetch — never one query per service.
+  const svcRows = await db
+    .select()
+    .from(services)
+    .where(inArray(services.id, args.serviceIds));
+  const svcById = new Map(svcRows.map((s) => [s.id, s]));
+
   let durationMinutes = 0;
   let priceNum = 0;
   for (const serviceId of args.serviceIds) {
-    const [svc] = await db.select().from(services).where(eq(services.id, serviceId)).limit(1);
+    const svc = svcById.get(serviceId);
     if (!svc || svc.tenantId !== args.tenantId) throw new NotFoundError("Service not found");
     if (!svc.active) throw new ConflictError("Service is not active");
     durationMinutes += svc.durationMinutes;
@@ -174,7 +181,7 @@ export async function validateBookingAvailability(args: {
 
     const durationByService = new Map<string, number>();
     for (const serviceId of args.serviceIds) {
-      const [svc] = await db.select().from(services).where(eq(services.id, serviceId)).limit(1);
+      const svc = svcById.get(serviceId);
       if (svc) durationByService.set(serviceId, svc.durationMinutes);
     }
     const chain = await buildSequentialChainSlots({
@@ -255,6 +262,8 @@ function addMinutes(hhmm: string, minutes: number): string {
 /**
  * Creates (or reuses) the customer, then creates the appointment + snapshots.
  * Single entry point for booking from website, AI, WhatsApp, or dashboard.
+ * All writes run in one transaction so a booking is never half-persisted,
+ * and the customer find-or-create survives concurrent same-phone races.
  */
 export async function createBooking(input: CreateBookingInput) {
   const appointmentDate = parseBookingDay(input.appointmentDate);
@@ -280,77 +289,104 @@ export async function createBooking(input: CreateBookingInput) {
     );
   }
 
-  let customerId: string | null = null;
-  if (input.customer.firstName) {
-    const phoneKey = normalizePhone(input.customer.phone) ?? input.customer.phone;
-    const existing = await db.query.customers.findFirst({
-      where: (c, { and, eq: op }) =>
-        and(op(c.tenantId, input.tenantId), op(c.phone, phoneKey)),
-    });
+  // One batched fetch for the immutable snapshots (validated above, so
+  // every id is guaranteed present and owned by this tenant).
+  const snapshotRows = await db
+    .select()
+    .from(services)
+    .where(inArray(services.id, input.serviceIds));
+  const snapshotById = new Map(snapshotRows.map((s) => [s.id, s]));
 
-    let id: string;
-    if (existing) {
-      id = existing.id;
-    } else {
-      const [created] = await db
-        .insert(customers)
-        .values({
-          tenantId: input.tenantId,
-          firstName: input.customer.firstName,
-          phone: normalizePhone(input.customer.phone) ?? input.customer.phone,
-          email: input.customer.email ?? null,
-          notes: input.customer.notes ?? null,
-          marketingConsent: input.customer.marketingConsent ?? false,
-        })
-    .returning();
+  return db.transaction(async (tx) => {
+    let customerId: string | null = null;
+    if (input.customer.firstName) {
+      const phoneKey = normalizePhone(input.customer.phone) ?? input.customer.phone;
+      const customerWhere = and(eq(customers.tenantId, input.tenantId), eq(customers.phone, phoneKey));
+      const [existing] = await tx
+        .select({ id: customers.id })
+        .from(customers)
+        .where(customerWhere)
+        .limit(1);
 
-  // Persist snapshot rows for immutable history (spec section 18).
-      id = created.id;
+      if (existing) {
+        customerId = existing.id;
+      } else {
+        const [created] = await tx
+          .insert(customers)
+          .values({
+            tenantId: input.tenantId,
+            firstName: input.customer.firstName,
+            phone: normalizePhone(input.customer.phone) ?? input.customer.phone,
+            email: input.customer.email ?? null,
+            notes: input.customer.notes ?? null,
+            marketingConsent: input.customer.marketingConsent ?? false,
+          })
+          .onConflictDoNothing()
+          .returning({ id: customers.id });
+
+        if (created) {
+          customerId = created.id;
+        } else {
+          // Lost a concurrent same-phone insert race — re-read the winner
+          // instead of surfacing a raw unique-violation 500.
+          const [winner] = await tx
+            .select({ id: customers.id })
+            .from(customers)
+            .where(customerWhere)
+            .limit(1);
+          if (!winner) throw new ConflictError("Could not save customer, please retry");
+          customerId = winner.id;
+        }
+      }
     }
-    customerId = id;
-  }
 
-  const [appt] = await db
-    .insert(appointments)
-    .values({
-      tenantId: input.tenantId,
-      customerId,
-      clientUserId: input.clientUserId ?? null,
-      employeeId: availability.employeeId,
-      appointmentDate,
-      startTime: input.startTime,
-      endTime: availability.endTime,
-      durationMinutes: availability.durationMinutes,
-      price: availability.price,
-      status: "pending",
-      source: input.source ?? "website",
-      notes: input.customer.notes ?? null,
-    })
-    .returning();
-  let sortOrder = 0;
-  for (const serviceId of input.serviceIds) {
-    const [svc] = await db.select().from(services).where(eq(services.id, serviceId)).limit(1);
-    if (svc) {
-      await db.insert(appointmentServices).values({
+    const [appt] = await tx
+      .insert(appointments)
+      .values({
+        tenantId: input.tenantId,
+        customerId,
+        clientUserId: input.clientUserId ?? null,
+        employeeId: availability.employeeId,
+        appointmentDate,
+        startTime: input.startTime,
+        endTime: availability.endTime,
+        durationMinutes: availability.durationMinutes,
+        price: availability.price,
+        status: "pending",
+        source: input.source ?? "website",
+        notes: input.customer.notes ?? null,
+      })
+      .returning();
+
+    // Persist snapshot rows for immutable history (spec section 18).
+    const snapshots = input.serviceIds
+      .map((serviceId, i) => {
+        const svc = snapshotById.get(serviceId);
+        if (!svc) return null;
+        return {
+          appointmentId: appt.id,
+          serviceId: svc.id,
+          serviceNameSnapshot: svc.name,
+          durationSnapshot: svc.durationMinutes,
+          priceSnapshot: svc.price,
+          sortOrder: i,
+        };
+      })
+      .filter((s): s is NonNullable<typeof s> => s !== null);
+    if (snapshots.length > 0) {
+      await tx.insert(appointmentServices).values(snapshots);
+    }
+
+    // Persist per-service worker assignments (multi-worker packages).
+    await tx.insert(appointmentEmployees).values(
+      availability.assignments.map((a, i) => ({
         appointmentId: appt.id,
-        serviceId: svc.id,
-        serviceNameSnapshot: svc.name,
-        durationSnapshot: svc.durationMinutes,
-        priceSnapshot: svc.price,
-        sortOrder: sortOrder++,
-      });
-    }
-  }
+        employeeId: a.employeeId,
+        serviceId: a.serviceId,
+        sortOrder: i,
+      }))
+    );
 
-  // Persist per-service worker assignments (multi-worker packages).
-  await db.insert(appointmentEmployees).values(
-    availability.assignments.map((a, i) => ({
-      appointmentId: appt.id,
-      employeeId: a.employeeId,
-      serviceId: a.serviceId,
-      sortOrder: i,
-    }))
-  );
-
-  return { appointment: appt, customerId };
+    return { appointment: appt, customerId };
+  });
 }

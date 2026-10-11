@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, inArray, isNull, lt, or } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNull, lt, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
   appointmentEmployees,
@@ -200,11 +200,11 @@ export function isProfileComplete(p: ClientProfile | null): boolean {
 
 /** Lifetime points balance = SUM(ledger). Spend accrues on completion. */
 export async function getClientPointsTotal(userId: string): Promise<number> {
-  const rows = await db
-    .select({ amount: clientPointsLedger.amount })
+  const [row] = await db
+    .select({ total: sql<number | null>`COALESCE(SUM(${clientPointsLedger.amount}), 0)` })
     .from(clientPointsLedger)
     .where(eq(clientPointsLedger.userId, userId));
-  return rows.reduce((a, r) => a + (r.amount ?? 0), 0);
+  return Number(row?.total ?? 0);
 }
 
 /** "HH:MM" + minutes → "HH:MM" (wraps past midnight). */

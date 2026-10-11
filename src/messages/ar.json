@@ -530,7 +530,8 @@
     "lockedEmployeesBody": "أضف المختصين وحدد ساعات العمل وأسند الخدمات — بعد الاشتراك."
   },
   "footer": {
-    "poweredBy": "مدعوم من LastTouch"
+    "poweredBy": "مدعوم من LastTouch",
+    "contactUs": "تواصل معنا"
   },
   "marketplace": {
     "title": "اعثر على موعدك القادم",
@@ -585,6 +586,7 @@
     "footerListStore": "اعرض محلك",
     "footerRights": "جميع الحقوق محفوظة.",
     "footerPoweredBy": "مدعوم من",
+    "footerFollow": "تابعنا",
     "aboutTitle": "عن LastTouch",
     "aboutEyebrow": "لماذا تحجز معنا",
     "upNextTitle": "القادم",
@@ -644,6 +646,8 @@
     "forBusinessBody": "أدر محلك على LastTouch — الحجز والعملاء والتحليلات.",
     "forBusinessCta": "افتح محلك",
     "openDashboard": "افتح لوحة التحكم",
+    "supportTitle": "تحتاج مساعدة؟ تواصل معنا",
+    "supportBody": "تواصل مع فريق LastTouch عبر الهاتف أو البريد الإلكتروني.",
     "status_pending": "قيد الانتظار",
     "status_confirmed": "مؤكد",
     "status_completed": "مكتمل",
@@ -716,7 +720,9 @@
     "refRequestCta": "اطلب المبلغ",
     "refConverted": "تم التحويل",
     "refAwaiting": "بانتظار الصرف",
-    "refPaid": "تم الصرف"
+    "refPaid": "تم الصرف",
+    "refPending": "بانتظار اشتراك المحل",
+    "refPendingHint": "تُفتح الجائزة عندما يفعّل هذا المحل باقة مدفوعة — ثم اختر النقاط أو المبلغ."
   },
   "legal": {
     "privacyTitle": "سياسة الخصوصية",

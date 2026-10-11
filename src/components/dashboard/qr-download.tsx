@@ -41,17 +41,17 @@ export function QrDownload({
 
   return (
     <div
-      className="flex flex-1 flex-col items-center gap-2 rounded-xl border p-3"
+      className="flex min-w-0 flex-1 flex-col items-center gap-2 rounded-xl border p-3"
       style={{ borderColor: theme.outlineVariant }}
     >
-      <span className="text-xs font-semibold" style={{ color: theme.onSurfaceVariant }}>
+      <span className="max-w-full break-words text-center text-xs font-semibold" style={{ color: theme.onSurfaceVariant }}>
         {label}
       </span>
       {src ? (
-        <img src={src} alt={label} loading="lazy" decoding="async" className="h-28 w-28 rounded-lg bg-white object-contain" />
+        <img src={src} alt={label} loading="lazy" decoding="async" className="h-24 w-24 rounded-lg bg-white object-contain sm:h-28 sm:w-28" />
       ) : (
         <span
-          className="flex h-28 w-28 items-center justify-center rounded-lg text-xs"
+          className="flex h-24 w-24 items-center justify-center rounded-lg text-xs sm:h-28 sm:w-28"
           style={{ backgroundColor: theme.surfaceContainerHigh, color: theme.onSurfaceVariant }}
         >
           …
@@ -61,7 +61,7 @@ export function QrDownload({
         <a
           href={src}
           download={fileName}
-          className="inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-semibold"
+          className="inline-flex max-w-full items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-semibold"
           style={{ backgroundColor: theme.primary, color: theme.onPrimary }}
         >
           <Download className="h-3.5 w-3.5" />

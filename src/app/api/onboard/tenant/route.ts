@@ -47,8 +47,9 @@ export async function POST(req: Request) {
       phone: input.data.phone,
     });
 
-    // Optional referral: credit the referrer (100 EGP earned). Invalid
-    // codes and self-referrals never block setup — warn and continue.
+    // Optional referral: recorded as pending — the prize unlocks only after
+    // the store activates a paid plan (Basic 800 / AI 1200 / Enterprise).
+    // Invalid codes and self-referrals never block setup — warn and continue.
     let referralWarning: string | null = null;
     const code = input.data.referralCode?.trim().toLowerCase();
     if (code) {
@@ -65,7 +66,7 @@ export async function POST(req: Request) {
         } else {
           await db
             .insert(referrals)
-            .values({ code, referrerUserId: referrer.userId, tenantId: tenant.id, amount: 100, status: "earned" })
+            .values({ code, referrerUserId: referrer.userId, tenantId: tenant.id, amount: 100, status: "pending" })
             .onConflictDoNothing();
         }
       } catch {

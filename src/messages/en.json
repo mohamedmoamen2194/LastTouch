@@ -531,7 +531,8 @@
     "lockedEmployeesBody": "Add specialists, set working hours and assign services — once you're subscribed."
   },
   "footer": {
-    "poweredBy": "Powered by LastTouch"
+    "poweredBy": "Powered by LastTouch",
+    "contactUs": "Contact us"
   },
   "marketplace": {
     "title": "Find your next appointment",
@@ -586,6 +587,7 @@
     "footerListStore": "List your store",
     "footerRights": "All rights reserved.",
     "footerPoweredBy": "Powered by",
+    "footerFollow": "Follow us",
     "aboutTitle": "About LastTouch",
     "aboutEyebrow": "Why book with us",
     "upNextTitle": "Up next",
@@ -645,6 +647,8 @@
     "forBusinessBody": "Run your store on LastTouch — booking, customers and analytics.",
     "forBusinessCta": "Open your store",
     "openDashboard": "Open dashboard",
+    "supportTitle": "Need help? Contact us",
+    "supportBody": "Reach the LastTouch team by phone or email.",
     "status_pending": "Pending",
     "status_confirmed": "Confirmed",
     "status_completed": "Completed",
@@ -717,7 +721,9 @@
     "refRequestCta": "Request cash",
     "refConverted": "Converted",
     "refAwaiting": "Awaiting payout",
-    "refPaid": "Paid"
+    "refPaid": "Paid",
+    "refPending": "Waiting for store plan",
+    "refPendingHint": "Prize unlocks when this store activates a paid plan — then choose points or cash."
   },
   "legal": {
     "privacyTitle": "Privacy Policy",

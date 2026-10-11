@@ -189,11 +189,11 @@ export function SettingsManager({
     }
   };
 
-  const cardClass = "rounded-2xl border p-5 md:p-6" + "";
+  const cardClass = "min-w-0 rounded-2xl border p-4 sm:p-5 md:p-6" + "";
   const cardStyle = { borderColor: theme.outlineVariant, backgroundColor: theme.surfaceContainerLowest } as const;
 
   return (
-    <div className="space-y-5 md:space-y-6">
+    <div className="min-w-0 max-w-full space-y-5 overflow-x-clip md:space-y-6">
       <div>
         <h1 className="text-xl font-bold md:text-2xl" style={{ color: theme.primary }}>{t("title")}</h1>
         <p className="mt-1 text-sm" style={{ color: theme.onSurfaceVariant }}>{t("subtitle")}</p>
@@ -205,7 +205,7 @@ export function SettingsManager({
         </div>
       )}
 
-      <div className="grid gap-4 md:grid-cols-2 md:gap-5">
+      <div className="grid min-w-0 grid-cols-1 gap-4 md:grid-cols-2 md:gap-5">
         {/* Business info */}
         <section className={cardClass} style={cardStyle}>
           <div className="flex items-center gap-3">
@@ -225,11 +225,11 @@ export function SettingsManager({
               <dt className="text-xs font-medium uppercase tracking-wide" style={{ color: theme.onSurfaceVariant }}>{t("theme")}</dt>
               <dd className="break-words" style={{ color: theme.onSurfaceVariant }}>{theme.label}</dd>
             </div>
-            <div className="flex flex-col gap-0.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-              <dt className="text-xs font-medium uppercase tracking-wide" style={{ color: theme.onSurfaceVariant }}>{t("address")}</dt>
-              <dd className="truncate" dir="ltr" style={{ color: theme.primary }}>{bookingUrl}</dd>
+            <div className="flex min-w-0 flex-col gap-0.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+              <dt className="shrink-0 text-xs font-medium uppercase tracking-wide" style={{ color: theme.onSurfaceVariant }}>{t("address")}</dt>
+              <dd className="min-w-0 max-w-full truncate text-xs sm:text-sm" dir="ltr" style={{ color: theme.primary }}>{bookingUrl}</dd>
             </div>
-            <div className="flex flex-col gap-2 sm:flex-row">
+            <div className="grid min-w-0 grid-cols-1 gap-2 min-[400px]:grid-cols-2 sm:grid-cols-1 lg:grid-cols-2">
               <QrDownload value={bookingUrl} fileName={`${slug}-booking-qr.png`} label={t("qrBooking")} theme={theme} />
               <QrDownload value={checkinUrl} fileName={`${slug}-checkin-qr.png`} label={t("qrCheckin")} theme={theme} />
             </div>
@@ -320,8 +320,8 @@ export function SettingsManager({
 
         {/* Logo */}
         <section className={cardClass} style={cardStyle}>
-          <div className="flex items-start justify-between gap-3">
-            <div>
+          <div className="flex flex-wrap items-start justify-between gap-2 sm:gap-3">
+            <div className="min-w-0 flex-1">
               <h2 className="text-base font-semibold sm:text-lg" style={{ color: theme.primary }}>{t("logo")}</h2>
               <p className="mt-0.5 text-xs sm:text-sm" style={{ color: theme.onSurfaceVariant }}>{t("logoHint")}</p>
             </div>
@@ -338,7 +338,7 @@ export function SettingsManager({
               </button>
             )}
           </div>
-          <div className="mt-4 flex items-center gap-4">
+          <div className="mt-4 flex flex-wrap items-center gap-3 sm:gap-4">
             <div
               className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl border sm:h-24 sm:w-24"
               style={{ borderColor: theme.outlineVariant, backgroundColor: theme.surfaceContainerHigh }}
@@ -373,8 +373,8 @@ export function SettingsManager({
 
         {/* Shop images */}
         <section className={cardClass} style={cardStyle}>
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
+          <div className="flex flex-wrap items-start justify-between gap-2 sm:gap-3">
+            <div className="min-w-0 flex-1">
               <h2 className="text-base font-semibold sm:text-lg" style={{ color: theme.primary }}>{t("shopImages")}</h2>
               <p className="mt-0.5 text-xs sm:text-sm" style={{ color: theme.onSurfaceVariant }}>{t("shopImagesHint")}</p>
             </div>
@@ -382,12 +382,11 @@ export function SettingsManager({
               type="button"
               onClick={() => imageInput.current?.click()}
               disabled={busy}
-              className="flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 text-sm font-semibold disabled:opacity-50"
+              className="flex max-w-full shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 text-sm font-semibold disabled:opacity-50"
               style={{ backgroundColor: theme.primary, color: theme.onPrimary }}
             >
-              <ImagePlus className="h-4 w-4" />
-              <span className="hidden sm:inline">{t("addPhoto")}</span>
-              <span className="sm:hidden">{t("addPhoto")}</span>
+              <ImagePlus className="h-4 w-4 shrink-0" />
+              <span className="truncate">{t("addPhoto")}</span>
             </button>
             <input
               ref={imageInput}

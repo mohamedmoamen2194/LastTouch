@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { SignOutButton } from "@clerk/nextjs";
-import { ChevronRight, FileText, LogOut, ShieldCheck, Store } from "lucide-react";
+import { ChevronRight, FileText, LogOut, Mail, Phone, ShieldCheck, Store } from "lucide-react";
 import { requireUserId } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
 import { UnauthorizedError } from "@/lib/errors";
@@ -20,6 +20,7 @@ import { LangSwitcher } from "@/components/shared/lang-switcher";
 import { PaymentsManager } from "@/components/marketplace/payments-manager";
 import { StoreCard } from "@/components/marketplace/store-card";
 import { MarketplaceTopbar } from "@/components/marketplace/topbar";
+import { SUPPORT_EMAIL, SUPPORT_EMAIL_HREF, SUPPORT_PHONE_DISPLAY, SUPPORT_PHONE_HREF } from "@/components/shared/social-links";
 
 export const dynamic = "force-dynamic";
 
@@ -161,6 +162,30 @@ export default async function AccountPage({
             </span>
             <ChevronRight className="h-4 w-4 shrink-0 text-[#9aa0a6] rtl:rotate-180" />
           </Link>
+        </section>
+
+        {/* 7 — Contact support */}
+        <section className="rounded-2xl border border-[#c5c6cd]/60 bg-white p-4 shadow-sm md:p-5">
+          <h2 className="font-bold text-[#091426]">{t("supportTitle")}</h2>
+          <p className="mt-0.5 text-xs text-[#45474c]">{t("supportBody")}</p>
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+            <a
+              href={SUPPORT_PHONE_HREF}
+              dir="ltr"
+              className="flex flex-1 items-center justify-center gap-2 rounded-full bg-[#091426] px-5 py-2.5 text-sm font-semibold text-white"
+            >
+              <Phone className="h-4 w-4" />
+              {SUPPORT_PHONE_DISPLAY}
+            </a>
+            <a
+              href={SUPPORT_EMAIL_HREF}
+              dir="ltr"
+              className="flex flex-1 items-center justify-center gap-2 rounded-full border border-[#c5c6cd]/60 bg-white px-5 py-2.5 text-sm font-semibold text-[#091426]"
+            >
+              <Mail className="h-4 w-4" />
+              {SUPPORT_EMAIL}
+            </a>
+          </div>
         </section>
 
         <section className="rounded-2xl bg-[#091426] p-5 text-center">

@@ -8,6 +8,7 @@ import { assertFeature } from "@/lib/tenant/context";
 import { assertSubscriptionAccess } from "@/lib/subscriptions";
 import { BRAIN_MODEL, runBrainTurn, type ChatTurn } from "@/lib/ai/client";
 import { ASSISTANT_TOOLS, buildAssistantSystem, executeAssistantTool } from "@/lib/ai/assistant-tools";
+import { rateLimit } from "@/lib/rate-limit";
 import { db } from "@/db";
 import { aiLogs } from "@/db/schema";
 
@@ -41,6 +42,7 @@ export async function POST(req: Request) {
 
     const ctx = await getDashboardAccess(input.data.slug);
     if (ctx.role !== "owner" && ctx.role !== "manager") throw new ForbiddenError();
+    rateLimit(`ai:chat:${ctx.tenantId}:${ctx.userId}`, 30);
     await assertSubscriptionAccess(ctx.tenantId);
     assertFeature(ctx, "ai_assistant");
 

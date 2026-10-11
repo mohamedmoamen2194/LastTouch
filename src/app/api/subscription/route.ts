@@ -10,6 +10,7 @@ import { db } from "@/db";
 import { subscriptions, tenants, BILLING_PERIODS, SUBSCRIPTION_PLANS, type BillingPeriod, type SubscriptionPlan } from "@/db/schema";
 import { periodEnd } from "@/lib/subscriptions";
 import { createCycleInvoice } from "@/lib/platform/invoices";
+import { unlockReferralsForTenant } from "@/lib/marketplace/referrals";
 
 const bodySchema = z.object({
   slug: z.string().min(1),
@@ -103,6 +104,15 @@ export async function POST(req: Request) {
       .update(tenants)
       .set({ subscriptionPlan: input.data.plan, updatedAt: new Date() })
       .where(eq(tenants.id, ctx.tenantId));
+
+    // A paid activation unlocks pending referral prizes for this store's referrer.
+    if (input.data.plan !== "free") {
+      try {
+        await unlockReferralsForTenant(ctx.tenantId);
+      } catch (e) {
+        console.error("[subscription] referral unlock failed", e);
+      }
+    }
 
     return NextResponse.json(
       ok({ plan: input.data.plan, expiresAt: input.data.plan === "free" ? null : end.toISOString() }),

@@ -33,7 +33,9 @@ export async function GET(req: Request) {
   return withApi(async () => {
     const userId = await requireUserId();
     const appointmentId = new URL(req.url).searchParams.get("appointmentId");
-    if (!appointmentId) throw new ValidationAppError("Missing appointment");
+    if (!appointmentId || !z.string().uuid().safeParse(appointmentId).success) {
+      throw new ValidationAppError("Missing appointment");
+    }
 
     const [appt] = await db.select().from(appointments).where(eq(appointments.id, appointmentId)).limit(1);
     if (!appt) throw new ValidationAppError("Booking not found");
@@ -144,14 +146,22 @@ export async function POST(req: Request) {
       if (open) throw new ValidationAppError("already_checked_in");
       if (day !== now.ymd) throw new ValidationAppError("not_today");
       if (now.hm > lateCheckin) throw new ValidationAppError("too_late_checkin");
-      await db.insert(visits).values({
-        tenantId: appt.tenantId,
-        customerId: appt.customerId,
-        customerName: customer?.firstName ?? null,
-        phone: customer?.phone ?? null,
-        appointmentId: appt.id,
-        status: "checked_in",
-      });
+      // Idempotent under double-tap/retry races: the partial unique index
+      // on open visits makes a concurrent second insert a no-op, and the
+      // loser gets already_checked_in instead of opening a duplicate visit.
+      const [created] = await db
+        .insert(visits)
+        .values({
+          tenantId: appt.tenantId,
+          customerId: appt.customerId,
+          customerName: customer?.firstName ?? null,
+          phone: customer?.phone ?? null,
+          appointmentId: appt.id,
+          status: "checked_in",
+        })
+        .onConflictDoNothing()
+        .returning({ id: visits.id });
+      if (!created) throw new ValidationAppError("already_checked_in");
       if (appt.status === "pending") {
         await db
           .update(appointments)

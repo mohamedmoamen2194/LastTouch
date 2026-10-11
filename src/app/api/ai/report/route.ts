@@ -6,6 +6,7 @@ import { getDashboardAccess } from "@/lib/tenant/dashboard";
 import { assertFeature } from "@/lib/tenant/context";
 import { assertSubscriptionAccess } from "@/lib/subscriptions";
 import { REPORT_TYPES, buildReportCsv, type ReportType } from "@/lib/ai/reports";
+import { rateLimit } from "@/lib/rate-limit";
 
 const bodySchema = z.object({
   slug: z.string().min(1),
@@ -26,6 +27,7 @@ export async function POST(req: Request) {
 
     const ctx = await getDashboardAccess(input.data.slug);
     if (ctx.role !== "owner" && ctx.role !== "manager") throw new ForbiddenError();
+    rateLimit(`ai:report:${ctx.tenantId}:${ctx.userId}`, 20);
     await assertSubscriptionAccess(ctx.tenantId);
     assertFeature(ctx, "ai_assistant");
 

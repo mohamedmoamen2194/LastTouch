@@ -34,13 +34,13 @@ export function MarketplaceToggle({ slug, initial }: { slug: string; initial: bo
       type="button"
       onClick={flip}
       disabled={busy}
-      className="flex w-full items-center justify-between gap-3 rounded-xl border border-[#c5c6cd]/60 bg-white px-4 py-3 text-start disabled:opacity-50"
+      className="flex w-full min-w-0 items-center justify-between gap-3 rounded-xl border border-[#c5c6cd]/60 bg-white px-3 py-3 text-start disabled:opacity-50 sm:px-4"
     >
-      <span className="flex items-center gap-2.5">
-        <Store className="h-4 w-4 text-[#091426]" />
-        <span>
-          <span className="block text-sm font-semibold text-[#091426]">Marketplace listing</span>
-          <span className="block text-xs text-[#45474c]">
+      <span className="flex min-w-0 flex-1 items-center gap-2.5">
+        <Store className="h-4 w-4 shrink-0 text-[#091426]" />
+        <span className="min-w-0">
+          <span className="block truncate text-sm font-semibold text-[#091426]">Marketplace listing</span>
+          <span className="block truncate text-xs text-[#45474c]">
             {on ? "Visible to clients" : "Hidden from clients"}
           </span>
         </span>

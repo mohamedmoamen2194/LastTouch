@@ -125,13 +125,12 @@ export async function POST(req: Request) {
     // Booked yet still-open times are kept but flagged unavailable so the UI can
     // render them greyed-out instead of hiding them.
     const staff = await listEligibleEmployees(tenant.id, input.data.serviceIds);
+    // Fan out across staff concurrently — each day-build is independent.
+    const days = await Promise.all(
+      staff.map((emp) => buildDaySlots({ employeeId: emp.id, date, serviceDurationMinutes: duration })),
+    );
     const byStart = new Map<string, { start: string; end: string; available: boolean }>();
-    for (const emp of staff) {
-      const day = await buildDaySlots({
-        employeeId: emp.id,
-        date,
-        serviceDurationMinutes: duration,
-      });
+    for (const day of days) {
       for (const s of day) {
         const existing = byStart.get(s.start);
         if (existing) {

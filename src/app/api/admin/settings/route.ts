@@ -6,6 +6,7 @@ import { ok, HttpStatus } from "@/lib/response";
 import { getDashboardAccess } from "@/lib/tenant/dashboard";
 import { canEditSettings } from "@/lib/permissions";
 import { ForbiddenError } from "@/lib/errors";
+import { assertSubscriptionAccess } from "@/lib/subscriptions";
 import { db } from "@/db";
 import { tenants } from "@/db/schema";
 
@@ -27,6 +28,7 @@ export async function POST(req: Request) {
     }
     const ctx = await getDashboardAccess(input.data.slug);
     if (!canEditSettings(ctx.role)) throw new ForbiddenError();
+    await assertSubscriptionAccess(ctx.tenantId);
     await db
       .update(tenants)
       .set({ marketplaceEnabled: input.data.marketplaceEnabled, updatedAt: new Date() })

@@ -187,7 +187,7 @@ export const locations = pgTable(
     createdAt,
     updatedAt,
   },
-  (t) => [index("locations_tenant_idx").on(t.tenantId)]
+  (t) => [index("locations_tenant_idx").on(t.tenantId), index("locations_tenant_active_idx").on(t.tenantId, t.active)]
 );
 
 /**
@@ -211,6 +211,7 @@ export const memberships = pgTable(
   (t) => [
     uniqueIndex("memberships_user_tenant_unique").on(t.userId, t.tenantId),
     index("memberships_tenant_idx").on(t.tenantId),
+    index("memberships_user_idx").on(t.userId),
   ]
 );
 
@@ -412,6 +413,7 @@ export const services = pgTable(
   (t) => [
     index("services_tenant_idx").on(t.tenantId),
     index("services_tenant_cat_idx").on(t.tenantId, t.categoryId),
+    index("services_tenant_active_idx").on(t.tenantId, t.active),
   ]
 );
 
@@ -512,6 +514,7 @@ export const appointments = pgTable(
     index("appointments_tenant_employee_idx").on(t.tenantId, t.employeeId),
     index("appointments_tenant_customer_idx").on(t.tenantId, t.customerId),
     index("appointments_client_idx").on(t.clientUserId),
+    index("appointments_client_date_status_idx").on(t.clientUserId, t.appointmentDate, t.status),
   ]
 );
 
@@ -646,7 +649,11 @@ export const reviews = pgTable(
     createdAt,
     updatedAt,
   },
-  (t) => [index("reviews_tenant_idx").on(t.tenantId), index("reviews_customer_idx").on(t.customerId)]
+  (t) => [
+    index("reviews_tenant_idx").on(t.tenantId),
+    index("reviews_tenant_status_idx").on(t.tenantId, t.status),
+    index("reviews_customer_idx").on(t.customerId),
+  ]
 );
 
 /**
@@ -758,6 +765,11 @@ export const visits = pgTable(
     index("visits_tenant_status_idx").on(t.tenantId, t.status),
     index("visits_tenant_device_idx").on(t.tenantId, t.deviceKey),
     index("visits_appointment_idx").on(t.appointmentId),
+    index("visits_appointment_status_idx").on(t.appointmentId, t.status),
+    // One open check-in per appointment — backs the idempotent scan insert.
+    uniqueIndex("visits_open_appointment_unique")
+      .on(t.appointmentId)
+      .where(sql`${t.status} = 'checked_in'`),
   ]
 );
 
@@ -975,8 +987,9 @@ export const clientPointsLedger = pgTable(
 
 /**
  * Referrals: a client invites a store. One row per referred store;
- * amount is fixed 100 (EGP). Status: earned → converted (points) |
- * requested (cash-out) | paid.
+ * amount is fixed 100 (EGP). Status: pending (store signed up, prize locked)
+ * → earned (store activated a paid plan: Basic / AI / Enterprise) →
+ * converted (points) | requested (cash-out) | paid.
  */
 export const referrals = pgTable(
   "referrals",

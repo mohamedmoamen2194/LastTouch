@@ -92,7 +92,7 @@ export function LocationManager({
         : null;
 
   return (
-    <section className="rounded-2xl border p-5 md:p-6" style={{ borderColor: theme.outlineVariant, backgroundColor: theme.surfaceContainerLowest }}>
+    <section className="min-w-0 max-w-full rounded-2xl border p-4 sm:p-5 md:p-6" style={{ borderColor: theme.outlineVariant, backgroundColor: theme.surfaceContainerLowest }}>
       <div className="flex items-start gap-2.5">
         <span
           className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
@@ -110,8 +110,8 @@ export function LocationManager({
         </div>
       </div>
 
-      <div className="mt-4 grid gap-3">
-        <label className="grid gap-1.5">
+      <div className="mt-4 grid min-w-0 grid-cols-1 gap-3">
+        <label className="grid min-w-0 gap-1.5">
           <span className="text-xs font-medium uppercase tracking-wide" style={{ color: theme.onSurfaceVariant }}>
             {t("locationAddress")}
           </span>
@@ -119,11 +119,11 @@ export function LocationManager({
             value={address}
             onChange={(e) => setAddress(e.target.value)}
             placeholder={t("locationAddressPlaceholder")}
-            className="w-full rounded-lg border px-4 py-2.5 text-sm outline-none"
+            className="w-full min-w-0 max-w-full rounded-lg border px-4 py-2.5 text-sm outline-none"
             style={{ borderColor: theme.outlineVariant, backgroundColor: theme.surface, color: theme.primary }}
           />
         </label>
-        <label className="grid gap-1.5">
+        <label className="grid min-w-0 gap-1.5">
           <span className="text-xs font-medium uppercase tracking-wide" style={{ color: theme.onSurfaceVariant }}>
             {t("locationCity")}
           </span>
@@ -131,11 +131,11 @@ export function LocationManager({
             value={city}
             onChange={(e) => setCity(e.target.value)}
             placeholder={t("locationCityPlaceholder")}
-            className="w-full rounded-lg border px-4 py-2.5 text-sm outline-none"
+            className="w-full min-w-0 max-w-full rounded-lg border px-4 py-2.5 text-sm outline-none"
             style={{ borderColor: theme.outlineVariant, backgroundColor: theme.surface, color: theme.primary }}
           />
         </label>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid min-w-0 grid-cols-1 gap-3 min-[420px]:grid-cols-2">
           <label className="grid min-w-0 gap-1.5">
             <span className="text-xs font-medium uppercase tracking-wide" style={{ color: theme.onSurfaceVariant }}>
               {t("locationLat")}
@@ -146,7 +146,7 @@ export function LocationManager({
               placeholder="30.0444"
               inputMode="decimal"
               dir="ltr"
-              className="w-full rounded-lg border px-4 py-2.5 text-sm tabular-nums outline-none"
+              className="w-full min-w-0 max-w-full rounded-lg border px-4 py-2.5 text-sm tabular-nums outline-none"
               style={{ borderColor: theme.outlineVariant, backgroundColor: theme.surface, color: theme.primary }}
             />
           </label>
@@ -160,7 +160,7 @@ export function LocationManager({
               placeholder="31.2357"
               inputMode="decimal"
               dir="ltr"
-              className="w-full rounded-lg border px-4 py-2.5 text-sm tabular-nums outline-none"
+              className="w-full min-w-0 max-w-full rounded-lg border px-4 py-2.5 text-sm tabular-nums outline-none"
               style={{ borderColor: theme.outlineVariant, backgroundColor: theme.surface, color: theme.primary }}
             />
           </label>
@@ -183,7 +183,7 @@ export function LocationManager({
           type="button"
           onClick={save}
           disabled={busy}
-          className="rounded-full px-5 py-2.5 text-sm font-semibold disabled:opacity-50"
+          className="w-full rounded-full px-5 py-2.5 text-sm font-semibold disabled:opacity-50 sm:w-auto"
           style={{ backgroundColor: theme.primary, color: theme.onPrimary }}
         >
           {busy ? t("saving") : t("saveLocation")}
@@ -192,7 +192,7 @@ export function LocationManager({
           type="button"
           onClick={useCurrent}
           disabled={locating || busy}
-          className="flex items-center justify-center gap-2 rounded-full border px-5 py-2.5 text-sm font-semibold disabled:opacity-50"
+          className="flex w-full items-center justify-center gap-2 rounded-full border px-5 py-2.5 text-sm font-semibold disabled:opacity-50 sm:w-auto"
           style={{ borderColor: theme.outlineVariant, color: theme.primary }}
         >
           {locating ? <Loader2 className="h-4 w-4 animate-spin" /> : <MapPin className="h-4 w-4" />}

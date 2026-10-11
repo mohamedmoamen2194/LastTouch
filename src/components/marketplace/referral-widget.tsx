@@ -85,13 +85,21 @@ export function ReferralWidget() {
   const statusBadge = (s: string) => {
     if (s === "earned") return null;
     const label =
-      s === "converted" ? t("refConverted") : s === "requested" ? t("refAwaiting") : t("refPaid");
+      s === "pending"
+        ? t("refPending")
+        : s === "converted"
+          ? t("refConverted")
+          : s === "requested"
+            ? t("refAwaiting")
+            : t("refPaid");
     const cls =
-      s === "converted"
-        ? "bg-blue-100 text-blue-700"
-        : s === "requested"
-          ? "bg-amber-100 text-amber-800"
-          : "bg-emerald-100 text-emerald-700";
+      s === "pending"
+        ? "bg-violet-100 text-violet-700"
+        : s === "converted"
+          ? "bg-blue-100 text-blue-700"
+          : s === "requested"
+            ? "bg-amber-100 text-amber-800"
+            : "bg-emerald-100 text-emerald-700";
     return <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${cls}`}>{label}</span>;
   };
 
@@ -185,6 +193,9 @@ export function ReferralWidget() {
                   </p>
                   <div className="mt-2 flex items-center gap-2">
                     {statusBadge(r.status)}
+                    {r.status === "pending" && (
+                      <p className="text-[11px] leading-snug text-[#45474c]">{t("refPendingHint")}</p>
+                    )}
                     {r.status === "earned" && (
                       <>
                         <button

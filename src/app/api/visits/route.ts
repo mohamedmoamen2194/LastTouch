@@ -5,6 +5,7 @@ import { ok, HttpStatus } from "@/lib/response";
 import { ValidationAppError } from "@/lib/errors";
 import { resolveTenantForBooking } from "@/modules/booking/domain/catalog";
 import { assertBookingOpen } from "@/lib/subscriptions";
+import { clientIp, rateLimit } from "@/lib/rate-limit";
 import {
   checkInVisit,
   checkOutVisit,
@@ -26,6 +27,7 @@ export async function POST(req: Request) {
     if (!z.enum(["status", "checkin", "checkout"]).safeParse(action).success) {
       throw new ValidationAppError("Unknown action");
     }
+    rateLimit(`visits:${clientIp(req)}:${action}`, 30);
 
     const tenant = await resolveTenantForBooking(slug);
     await assertBookingOpen(tenant.id);

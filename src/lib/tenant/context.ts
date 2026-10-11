@@ -1,6 +1,7 @@
 import type { BusinessType, Role, SubscriptionPlan, ThemeName } from "@/db/schema";
 import { ForbiddenError, UnauthorizedError } from "@/lib/errors";
 import { hasPermission, type Permission } from "@/lib/permissions";
+import { cache } from "react";
 import { db } from "@/db";
 import { memberships, tenants } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
@@ -38,12 +39,14 @@ export async function resolveTenantBySlug(slug: string) {
 /**
  * Builds the authenticated TenantContext for a user within a tenant.
  * Enforces tenant membership on the server (spec section 37).
+ * Request-cached: layout + pages + API helpers sharing one slug resolve
+ * membership/tenant only once per request.
  */
-export async function getTenantContext(args: {
+export const getTenantContext = cache(async (args: {
   userId: string;
   tenantId?: string;
   slug?: string;
-}): Promise<TenantContext> {
+}): Promise<TenantContext> => {
   if (!args.userId) throw new UnauthorizedError();
 
   let tenantId = args.tenantId;
@@ -91,7 +94,7 @@ export async function getTenantContext(args: {
     subscriptionPlan: tenant.subscriptionPlan,
     enabledFeatures: new Set(featuresForPlan(tenant.subscriptionPlan)),
   };
-}
+});
 
 /**
  * Authorization guard. Call inside services/route handlers:

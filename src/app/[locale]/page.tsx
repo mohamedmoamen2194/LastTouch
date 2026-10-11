@@ -59,22 +59,24 @@ export default async function MarketplaceHome({
   const userLng = sp.lng != null && sp.lng !== "" ? Number(sp.lng) : null;
   const hasCoords = nearbyOn && userLat != null && userLng != null && !Number.isNaN(userLat) && !Number.isNaN(userLng);
 
-  const allStores = await listMarketplaceStores();
+  // Independent fetches run concurrently — stores must never wait on auth,
+  // and the personal rails must never wait on each other.
+  const [allStores, userId] = await Promise.all([listMarketplaceStores(), getOptionalUserId()]);
   const cities = [...new Set(allStores.map((s) => s.city).filter((c): c is string => Boolean(c)))].sort();
 
-  const userId = await getOptionalUserId();
-  const clientProfile = userId ? await getClientProfile(userId) : null;
+  const [clientProfile, favRows] = userId
+    ? await Promise.all([
+        getClientProfile(userId),
+        db
+          .select({ tenantId: clientFavorites.tenantId })
+          .from(clientFavorites)
+          .where(eq(clientFavorites.userId, userId)),
+      ])
+    : [null, [] as { tenantId: string }[]];
   const gender = clientProfile?.gender ?? null;
   const accent = clientAccentForGender(gender);
   const typeOrder = orderedBusinessTypes(gender);
-  let favIds = new Set<string>();
-  if (userId) {
-    const favs = await db
-      .select({ tenantId: clientFavorites.tenantId })
-      .from(clientFavorites)
-      .where(eq(clientFavorites.userId, userId));
-    favIds = new Set(favs.map((f) => f.tenantId));
-  }
+  const favIds = new Set(favRows.map((f) => f.tenantId));
 
   const filtered = allStores.filter((s) => {
     if (typeFilter && s.businessType !== typeFilter) return false;
@@ -107,9 +109,15 @@ export default async function MarketplaceHome({
   });
 
   // Logged-in personal rails (compact carousels below the stores, so
-  // browsing + filters always stay near the top).
-  const upcoming = userId ? await getClientBookings(userId, "upcoming") : [];
-  const historyList = userId ? await getClientBookings(userId, "history") : [];
+  // browsing + filters always stay near the top). Fetched concurrently.
+  const [upcoming, historyList, points, referralBalance] = userId
+    ? await Promise.all([
+        getClientBookings(userId, "upcoming"),
+        getClientBookings(userId, "history"),
+        getClientPointsTotal(userId),
+        getReferralStats(userId).then((s) => s.balance),
+      ])
+    : [[], [], 0, 0] as const;
   const upNext = upcoming[0] ?? null;
   const seenSlugs = new Set<string>();
   const quickRebook = historyList
@@ -120,8 +128,6 @@ export default async function MarketplaceHome({
     .filter((s) => !visitedTenants.has(s.id))
     .sort((a, b) => b.ratingAvg - a.ratingAvg || b.ratingCount - a.ratingCount)
     .slice(0, 6);
-  const points = userId ? await getClientPointsTotal(userId) : 0;
-  const referralBalance = userId ? (await getReferralStats(userId)).balance : 0;
 
   const hrefWith = (over: Partial<SearchParams>) => {
     const p = new URLSearchParams();
