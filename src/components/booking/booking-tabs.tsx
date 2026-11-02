@@ -2,13 +2,13 @@
 
 import { useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
-import { CalendarCheck, QrCode, Star } from "lucide-react";
+import { CalendarCheck, QrCode, ShoppingBag, Star } from "lucide-react";
 import type { ThemeTokens } from "@/config/business-types";
 
-type Tab = "booking" | "scan" | "ratings";
+type Tab = "booking" | "scan" | "shop" | "ratings";
 
 /**
- * Bottom tab bar for the public booking page: Booking | Scan | Ratings.
+ * Bottom tab bar for the public booking page: Booking | Scan | Shop | Ratings.
  * Same height language as the dashboard mobile nav; all panels stay mounted
  * (hidden) so booking progress survives tab switches.
  */
@@ -16,11 +16,13 @@ export function BookingTabs({
   theme,
   booking,
   scan,
+  shop,
   ratings,
 }: {
   theme: ThemeTokens;
   booking: ReactNode;
   scan: ReactNode;
+  shop?: ReactNode;
   ratings: ReactNode;
 }) {
   const t = useTranslations("booking");
@@ -29,6 +31,7 @@ export function BookingTabs({
   const items: { key: Tab; label: string; icon: typeof CalendarCheck }[] = [
     { key: "booking", label: t("tabBooking"), icon: CalendarCheck },
     { key: "scan", label: t("tabScan"), icon: QrCode },
+    ...(shop ? [{ key: "shop" as const, label: t("tabShop"), icon: ShoppingBag }] : []),
     { key: "ratings", label: t("tabRatings"), icon: Star },
   ];
 
@@ -45,6 +48,7 @@ export function BookingTabs({
     <>
       <div className={tab === "booking" ? undefined : "hidden"}>{booking}</div>
       <div className={tab === "scan" ? undefined : "hidden"}>{scan}</div>
+      {shop && <div className={tab === "shop" ? undefined : "hidden"}>{shop}</div>}
       <div className={tab === "ratings" ? undefined : "hidden"}>{ratings}</div>
 
       <div

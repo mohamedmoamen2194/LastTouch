@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { setRequestLocale } from "next-intl/server";
 import { OnboardForm } from "@/components/onboarding/onboard-form";
 import { getOptionalUserId } from "@/lib/auth/session";
-import { getUserFirstTenantSlug } from "@/lib/tenant/home";
+import { getUserFirstTenant, tenantHomePath } from "@/lib/tenant/home";
 
 export const dynamic = "force-dynamic";
 
@@ -31,7 +31,7 @@ export default async function OnboardPage({
 }
 
 async function TenantRedirect({ locale, userId }: { locale: string; userId: string }) {
-  const slug = await getUserFirstTenantSlug(userId);
-  if (slug) redirect(`/${locale}/${slug}/dashboard`);
+  const home = await getUserFirstTenant(userId);
+  if (home) redirect(tenantHomePath(locale, home.slug, home.role));
   return null;
 }

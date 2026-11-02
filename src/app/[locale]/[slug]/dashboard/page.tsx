@@ -1,5 +1,5 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { getDashboardAccess } from "@/lib/tenant/dashboard";
 import { getThemeTokens } from "@/config/business-types";
 import { getDashboardStats } from "@/modules/analytics/application/dashboard";
@@ -8,6 +8,8 @@ import { BookingFlowChart } from "@/components/dashboard/booking-flow-chart";
 import { SubscriptionPlans } from "@/components/dashboard/subscription-plans";
 import { getSubscriptionState } from "@/lib/subscriptions";
 import { formatMoney } from "@/lib/utils";
+import { tenantHomePath } from "@/lib/tenant/home";
+import { Permission } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +31,9 @@ export default async function DashboardPage({
   }
 
   const theme = getThemeTokens(ctx.theme);
+  if (!ctx.permissions.has(Permission["analytics.read"])) {
+    redirect(tenantHomePath(locale, slug, ctx.role));
+  }
   const sub = await getSubscriptionState(ctx.tenantId, { role: ctx.role });
 
   // No active subscription (or expired) → plans + warm message instead of data.

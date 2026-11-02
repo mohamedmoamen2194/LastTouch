@@ -4,6 +4,7 @@ import { and, eq, gte, inArray, lte } from "drizzle-orm";
 import { ConflictError, NotFoundError, ValidationAppError } from "@/lib/errors";
 import { normalizePhone } from "@/lib/marketplace/client";
 import { buildDaySlots, buildSequentialChainSlots } from "../../availability/domain/engine";
+import { resolvePackageForBooking } from "./packages";
 
 export type EmployeeAssignment = {
   serviceId: string;
@@ -16,6 +17,8 @@ export type CreateBookingInput = {
   serviceIds: string[];
   employeeId?: string;
   employeeAssignments?: EmployeeAssignment[];
+  /** Selected package; its price overrides the sum of individual services. */
+  packageId?: string;
   appointmentDate: string; // "YYYY-MM-DD"
   startTime: string; // "HH:MM"
   customer: {
@@ -277,6 +280,21 @@ export async function createBooking(input: CreateBookingInput) {
     startTime: input.startTime,
   });
 
+  // A package is priced as a bundle, never as the sum of its services.
+  // Also ensure the client cannot swap in services outside the package.
+  let packagePrice: string | null = null;
+  if (input.packageId) {
+    const resolved = await resolvePackageForBooking(input.tenantId, input.packageId);
+    const expected = [...new Set(resolved.services.map((s) => s.id))].sort();
+    const selected = [...new Set(input.serviceIds)].sort();
+    if (expected.length !== selected.length || expected.some((id, i) => id !== selected[i])) {
+      throw new ValidationAppError("Selected services do not match this package");
+    }
+    packagePrice = String(resolved.package.price);
+  }
+
+  const price = packagePrice ?? availability.price;
+
   // One client, one body: a signed-in account cannot hold two live
   // bookings whose time windows intersect (any store). Checked BEFORE
   // insert so the new row can never match itself.
@@ -296,6 +314,26 @@ export async function createBooking(input: CreateBookingInput) {
     .from(services)
     .where(inArray(services.id, input.serviceIds));
   const snapshotById = new Map(snapshotRows.map((s) => [s.id, s]));
+
+  // When a package is booked, split its price across the service snapshots so
+  // their sum equals the package price (not the individual service prices).
+  const snapshotPrices = new Map<string, string>();
+  if (packagePrice) {
+    const base = input.serviceIds.reduce((sum, id) => sum + Number(snapshotById.get(id)?.price ?? 0), 0);
+    const packageNum = Number(packagePrice);
+    let allocated = 0;
+    input.serviceIds.forEach((id, index) => {
+      if (index === input.serviceIds.length - 1) {
+        snapshotPrices.set(id, Math.max(0, packageNum - allocated).toFixed(2));
+        return;
+      }
+      const svcPrice = Number(snapshotById.get(id)?.price ?? 0);
+      const share = base > 0 ? (packageNum * svcPrice) / base : packageNum / input.serviceIds.length;
+      const rounded = Math.round(share * 100) / 100;
+      allocated += rounded;
+      snapshotPrices.set(id, rounded.toFixed(2));
+    });
+  }
 
   return db.transaction(async (tx) => {
     let customerId: string | null = null;
@@ -351,7 +389,7 @@ export async function createBooking(input: CreateBookingInput) {
         startTime: input.startTime,
         endTime: availability.endTime,
         durationMinutes: availability.durationMinutes,
-        price: availability.price,
+        price,
         status: "pending",
         source: input.source ?? "website",
         notes: input.customer.notes ?? null,
@@ -368,7 +406,7 @@ export async function createBooking(input: CreateBookingInput) {
           serviceId: svc.id,
           serviceNameSnapshot: svc.name,
           durationSnapshot: svc.durationMinutes,
-          priceSnapshot: svc.price,
+          priceSnapshot: snapshotPrices.get(svc.id) ?? svc.price,
           sortOrder: i,
         };
       })

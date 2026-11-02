@@ -79,8 +79,12 @@ export const subscriptionPlanEnum = pgEnum("subscription_plan", SUBSCRIPTION_PLA
 export const subscriptionStatusEnum = pgEnum("subscription_status", SUBSCRIPTION_STATUSES);
 export const billingPeriodEnum = pgEnum("billing_period", BILLING_PERIODS);
 
-export const ROLES = ["owner", "manager", "employee", "customer"] as const;
+export const ROLES = ["owner", "manager", "cashier", "employee", "customer"] as const;
 export type Role = (typeof ROLES)[number];
+
+/** Access roles that can own a staff panel (never customer). */
+export const STAFF_ROLES = ["manager", "cashier", "employee"] as const;
+export type StaffRole = (typeof STAFF_ROLES)[number];
 
 export const APPOINTMENT_STATUSES = [
   "pending",
@@ -202,6 +206,12 @@ export const memberships = pgTable(
       .notNull(),
     userId: text("user_id").notNull(), // Clerk user id
     role: varchar("role", { length: 20 }).$type<Role>().default("employee").notNull(),
+    /**
+     * Explicit per-member permission grants. NULL = use the role defaults
+     * (ROLE_PERMISSIONS). An array — even an empty one — is authoritative,
+     * which lets an owner revoke a permission a role would normally get.
+     */
+    permissions: jsonb("permissions").$type<string[]>(),
     active: boolean("active").default(true).notNull(),
     invitedBy: text("invited_by"),
     joinedAt: timestamp("joined_at", { withTimezone: true }).defaultNow(),
@@ -240,6 +250,10 @@ export const employees = pgTable(
     hireDate: timestamp("hire_date", { withTimezone: true }),
     rating: numeric("rating", { precision: 3, scale: 2 }).default("0"),
     isGeneral: boolean("is_general").default(false).notNull(),
+    /** Cashiers / receptionists / managers are staff but not bookable. */
+    isBookable: boolean("is_bookable").default(true).notNull(),
+    /** Panel access role requested by the owner (actual grant lives on memberships). */
+    accessRole: varchar("access_role", { length: 20 }).$type<Role>(),
     active: boolean("active").default(true).notNull(),
     createdAt,
     updatedAt,
@@ -494,9 +508,15 @@ export const appointments = pgTable(
     endTime: text("end_time").notNull(),
     durationMinutes: integer("duration_minutes").notNull(),
     status: varchar("status", { length: 20 }).$type<AppointmentStatus>().default("pending").notNull(),
+    /** Human-friendly reference the customer can copy and search publicly. */
+    trackingNumber: varchar("tracking_number", { length: 24 })
+      .default(sql`'LT-' || upper(substr(md5(gen_random_uuid()::text), 1, 8))`)
+      .notNull(),
     price: numeric("price", { precision: 12, scale: 2 }).default("0").notNull(),
     notes: text("notes"),
     source: varchar("source", { length: 20 }).$type<AppointmentSource>().default("website").notNull(),
+    /** Staff account that created a phone / walk-in booking, if any. */
+    createdByUserId: text("created_by_user_id"),
     cancelledBy: text("cancelled_by"),
     cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
     cancelReason: text("cancel_reason"),
@@ -508,6 +528,7 @@ export const appointments = pgTable(
     deletedAt,
   },
   (t) => [
+    uniqueIndex("appointments_tracking_unique").on(t.trackingNumber),
     index("appointments_tenant_idx").on(t.tenantId),
     index("appointments_tenant_date_idx").on(t.tenantId, t.appointmentDate),
     index("appointments_tenant_status_idx").on(t.tenantId, t.status),
@@ -638,6 +659,8 @@ export const reviews = pgTable(
       .references(() => tenants.id, { onDelete: "cascade" })
       .notNull(),
     appointmentId: uuid("appointment_id").references(() => appointments.id, { onDelete: "set null" }),
+    /** Visit that produced this review (prevents duplicate checkout ratings). */
+    visitId: uuid("visit_id"),
     customerId: uuid("customer_id").references(() => customers.id, { onDelete: "set null" }),
     employeeId: uuid("employee_id").references(() => employees.id, { onDelete: "set null" }),
     serviceId: uuid("service_id").references(() => services.id, { onDelete: "set null" }),
@@ -653,6 +676,7 @@ export const reviews = pgTable(
     index("reviews_tenant_idx").on(t.tenantId),
     index("reviews_tenant_status_idx").on(t.tenantId, t.status),
     index("reviews_customer_idx").on(t.customerId),
+    uniqueIndex("reviews_visit_unique").on(t.visitId),
   ]
 );
 
@@ -1028,4 +1052,241 @@ export const clientFavorites = pgTable(
     primaryKey({ columns: [t.userId, t.tenantId] }),
     index("client_favorites_user_idx").on(t.userId),
   ]
+);
+
+/**
+ * Owner-defined custom job titles. The built-in list lives in
+ * src/config/business-types.ts; this table only holds additions.
+ */
+export const tenantStaffRoles = pgTable(
+  "tenant_staff_roles",
+  {
+    id,
+    tenantId: uuid("tenant_id")
+      .references(() => tenants.id, { onDelete: "cascade" })
+      .notNull(),
+    name: text("name").notNull(),
+    isBookable: boolean("is_bookable").default(true).notNull(),
+    accessRole: varchar("access_role", { length: 20 }).$type<Role>().default("employee").notNull(),
+    createdAt,
+  },
+  (t) => [
+    uniqueIndex("tenant_staff_roles_name_unique").on(t.tenantId, t.name),
+    index("tenant_staff_roles_tenant_idx").on(t.tenantId),
+  ]
+);
+
+/**
+ * Single-use staff onboarding codes. The raw code is only returned once at
+ * creation; only its SHA-256 hash is stored so a DB leak can't mint staff.
+ * Codes expire after 7 days and are bound to one employee + access role.
+ */
+export const staffInvites = pgTable(
+  "staff_invites",
+  {
+    id,
+    tenantId: uuid("tenant_id")
+      .references(() => tenants.id, { onDelete: "cascade" })
+      .notNull(),
+    employeeId: uuid("employee_id")
+      .references(() => employees.id, { onDelete: "cascade" })
+      .notNull(),
+    codeHash: text("code_hash").notNull(),
+    accessRole: varchar("access_role", { length: 20 }).$type<Role>().notNull(),
+    /** Effective permission grants snapshot applied when the invite is claimed. */
+    permissions: jsonb("permissions").$type<string[]>(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    usedAt: timestamp("used_at", { withTimezone: true }),
+    usedByUserId: text("used_by_user_id"),
+    createdByUserId: text("created_by_user_id"),
+    createdAt,
+    updatedAt,
+  },
+  (t) => [
+    uniqueIndex("staff_invites_code_unique").on(t.codeHash),
+    index("staff_invites_employee_idx").on(t.employeeId),
+    index("staff_invites_tenant_idx").on(t.tenantId),
+  ]
+);
+
+/**
+ * Worker attendance (arrive / leave) verified against the store geofence.
+ * Every attempt is stored — verified=false keeps a rejected GPS attempt for
+ * audit instead of silently discarding it.
+ */
+export const attendanceLogs = pgTable(
+  "attendance_logs",
+  {
+    id,
+    tenantId: uuid("tenant_id")
+      .references(() => tenants.id, { onDelete: "cascade" })
+      .notNull(),
+    employeeId: uuid("employee_id")
+      .references(() => employees.id, { onDelete: "cascade" })
+      .notNull(),
+    userId: text("user_id"),
+    type: varchar("type", { length: 10 }).$type<"arrive" | "leave">().notNull(),
+    latitude: numeric("latitude", { precision: 10, scale: 7 }),
+    longitude: numeric("longitude", { precision: 10, scale: 7 }),
+    accuracyMeters: numeric("accuracy_meters", { precision: 10, scale: 2 }),
+    distanceMeters: integer("distance_meters"),
+    verified: boolean("verified").default(false).notNull(),
+    createdAt,
+  },
+  (t) => [
+    index("attendance_employee_created_idx").on(t.employeeId, t.createdAt),
+    index("attendance_tenant_created_idx").on(t.tenantId, t.createdAt),
+  ]
+);
+
+/**
+ * Retail products sold in-store and through the store's public shop page.
+ */
+export const products = pgTable(
+  "products",
+  {
+    id,
+    tenantId: uuid("tenant_id")
+      .references(() => tenants.id, { onDelete: "cascade" })
+      .notNull(),
+    name: text("name").notNull(),
+    nameAr: text("name_ar"),
+    sku: varchar("sku", { length: 80 }),
+    barcode: varchar("barcode", { length: 80 }),
+    category: text("category"),
+    description: text("description"),
+    descriptionAr: text("description_ar"),
+    imageUrl: text("image_url"),
+    costPrice: numeric("cost_price", { precision: 12, scale: 2 }).default("0").notNull(),
+    sellPrice: numeric("sell_price", { precision: 12, scale: 2 }).default("0").notNull(),
+    quantity: integer("quantity").default(0).notNull(),
+    lowStockThreshold: integer("low_stock_threshold").default(5).notNull(),
+    expiryDate: timestamp("expiry_date", { withTimezone: true }),
+    listedOnline: boolean("listed_online").default(false).notNull(),
+    active: boolean("active").default(true).notNull(),
+    createdAt,
+    updatedAt,
+    deletedAt,
+  },
+  (t) => [
+    index("products_tenant_idx").on(t.tenantId),
+    index("products_tenant_active_idx").on(t.tenantId, t.active),
+    index("products_tenant_listed_idx").on(t.tenantId, t.listedOnline),
+    uniqueIndex("products_tenant_sku_unique").on(t.tenantId, t.sku),
+  ]
+);
+
+/**
+ * Equipment / machines owned by the store, with maintenance + expiry dates.
+ */
+export const machines = pgTable(
+  "machines",
+  {
+    id,
+    tenantId: uuid("tenant_id")
+      .references(() => tenants.id, { onDelete: "cascade" })
+      .notNull(),
+    locationId: uuid("location_id").references(() => locations.id, { onDelete: "set null" }),
+    name: text("name").notNull(),
+    nameAr: text("name_ar"),
+    serialNumber: varchar("serial_number", { length: 120 }),
+    category: text("category"),
+    description: text("description"),
+    imageUrl: text("image_url"),
+    purchaseDate: timestamp("purchase_date", { withTimezone: true }),
+    warrantyExpiry: timestamp("warranty_expiry", { withTimezone: true }),
+    expiryDate: timestamp("expiry_date", { withTimezone: true }),
+    maintenanceIntervalDays: integer("maintenance_interval_days").default(0).notNull(),
+    lastMaintenanceAt: timestamp("last_maintenance_at", { withTimezone: true }),
+    nextMaintenanceAt: timestamp("next_maintenance_at", { withTimezone: true }),
+    status: varchar("status", { length: 20 }).default("operational").notNull(), // operational | maintenance | retired
+    notes: text("notes"),
+    active: boolean("active").default(true).notNull(),
+    createdAt,
+    updatedAt,
+    deletedAt,
+  },
+  (t) => [
+    index("machines_tenant_idx").on(t.tenantId),
+    index("machines_tenant_active_idx").on(t.tenantId, t.active),
+    index("machines_next_maintenance_idx").on(t.tenantId, t.nextMaintenanceAt),
+  ]
+);
+
+export const machineMaintenance = pgTable(
+  "machine_maintenance",
+  {
+    id,
+    tenantId: uuid("tenant_id")
+      .references(() => tenants.id, { onDelete: "cascade" })
+      .notNull(),
+    machineId: uuid("machine_id")
+      .references(() => machines.id, { onDelete: "cascade" })
+      .notNull(),
+    type: varchar("type", { length: 20 }).default("scheduled").notNull(), // scheduled | completed
+    scheduledFor: timestamp("scheduled_for", { withTimezone: true }).notNull(),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    notes: text("notes"),
+    cost: numeric("cost", { precision: 12, scale: 2 }).default("0").notNull(),
+    createdByUserId: text("created_by_user_id"),
+    createdAt,
+    updatedAt,
+  },
+  (t) => [
+    index("machine_maintenance_machine_idx").on(t.machineId, t.scheduledFor),
+    index("machine_maintenance_tenant_idx").on(t.tenantId, t.scheduledFor),
+  ]
+);
+
+/**
+ * A product sale (private/in-store or public online order) and its line
+ * items. Revenue is the sum of `productSales.total` for paid/completed rows.
+ */
+export const productSales = pgTable(
+  "product_sales",
+  {
+    id,
+    tenantId: uuid("tenant_id")
+      .references(() => tenants.id, { onDelete: "cascade" })
+      .notNull(),
+    customerId: uuid("customer_id").references(() => customers.id, { onDelete: "set null" }),
+    appointmentId: uuid("appointment_id").references(() => appointments.id, { onDelete: "set null" }),
+    soldByUserId: text("sold_by_user_id"),
+    channel: varchar("channel", { length: 20 }).default("in_store").notNull(), // in_store | online
+    paymentMethod: varchar("payment_method", { length: 20 }).default("cash").notNull(),
+    status: varchar("status", { length: 20 }).default("paid").notNull(), // pending | paid | completed | cancelled | refunded
+    subtotal: numeric("subtotal", { precision: 12, scale: 2 }).default("0").notNull(),
+    discount: numeric("discount", { precision: 12, scale: 2 }).default("0").notNull(),
+    total: numeric("total", { precision: 12, scale: 2 }).default("0").notNull(),
+    customerName: text("customer_name"),
+    customerPhone: varchar("customer_phone", { length: 30 }),
+    reference: varchar("reference", { length: 24 })
+      .default(sql`'PS-' || upper(substr(md5(gen_random_uuid()::text), 1, 8))`)
+      .notNull(),
+    notes: text("notes"),
+    createdAt,
+    updatedAt,
+  },
+  (t) => [
+    uniqueIndex("product_sales_reference_unique").on(t.reference),
+    index("product_sales_tenant_created_idx").on(t.tenantId, t.createdAt),
+    index("product_sales_tenant_status_idx").on(t.tenantId, t.status),
+  ]
+);
+
+export const productSaleItems = pgTable(
+  "product_sale_items",
+  {
+    id,
+    saleId: uuid("sale_id")
+      .references(() => productSales.id, { onDelete: "cascade" })
+      .notNull(),
+    productId: uuid("product_id").references(() => products.id, { onDelete: "set null" }),
+    productNameSnapshot: text("product_name_snapshot").notNull(),
+    unitPrice: numeric("unit_price", { precision: 12, scale: 2 }).default("0").notNull(),
+    quantity: integer("quantity").notNull(),
+    lineTotal: numeric("line_total", { precision: 12, scale: 2 }).default("0").notNull(),
+    createdAt,
+  },
+  (t) => [index("product_sale_items_sale_idx").on(t.saleId)]
 );

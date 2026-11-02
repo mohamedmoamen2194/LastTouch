@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { UserButton } from "@clerk/nextjs";
 import { LangSwitcher } from "@/components/shared/lang-switcher";
 import { PoweredByLastTouch } from "@/components/shared/powered-by-lasttouch";
-import { LayoutDashboard, CalendarDays, Users, Scissors, Contact, Settings, ExternalLink, Sparkles, Bot } from "lucide-react";
+import { LayoutDashboard, CalendarDays, Users, Scissors, Contact, Settings, ExternalLink, Sparkles, Bot, ShoppingBag, Wrench, Receipt } from "lucide-react";
 import { Logo } from "@/components/booking/logo";
 
 import type { ThemeTokens } from "@/config/business-types";
@@ -22,31 +22,45 @@ type Props = {
    * `null` = core item, always visible to subscribed tenants.
    */
   features?: string[];
+  /** Effective permission keys for the signed-in member. */
+  permissions?: string[];
   children: React.ReactNode;
 };
 
-export function DashboardShell({ slug, businessName, theme, logoUrl, features, children }: Props) {
+export function DashboardShell({ slug, businessName, theme, logoUrl, features, permissions, children }: Props) {
   const t = useTranslations("nav");
   const locale = useLocale();
   const pathname = usePathname();
+  const granted = permissions ? new Set(permissions) : null;
 
   const allItems = [
-    { href: `/${locale}/${slug}/dashboard`, key: "dashboard", icon: LayoutDashboard, feature: "analytics" as string | null },
-    { href: `/${locale}/${slug}/appointments`, key: "appointments", icon: CalendarDays, feature: null },
-    { href: `/${locale}/${slug}/customers`, key: "customers", icon: Users, feature: "customers" as string | null },
-    { href: `/${locale}/${slug}/services`, key: "services", icon: Scissors, feature: null },
-    { href: `/${locale}/${slug}/employees`, key: "employees", icon: Contact, feature: "employees" as string | null },
-    { href: `/${locale}/${slug}/ai-insights`, key: "aiInsights", icon: Sparkles, feature: "ai_insights" as string | null },
-    { href: `/${locale}/${slug}/ai-assistant`, key: "aiAssistant", icon: Bot, feature: "ai_assistant" as string | null },
-    { href: `/${locale}/${slug}/settings`, key: "settings", icon: Settings, feature: null },
+    { href: `/${locale}/${slug}/dashboard`, key: "dashboard", icon: LayoutDashboard, feature: "analytics" as string | null, permission: "analytics.read" },
+    { href: `/${locale}/${slug}/appointments`, key: "appointments", icon: CalendarDays, feature: null, permission: "appointments.read" },
+    { href: `/${locale}/${slug}/customers`, key: "customers", icon: Users, feature: "customers" as string | null, permission: "customers.read" },
+    { href: `/${locale}/${slug}/services`, key: "services", icon: Scissors, feature: null, permission: "services.read" },
+    { href: `/${locale}/${slug}/employees`, key: "employees", icon: Contact, feature: "employees" as string | null, permission: "employees.read" },
+    { href: `/${locale}/${slug}/products`, key: "products", icon: ShoppingBag, feature: null, permission: "inventory.read" },
+    { href: `/${locale}/${slug}/machines`, key: "machines", icon: Wrench, feature: null, permission: "inventory.read" },
+    { href: `/${locale}/${slug}/sales`, key: "sales", icon: Receipt, feature: null, permission: "sales.read" },
+    { href: `/${locale}/${slug}/ai-insights`, key: "aiInsights", icon: Sparkles, feature: "ai_insights" as string | null, permission: "analytics.read" },
+    { href: `/${locale}/${slug}/ai-assistant`, key: "aiAssistant", icon: Bot, feature: "ai_assistant" as string | null, permission: "ai.use" },
+    { href: `/${locale}/${slug}/settings`, key: "settings", icon: Settings, feature: null, permission: "settings.update" },
   ];
   // No list passed (or all features present) → show everything. Lets future
   // AI/enterprise nav entries hide themselves on lower tiers automatically.
-  const items = features
-    ? allItems.filter((i) => i.feature === null || features.includes(i.feature))
-    : allItems;
+  const items = allItems.filter(
+    (i) =>
+      (!features || i.feature === null || features.includes(i.feature)) &&
+      (!granted || granted.has(i.permission))
+  );
 
   const isActive = (href: string) => pathname === href;
+  // Cashiers/limited staff have no analytics grant: send the brand home to
+  // the front desk instead of a dashboard they cannot open.
+  const homeHref =
+    granted && !granted.has("analytics.read")
+      ? `/${locale}/desk/${slug}`
+      : `/${locale}/${slug}/dashboard`;
 
   return (
     <div className="flex min-h-screen flex-col" style={{ backgroundColor: theme.background }}>
@@ -54,7 +68,7 @@ export function DashboardShell({ slug, businessName, theme, logoUrl, features, c
       <header className="sticky top-0 z-40 border-b bg-white [transform:translateZ(0)] sm:bg-white/80 sm:backdrop-blur-md" style={{ borderColor: theme.outlineVariant }}>
         <div className="flex h-16 items-center justify-between gap-4 px-4 md:px-8">
           <div className="flex items-center gap-3">
-            <Link href={`/${locale}/${slug}/dashboard`}>
+            <Link href={homeHref}>
               {logoUrl ? (
                 <img src={logoUrl} alt={businessName} className="h-9 w-auto max-w-[160px] object-contain" />
               ) : (

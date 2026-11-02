@@ -17,6 +17,7 @@ const bodySchema = z.object({
   slug: z.string().min(1),
   serviceIds: z.array(z.string().uuid()).min(1),
   employeeId: z.string().uuid().optional(),
+  packageId: z.string().uuid().optional(),
   employeeAssignments: z
     .array(z.object({ serviceId: z.string().uuid(), employeeId: z.string().uuid() }))
     .optional(),
@@ -71,6 +72,7 @@ export async function POST(req: Request) {
       serviceIds: input.data.serviceIds,
       employeeId: input.data.employeeId,
       employeeAssignments: input.data.employeeAssignments,
+      packageId: input.data.packageId,
       appointmentDate: input.data.appointmentDate,
       startTime: input.data.startTime,
       customer: {
@@ -114,6 +116,8 @@ export async function POST(req: Request) {
       ok(
         {
           appointmentId: appt.id,
+          trackingNumber: appt.trackingNumber,
+          totalPrice: String(appt.price),
           startTime: appt.startTime,
           endTime: appt.endTime,
           appointmentDate: appt.appointmentDate,

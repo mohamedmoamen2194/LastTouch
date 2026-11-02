@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getDashboardAccess } from "@/lib/tenant/dashboard";
 import { getThemeTokens } from "@/config/business-types";
 import { listTenantServicesForAdmin, listTenantTeam } from "@/modules/booking/domain/catalog";
+import { listStaffRoleOptions, listTeamAccess } from "@/modules/booking/application/employees";
 import { EmployeesManager } from "@/components/dashboard/employees-manager";
 import { LockedPage } from "@/components/dashboard/locked-page";
 import { getMaxEmployeesForPlan, getSubscriptionState } from "@/lib/subscriptions";
@@ -30,9 +31,11 @@ export default async function EmployeesPage({
     return <LockedPage page="employees" slug={slug} theme={theme} />;
   }
 
-  const [team, services] = await Promise.all([
+  const [team, services, roleOptions, access] = await Promise.all([
     listTenantTeam(ctx.tenantId),
     listTenantServicesForAdmin(ctx.tenantId),
+    listStaffRoleOptions(ctx),
+    listTeamAccess(ctx.tenantId),
   ]);
 
   return (
@@ -42,21 +45,34 @@ export default async function EmployeesPage({
       theme={theme}
       maxEmployees={getMaxEmployeesForPlan(ctx.subscriptionPlan)}
       businessName={ctx.businessName}
-      employees={team.map((e) => ({
-        id: e.id,
-        firstName: e.firstName,
-        lastName: e.lastName,
-        displayName: e.displayName,
-        role: e.role,
-        phone: e.phone,
-        salary: e.salary ? String(e.salary) : null,
-        bio: e.bio,
-        rating: e.rating ? String(e.rating) : null,
-        isGeneral: e.isGeneral,
-        active: e.active,
-        serviceIds: e.serviceIds,
-        workingHours: e.workingHours,
-      }))}
+      roleOptions={roleOptions}
+      employees={team.map((e) => {
+        const membership = e.userId ? access.membershipByUser.get(e.userId) : undefined;
+        const invite = access.inviteByEmployee.get(e.id);
+        return {
+          id: e.id,
+          firstName: e.firstName,
+          lastName: e.lastName,
+          displayName: e.displayName,
+          role: e.role,
+          email: e.email,
+          phone: e.phone,
+          salary: e.salary ? String(e.salary) : null,
+          bio: e.bio,
+          rating: e.rating ? String(e.rating) : null,
+          isGeneral: e.isGeneral,
+          isBookable: e.isBookable,
+          active: e.active,
+          userId: e.userId,
+          accessRole: e.accessRole,
+          panelAccess: Boolean(membership?.active || invite || e.userId),
+          permissions: membership?.permissions ?? null,
+          membershipActive: membership?.active ?? null,
+          inviteExpiresAt: invite?.expiresAt ? invite.expiresAt.toISOString() : null,
+          serviceIds: e.serviceIds,
+          workingHours: e.workingHours,
+        };
+      })}
       services={services.map((s) => ({ id: s.id, name: s.name }))}
     />
   );

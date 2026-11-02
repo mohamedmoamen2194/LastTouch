@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { appointmentServices, appointments, customers, type AppointmentStatus } from "@/db/schema";
 import { assertFeature, assertPermission, type TenantContext } from "@/lib/tenant/context";
 import { Permission } from "@/lib/permissions";
+import { sumProductRevenue } from "@/modules/inventory/application/sales";
 
 const OPEN: AppointmentStatus[] = ["confirmed", "pending"];
 const COUNTED: AppointmentStatus[] = ["completed", "confirmed"];
@@ -87,6 +88,11 @@ export async function getDashboardStats(ctx: TenantContext): Promise<DashboardSt
     .from(customers)
     .where(and(eq(customers.tenantId, ctxId), gte(customers.createdAt, daysAgo)));
 
+  const [productRevenueToday, productRevenueMonth] = await Promise.all([
+    sumProductRevenue(ctxId, dayStart, dayEnd),
+    sumProductRevenue(ctxId, monthStart, monthEnd),
+  ]);
+
   const topServiceRows = await db
     .select({
       name: appointmentServices.serviceNameSnapshot,
@@ -109,8 +115,8 @@ export async function getDashboardStats(ctx: TenantContext): Promise<DashboardSt
   return {
     todayAppointments: todayRow?.value ?? 0,
     upcomingAppointments: upcomingRow?.value ?? 0,
-    revenueToday: Number(revTodayRow?.value ?? 0),
-    revenueMonth: Number(revMonthRow?.value ?? 0),
+    revenueToday: Number(revTodayRow?.value ?? 0) + productRevenueToday,
+    revenueMonth: Number(revMonthRow?.value ?? 0) + productRevenueMonth,
     newCustomers30d: newCustRow?.value ?? 0,
     topServices: topServiceRows.map((r) => ({
       name: r.name,

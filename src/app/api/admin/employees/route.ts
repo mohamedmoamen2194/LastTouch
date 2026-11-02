@@ -33,9 +33,16 @@ export async function POST(req: Request) {
     if (action === "create") {
       const body = await readJson<unknown>(req);
       const input = validateEmployeeInput(body);
-      const created = await createEmployee(ctx, input);
+      const result = await createEmployee(ctx, input);
       return NextResponse.json(
-        ok({ id: created.id, displayName: created.displayName }, "Employee created"),
+        ok(
+          {
+            id: result.employee.id,
+            displayName: result.employee.displayName,
+            invite: result.invite,
+          },
+          "Employee created"
+        ),
         { status: HttpStatus.Created }
       );
     }
@@ -45,8 +52,17 @@ export async function POST(req: Request) {
       const id = typeof body.id === "string" ? body.id : "";
       if (!z.string().uuid().safeParse(id).success) throw new ValidationAppError("Invalid employee payload");
       const input = validateEmployeeInput(body);
-      const updated = await updateEmployee(ctx, id, input);
-      return NextResponse.json(ok({ id: updated.id, displayName: updated.displayName }, "Employee updated"));
+      const result = await updateEmployee(ctx, id, input);
+      return NextResponse.json(
+        ok(
+          {
+            id: result.employee.id,
+            displayName: result.employee.displayName,
+            invite: result.invite,
+          },
+          "Employee updated"
+        )
+      );
     }
 
     if (action === "delete") {

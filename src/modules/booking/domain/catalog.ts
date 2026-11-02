@@ -20,10 +20,14 @@ export async function resolveTenantForBooking(slug: string) {
   return tenant;
 }
 
-/** List active employees of a tenant (public/booking view). */
+/** List active, bookable employees of a tenant (public/booking view). */
 export async function listTenantEmployees(tenantId: string, activeOnly = true) {
   const where = activeOnly
-    ? and(eq(employees.tenantId, tenantId), eq(employees.active, true))
+    ? and(
+        eq(employees.tenantId, tenantId),
+        eq(employees.active, true),
+        eq(employees.isBookable, true)
+      )
     : eq(employees.tenantId, tenantId);
   return db
     .select()
@@ -60,7 +64,13 @@ export async function listEligibleEmployees(tenantId: string, serviceIds: string
   const staff = await db
     .select()
     .from(employees)
-    .where(and(eq(employees.tenantId, tenantId), eq(employees.active, true)));
+    .where(
+      and(
+        eq(employees.tenantId, tenantId),
+        eq(employees.active, true),
+        eq(employees.isBookable, true)
+      )
+    );
 
   if (serviceIds.length === 0) return staff;
   if (staff.length === 0) return staff;
@@ -98,7 +108,14 @@ export async function employeeCoversServices(
   const [emp] = await db
     .select()
     .from(employees)
-    .where(and(eq(employees.id, employeeId), eq(employees.tenantId, tenantId), eq(employees.active, true)))
+    .where(
+      and(
+        eq(employees.id, employeeId),
+        eq(employees.tenantId, tenantId),
+        eq(employees.active, true),
+        eq(employees.isBookable, true)
+      )
+    )
     .limit(1);
   if (!emp) return false;
   if (emp.isGeneral) return true;

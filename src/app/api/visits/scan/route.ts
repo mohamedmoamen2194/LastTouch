@@ -143,12 +143,25 @@ export async function POST(req: Request) {
 
     if (!wantOut) {
       // ---- check-in ----
-      if (open) throw new ValidationAppError("already_checked_in");
+      // Idempotent: tapping check-in twice (or a retry after a timeout) must
+      // stay green instead of surfacing "already checked in".
+      if (open) {
+        if (appt.status === "pending") {
+          await db
+            .update(appointments)
+            .set({ status: "confirmed", updatedAt: new Date() })
+            .where(eq(appointments.id, appt.id));
+        }
+        return NextResponse.json(
+          ok({ action: "checked_in", status: "confirmed", visitId: open.id, already: true }),
+          { status: HttpStatus.Ok },
+        );
+      }
       if (day !== now.ymd) throw new ValidationAppError("not_today");
       if (now.hm > lateCheckin) throw new ValidationAppError("too_late_checkin");
       // Idempotent under double-tap/retry races: the partial unique index
       // on open visits makes a concurrent second insert a no-op, and the
-      // loser gets already_checked_in instead of opening a duplicate visit.
+      // loser gets a green response instead of a duplicate visit.
       const [created] = await db
         .insert(visits)
         .values({
@@ -161,14 +174,27 @@ export async function POST(req: Request) {
         })
         .onConflictDoNothing()
         .returning({ id: visits.id });
-      if (!created) throw new ValidationAppError("already_checked_in");
+      if (!created) {
+        const [winner] = await db
+          .select({ id: visits.id })
+          .from(visits)
+          .where(and(eq(visits.appointmentId, appointmentId), eq(visits.status, "checked_in")))
+          .limit(1);
+        return NextResponse.json(
+          ok({ action: "checked_in", status: "confirmed", visitId: winner?.id ?? null, already: true }),
+          { status: HttpStatus.Ok },
+        );
+      }
       if (appt.status === "pending") {
         await db
           .update(appointments)
           .set({ status: "confirmed", updatedAt: new Date() })
           .where(eq(appointments.id, appt.id));
       }
-      return NextResponse.json(ok({ action: "checked_in", status: "confirmed" }), { status: HttpStatus.Ok });
+      return NextResponse.json(
+        ok({ action: "checked_in", status: "confirmed", visitId: created.id }),
+        { status: HttpStatus.Ok },
+      );
     }
 
     // ---- check-out ----
@@ -195,7 +221,13 @@ export async function POST(req: Request) {
       });
     }
     await completeAppointment(appt.id);
-    return NextResponse.json(ok({ action: "checked_out", status: "completed" }), {
+    const [closed] = await db
+      .select({ id: visits.id })
+      .from(visits)
+      .where(and(eq(visits.appointmentId, appointmentId), eq(visits.status, "checked_out")))
+      .orderBy(visits.id)
+      .limit(1);
+    return NextResponse.json(ok({ action: "checked_out", status: "completed", visitId: closed?.id ?? null }), {
       status: HttpStatus.Ok,
     });
   });

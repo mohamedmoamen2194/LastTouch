@@ -44,6 +44,8 @@ type Receipt = {
   startTime: string;
   endTime: string;
   appointmentDate: string;
+  trackingNumber?: string;
+  totalPrice?: string;
   employee: { id: string; displayName: string | null; firstName: string; lastName: string | null } | null;
   services: { name: string; price: string; durationMinutes: number }[];
   assignedWorkers?: { serviceId: string; employeeId: string; employeeName: string }[];
@@ -104,6 +106,7 @@ export function BookingWidget({ tenant, themeId, services, packages = [], employ
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
   const [receipt, setReceipt] = useState<Receipt | null>(null);
+  const [copiedTracking, setCopiedTracking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({
     firstName: initialCustomer?.firstName ?? "",
@@ -433,6 +436,7 @@ export function BookingWidget({ tenant, themeId, services, packages = [], employ
         startTime: time,
         customer: { ...form, marketingConsent: true },
       };
+      if (pkg) payload.packageId = pkg.id;
       if (multiSelection) {
         if (generalWorkerId) {
           payload.employeeId = generalWorkerId;
@@ -524,6 +528,33 @@ export function BookingWidget({ tenant, themeId, services, packages = [], employ
                   {formatTime(receipt.startTime, numTag)} – {formatTime(receipt.endTime, numTag)}
                 </span>
               </div>
+              {receipt.trackingNumber && (
+                <div className="flex items-center justify-between gap-3 rounded-xl px-3 py-2" style={{ backgroundColor: theme.primaryContainer }}>
+                  <div>
+                    <p className="text-[11px] uppercase tracking-wide" style={{ color: theme.secondary }}>
+                      {t("trackingNumber")}
+                    </p>
+                    <p dir="ltr" className="font-mono text-sm font-semibold" style={{ color: theme.primary }}>
+                      {receipt.trackingNumber}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(receipt.trackingNumber ?? "");
+                        setCopiedTracking(true);
+                      } catch {
+                        /* clipboard unavailable */
+                      }
+                    }}
+                    className="rounded-full px-3 py-1.5 text-xs font-semibold"
+                    style={{ backgroundColor: theme.primary, color: theme.onPrimary }}
+                  >
+                    {copiedTracking ? t("copied") : t("copy")}
+                  </button>
+                </div>
+              )}
               {receipt.services.map((s, idx) => (
                 <div key={`${s.name}-${idx}`} className="flex items-center justify-between gap-3">
                   <span style={{ color: theme.onSurfaceVariant }}>{s.name} · {s.durationMinutes} {t("min")}</span>
@@ -559,35 +590,46 @@ export function BookingWidget({ tenant, themeId, services, packages = [], employ
               <div className="flex items-center justify-between gap-3 border-t pt-3" style={{ borderColor: theme.outlineVariant }}>
                 <span style={{ color: theme.onSurfaceVariant }}>{t("totalPrice")}</span>
                 <span dir="ltr" className="whitespace-nowrap text-lg font-bold tabular-nums" style={{ color: theme.primary }}>
-                  {formatMoney(receipt.services.reduce((sum, s) => sum + Number(s.price), 0), tenant.currency, numTag)}
+                  {formatMoney(receipt.totalPrice ?? receipt.services.reduce((sum, s) => sum + Number(s.price), 0), tenant.currency, numTag)}
                 </span>
               </div>
             </div>
           </div>
         )}
 
-        <button
-          type="button"
-          onClick={() => {
-            setDone(false);
-            setReceipt(null);
-            setStep(1);
-            setServiceId(null);
-            setPackageId(null);
-            setCustomServices([]);
-            setCustomizeOpen(false);
-            setEmployeeId("any");
-            setDate(null);
-            setHour(null);
-            setTime(null);
-            setSlots([]);
-            setCalOpen(false);
-          }}
-          className="mt-8 rounded-full px-6 py-3 text-sm font-semibold"
-          style={{ backgroundColor: theme.primary, color: theme.onPrimary }}
-        >
-          {t("makeAnother")}
-        </button>
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-2">
+          {receipt?.trackingNumber && (
+            <a
+              href={`/${locale}/track/${slugFromPath()}?code=${encodeURIComponent(receipt.trackingNumber)}`}
+              className="rounded-full px-6 py-3 text-sm font-semibold"
+              style={{ border: `1px solid ${theme.primary}`, color: theme.primary }}
+            >
+              {t("trackAppointment")}
+            </a>
+          )}
+          <button
+            type="button"
+            onClick={() => {
+              setDone(false);
+              setReceipt(null);
+              setStep(1);
+              setServiceId(null);
+              setPackageId(null);
+              setCustomServices([]);
+              setCustomizeOpen(false);
+              setEmployeeId("any");
+              setDate(null);
+              setHour(null);
+              setTime(null);
+              setSlots([]);
+              setCalOpen(false);
+            }}
+            className="rounded-full px-6 py-3 text-sm font-semibold"
+            style={{ backgroundColor: theme.primary, color: theme.onPrimary }}
+          >
+            {t("makeAnother")}
+          </button>
+        </div>
       </div>
     );
   }

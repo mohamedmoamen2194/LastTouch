@@ -6,9 +6,11 @@ import { db } from "@/db";
 import { reviews } from "@/db/schema";
 import { resolveTenantForBooking, getTenantLocation, listTenantEmployeesWithServices, listTenantServices } from "@/modules/booking/domain/catalog";
 import { listActivePackagesForBooking } from "@/modules/booking/application/packages";
+import { listPublicProducts } from "@/modules/inventory/application/products";
 import { getBusinessTypeConfig, getThemeTokens } from "@/config/business-types";
 import { BookingWidget } from "@/components/booking/booking-widget";
 import { BookingTabs } from "@/components/booking/booking-tabs";
+import { ShopView } from "@/components/booking/shop-view";
 import { RecordRecentStore } from "@/components/marketplace/continue-row";
 import { Link } from "@/i18n/navigation";
 import { ScanView } from "@/components/booking/scan-view";
@@ -107,10 +109,11 @@ export default async function BookingPage({
     );
   }
 
-  const [employees, services, packages, [ratingRow], storeLocation] = await Promise.all([
+  const [employees, services, packages, products, [ratingRow], storeLocation] = await Promise.all([
     listTenantEmployeesWithServices(tenant.id),
     listTenantServices(tenant.id),
     listActivePackagesForBooking(tenant.id),
+    listPublicProducts(tenant.id),
     db
       .select({ avg: avg(reviews.rating), count: count(reviews.id) })
       .from(reviews)
@@ -160,6 +163,13 @@ export default async function BookingPage({
               style={{ color: theme.secondary }}
             >
               {mt("allStores")}
+            </Link>
+            <Link
+              href={`/track/${slug}`}
+              className="hidden whitespace-nowrap text-xs font-semibold underline sm:block"
+              style={{ color: theme.secondary }}
+            >
+              {bt("trackAppointment")}
             </Link>
             <LangSwitcher theme={theme} />
             <a
@@ -270,6 +280,34 @@ export default async function BookingPage({
             <section className="py-2">
               <ScanView theme={theme} slug={slug} />
             </section>
+          }
+          shop={
+            products.length > 0 ? (
+              <section className="py-2">
+                <ShopView
+                  slug={slug}
+                  locale={locale}
+                  currency={tenant.currency}
+                  theme={theme}
+                  initialCustomer={
+                    bookerProfile?.fullName || bookerProfile?.phone
+                      ? { name: bookerProfile.fullName ?? "", phone: bookerProfile.phone ?? "" }
+                      : null
+                  }
+                  products={products.map((p) => ({
+                    id: p.id,
+                    name: p.name,
+                    nameAr: p.nameAr,
+                    category: p.category,
+                    description: p.description,
+                    descriptionAr: p.descriptionAr,
+                    imageUrl: p.imageUrl,
+                    sellPrice: String(p.sellPrice),
+                    quantity: p.quantity,
+                  }))}
+                />
+              </section>
+            ) : undefined
           }
           ratings={
             <section className="py-2">

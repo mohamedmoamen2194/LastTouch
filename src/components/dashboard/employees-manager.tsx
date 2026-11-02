@@ -8,6 +8,7 @@ import {
   CalendarDays,
   ChevronDown,
   Clock,
+  KeyRound,
   Pencil,
   Phone,
   Plus,
@@ -26,12 +27,20 @@ export type ManagedEmployee = {
   lastName: string | null;
   displayName: string | null;
   role: string | null;
+  email: string | null;
   phone: string | null;
   salary: string | null;
   bio: string | null;
   rating: string | null;
   isGeneral: boolean;
+  isBookable: boolean;
   active: boolean;
+  userId: string | null;
+  accessRole: string | null;
+  panelAccess: boolean;
+  permissions: string[] | null;
+  membershipActive: boolean | null;
+  inviteExpiresAt: string | null;
   serviceIds: string[];
   workingHours: { weekday: number; startTime: string; endTime: string }[];
 };
@@ -48,24 +57,128 @@ type Props = {
   employees: ManagedEmployee[];
   services: ManagedServiceRef[];
   businessName: string;
+  roleOptions: string[];
   /** Max active team members for the current plan; null = unlimited (enterprise). */
   maxEmployees?: number | null;
 };
 
 type DayForm = { weekday: number; enabled: boolean; start: string; end: string };
 
+export type AccessRole = "employee" | "cashier" | "manager";
+
 type FormState = {
   id?: string;
   firstName: string;
   lastName: string;
   role: string;
+  customRole: string;
+  email: string;
   phone: string;
   salary: string;
   isGeneral: boolean;
+  isBookable: boolean;
   active: boolean;
+  panelAccess: boolean;
+  accessRole: AccessRole;
+  permissions: string[];
   serviceIds: string[];
   days: DayForm[];
 };
+
+/** Curated, human-facing grants shown as checkboxes in the team form. */
+export const PERMISSION_GROUPS: { key: string; permissions: { key: string; label: string }[] }[] = [
+  {
+    key: "appointments",
+    permissions: [
+      { key: "appointments.read", label: "View appointments" },
+      { key: "appointments.create", label: "Add appointments" },
+      { key: "appointments.confirm", label: "Confirm appointments" },
+      { key: "appointments.update", label: "Reschedule / edit" },
+      { key: "appointments.complete", label: "Complete / no-show" },
+    ],
+  },
+  {
+    key: "customers",
+    permissions: [
+      { key: "customers.read", label: "View customers" },
+      { key: "customers.create", label: "Add customers" },
+    ],
+  },
+  {
+    key: "inventory",
+    permissions: [
+      { key: "inventory.read", label: "View inventory" },
+      { key: "inventory.manage", label: "Manage inventory" },
+      { key: "sales.create", label: "Sell products" },
+      { key: "sales.read", label: "View sales" },
+    ],
+  },
+  {
+    key: "other",
+    permissions: [
+      { key: "attendance.use", label: "Arrive / leave" },
+      { key: "services.read", label: "View services" },
+      { key: "reviews.read", label: "View ratings" },
+    ],
+  },
+];
+
+export const ALL_PERMISSION_KEYS = PERMISSION_GROUPS.flatMap((g) =>
+  g.permissions.map((p) => p.key)
+);
+
+function defaultPermissionsFor(role: AccessRole): string[] {
+  switch (role) {
+    case "cashier":
+      return [
+        "appointments.read",
+        "appointments.create",
+        "appointments.confirm",
+        "appointments.update",
+        "appointments.complete",
+        "customers.read",
+        "customers.create",
+        "customers.update",
+        "services.read",
+        "inventory.read",
+        "sales.create",
+        "sales.read",
+        "reviews.read",
+      ];
+    case "manager":
+      return [
+        "appointments.read",
+        "appointments.create",
+        "appointments.confirm",
+        "appointments.update",
+        "appointments.complete",
+        "customers.read",
+        "customers.create",
+        "customers.update",
+        "employees.read",
+        "employees.manage",
+        "services.read",
+        "services.manage",
+        "inventory.read",
+        "inventory.manage",
+        "sales.create",
+        "sales.read",
+        "attendance.use",
+        "reviews.read",
+      ];
+    default:
+      return [
+        "appointments.read",
+        "appointments.confirm",
+        "appointments.update",
+        "appointments.complete",
+        "customers.read",
+        "services.read",
+        "inventory.read",
+        "attendance.use",
+      ];
+  }
+}
 
 const WEEKDAY_LABELS = [
   "sunday",
@@ -90,10 +203,16 @@ const EMPTY_FORM: FormState = {
   firstName: "",
   lastName: "",
   role: "",
+  customRole: "",
+  email: "",
   phone: "",
   salary: "",
   isGeneral: false,
+  isBookable: true,
   active: true,
+  panelAccess: false,
+  accessRole: "employee",
+  permissions: defaultPermissionsFor("employee"),
   serviceIds: [],
   days: makeEmptyDays(),
 };
@@ -118,7 +237,7 @@ type EmployeeOverview = {
   totalWorksThisMonth: number;
 };
 
-export function EmployeesManager({ slug, locale, theme, employees: initial, services, businessName, maxEmployees = 5 }: Props) {
+export function EmployeesManager({ slug, locale, theme, employees: initial, services, businessName, roleOptions, maxEmployees = 5 }: Props) {
   const t = useTranslations("employees");
   const dt = useTranslations("dashboard");
 
@@ -127,6 +246,8 @@ export function EmployeesManager({ slug, locale, theme, employees: initial, serv
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
+  const [inviteLink, setInviteLink] = useState<string | null>(null);
+  const [copiedInvite, setCopiedInvite] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [detail, setDetail] = useState<ManagedEmployee | null>(null);
@@ -180,15 +301,24 @@ export function EmployeesManager({ slug, locale, theme, employees: initial, serv
   };
 
   const openEdit = (e: ManagedEmployee) => {
+    const accessRole: AccessRole =
+      e.accessRole === "cashier" || e.accessRole === "manager" ? e.accessRole : "employee";
+    const knownRole = Boolean(e.role && roleOptions.includes(e.role));
     setForm({
       id: e.id,
       firstName: e.firstName,
       lastName: e.lastName ?? "",
-      role: e.role ?? "",
+      role: knownRole ? (e.role as string) : e.role ? "__custom" : "",
+      customRole: knownRole ? "" : (e.role ?? ""),
+      email: e.email ?? "",
       phone: e.phone ?? "",
       salary: e.salary ?? "",
       isGeneral: e.isGeneral,
+      isBookable: e.isBookable,
       active: e.active,
+      panelAccess: e.panelAccess,
+      accessRole,
+      permissions: e.permissions ?? defaultPermissionsFor(accessRole),
       serviceIds: e.serviceIds,
       days: daysToForm(e.workingHours),
     });
@@ -205,7 +335,11 @@ export function EmployeesManager({ slug, locale, theme, employees: initial, serv
     });
     const json = await res.json();
     if (!json.success) throw new Error(json.message ?? "Request failed");
-    return json.data as { id: string; displayName: string | null };
+    return json.data as {
+      id: string;
+      displayName: string | null;
+      invite?: { code: string; expiresAt: string } | null;
+    };
   };
 
   const save = async () => {
@@ -224,15 +358,22 @@ export function EmployeesManager({ slug, locale, theme, employees: initial, serv
           throw new Error(t("limitReached", { max: maxEmployees as number }));
         }
       }
+      const roleValue = form.role === "__custom" ? form.customRole.trim() : form.role.trim();
       const payload = {
         id: isEdit ? editingId : undefined,
         firstName: form.firstName,
         lastName: form.lastName,
-        role: form.role,
+        role: roleValue,
+        customRole: roleValue,
+        email: form.email,
         phone: form.phone,
         salary: form.salary,
         isGeneral: form.isGeneral,
+        isBookable: form.isBookable,
         active: form.active,
+        panelAccess: form.panelAccess,
+        accessRole: form.panelAccess ? form.accessRole : null,
+        permissions: form.panelAccess ? form.permissions : undefined,
         serviceIds: form.serviceIds,
         workingHours: form.days.filter((d) => d.enabled).map((d) => ({ weekday: d.weekday, startTime: d.start, endTime: d.end })),
       };
@@ -242,20 +383,33 @@ export function EmployeesManager({ slug, locale, theme, employees: initial, serv
         firstName: form.firstName.trim(),
         lastName: form.lastName.trim() || null,
         displayName: result.displayName ?? `${form.firstName.trim()}${form.lastName.trim() ? " " + form.lastName.trim() : ""}`,
-        role: form.role.trim() || null,
+        role: roleValue || null,
+        email: form.email.trim() || null,
         phone: form.phone.trim() || null,
         salary: form.salary === "" ? null : form.salary,
         bio: null,
         rating: null,
         isGeneral: form.isGeneral,
+        isBookable: form.isBookable,
         active: form.active,
+        userId: null,
+        accessRole: form.panelAccess ? form.accessRole : null,
+        panelAccess: form.panelAccess,
+        permissions: form.panelAccess ? form.permissions : null,
+        membershipActive: null,
+        inviteExpiresAt: result.invite?.expiresAt ?? null,
         serviceIds: form.serviceIds,
         workingHours: form.days.filter((d) => d.enabled).map((d) => ({ weekday: d.weekday, startTime: d.start, endTime: d.end })),
       };
       if (isEdit) {
-        setEmployees((prev) => prev.map((e) => (e.id === result.id ? { ...e, ...full } : e)));
+        setEmployees((prev) => prev.map((e) => (e.id === result.id ? { ...e, ...full, userId: e.userId, membershipActive: e.membershipActive } : e)));
       } else {
         setEmployees((prev) => [...prev, full]);
+      }
+      if (result.invite?.code) {
+        setInviteLink(
+          `${window.location.origin}/${locale}/staff/join?code=${encodeURIComponent(result.invite.code)}`
+        );
       }
       setModal(null);
     } catch (e) {
@@ -288,6 +442,15 @@ export function EmployeesManager({ slug, locale, theme, employees: initial, serv
       const allSelected = serviceIds.length === services.length && services.length > 0;
       return { ...f, serviceIds, isGeneral: checked ? false : allSelected };
     });
+  };
+
+  const togglePermission = (permission: string) => {
+    setForm((f) => ({
+      ...f,
+      permissions: f.permissions.includes(permission)
+        ? f.permissions.filter((p) => p !== permission)
+        : [...f.permissions, permission],
+    }));
   };
 
   const updateDay = (weekday: number, patch: Partial<DayForm>) => {
@@ -368,6 +531,18 @@ export function EmployeesManager({ slug, locale, theme, employees: initial, serv
                       {e.displayName ?? `${e.firstName}${e.lastName ? " " + e.lastName : ""}`}
                     </h3>
                     {e.role && <p className="mt-0.5 truncate text-xs font-medium" style={{ color: theme.secondary }}>{e.role}</p>}
+                    {e.panelAccess && (
+                      <span
+                        className="mt-1.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                        style={{
+                          backgroundColor: e.userId ? theme.primary : theme.surfaceContainerHigh,
+                          color: e.userId ? theme.onPrimary : theme.secondary,
+                        }}
+                      >
+                        <KeyRound className="h-3 w-3" />
+                        {e.userId ? t("panelActive") : t("invitePending")}
+                      </span>
+                    )}
                   </div>
                   <span
                     className="inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium"
@@ -498,13 +673,27 @@ export function EmployeesManager({ slug, locale, theme, employees: initial, serv
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="mb-1 block text-xs font-medium" style={{ color: theme.onSurfaceVariant }}>{t("role")}</label>
-                  <input
+                  <select
                     value={form.role}
-                    onChange={(e) => setForm({ ...form, role: e.target.value })}
-                    placeholder={t("rolePlaceholder")}
+                    onChange={(e) => setForm({ ...form, role: e.target.value, customRole: e.target.value === "__custom" ? form.customRole : "" })}
                     className={inputClass}
                     style={{ borderColor: theme.outlineVariant, backgroundColor: theme.surfaceContainerLowest, color: theme.onSurfaceVariant }}
-                  />
+                  >
+                    <option value="">{t("rolePlaceholder")}</option>
+                    {roleOptions.map((r) => (
+                      <option key={r} value={r}>{r}</option>
+                    ))}
+                    <option value="__custom">{t("customRoleOption")}</option>
+                  </select>
+                  {form.role === "__custom" && (
+                    <input
+                      value={form.customRole}
+                      onChange={(e) => setForm({ ...form, customRole: e.target.value })}
+                      placeholder={t("customRolePlaceholder")}
+                      className={`${inputClass} mt-2`}
+                      style={{ borderColor: theme.outlineVariant, backgroundColor: theme.surfaceContainerLowest, color: theme.onSurfaceVariant }}
+                    />
+                  )}
                 </div>
                 <div>
                   <label className="mb-1 block text-xs font-medium" style={{ color: theme.onSurfaceVariant }}>{t("phone")}</label>
@@ -519,6 +708,32 @@ export function EmployeesManager({ slug, locale, theme, employees: initial, serv
                   />
                 </div>
               </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium" style={{ color: theme.onSurfaceVariant }}>{t("email")}</label>
+                <input
+                  value={form.email}
+                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  placeholder={t("emailPlaceholder")}
+                  type="email"
+                  dir="ltr"
+                  className={inputClass}
+                  style={{ borderColor: theme.outlineVariant, backgroundColor: theme.surfaceContainerLowest, color: theme.onSurfaceVariant }}
+                />
+              </div>
+              <label
+                className="flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2.5 text-sm"
+                style={{ borderColor: form.isBookable ? theme.primary : theme.outlineVariant, color: theme.onSurfaceVariant }}
+              >
+                <input
+                  type="checkbox"
+                  checked={form.isBookable}
+                  onChange={(e) => setForm({ ...form, isBookable: e.target.checked })}
+                />
+                <span>
+                  <span className="font-medium">{t("bookable")}</span>
+                  <span className="block text-xs" style={{ color: theme.secondary }}>{t("bookableHint")}</span>
+                </span>
+              </label>
               <div>
                 <label className="mb-1 block text-xs font-medium" style={{ color: theme.onSurfaceVariant }}>{t("salary")}</label>
                 <input
@@ -575,6 +790,74 @@ export function EmployeesManager({ slug, locale, theme, employees: initial, serv
                         <span className="truncate">{s.name}</span>
                       </label>
                     ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="rounded-xl border p-3" style={{ borderColor: form.panelAccess ? theme.primary : theme.outlineVariant }}>
+                <label className="flex cursor-pointer items-start gap-2 text-sm" style={{ color: theme.onSurfaceVariant }}>
+                  <input
+                    type="checkbox"
+                    checked={form.panelAccess}
+                    onChange={(e) => setForm({ ...form, panelAccess: e.target.checked })}
+                    className="mt-0.5 h-4 w-4 shrink-0"
+                    style={{ accentColor: theme.primary }}
+                  />
+                  <span>
+                    <span className="font-medium">{t("panelAccess")}</span>
+                    <span className="block text-xs" style={{ color: theme.secondary }}>{t("panelAccessHint")}</span>
+                  </span>
+                </label>
+
+                {form.panelAccess && (
+                  <div className="mt-3 space-y-3">
+                    <div>
+                      <label className="mb-1 block text-xs font-medium" style={{ color: theme.onSurfaceVariant }}>{t("panelRole")}</label>
+                      <select
+                        value={form.accessRole}
+                        onChange={(e) => {
+                          const accessRole = e.target.value as AccessRole;
+                          setForm((f) => ({ ...f, accessRole, permissions: defaultPermissionsFor(accessRole) }));
+                        }}
+                        className={inputClass}
+                        style={{ borderColor: theme.outlineVariant, backgroundColor: theme.surfaceContainerLowest, color: theme.onSurfaceVariant }}
+                      >
+                        <option value="employee">{t("panelRoles.employee")}</option>
+                        <option value="cashier">{t("panelRoles.cashier")}</option>
+                        <option value="manager">{t("panelRoles.manager")}</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="mb-1 block text-xs font-medium" style={{ color: theme.onSurfaceVariant }}>{t("permissions")}</label>
+                      <div className="space-y-2.5">
+                        {PERMISSION_GROUPS.map((group) => (
+                          <div key={group.key}>
+                            <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide" style={{ color: theme.secondary }}>
+                              {t(`permissionGroups.${group.key}`)}
+                            </p>
+                            <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
+                              {group.permissions.map((permission) => (
+                                <label key={permission.key} className="flex items-center gap-2 text-xs" style={{ color: theme.onSurfaceVariant }}>
+                                  <input
+                                    type="checkbox"
+                                    checked={form.permissions.includes(permission.key)}
+                                    onChange={() => togglePermission(permission.key)}
+                                    className="h-3.5 w-3.5"
+                                    style={{ accentColor: theme.primary }}
+                                  />
+                                  <span>{permission.label}</span>
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <p className="text-xs" style={{ color: theme.onSurfaceVariant }}>
+                      {form.id ? t("inviteHintEdit") : t("inviteHint")}
+                    </p>
                   </div>
                 )}
               </div>
@@ -649,6 +932,59 @@ export function EmployeesManager({ slug, locale, theme, employees: initial, serv
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {inviteLink && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4" onClick={() => setInviteLink(null)}>
+          <div
+            className="w-full rounded-t-2xl border p-5 shadow-xl sm:max-w-md sm:rounded-2xl md:p-6"
+            style={{ backgroundColor: theme.surfaceContainerLowest, borderColor: theme.outlineVariant }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <h2 className="text-lg font-semibold" style={{ color: theme.primary }}>{t("inviteTitle")}</h2>
+              <button type="button" onClick={() => setInviteLink(null)} className="rounded-md p-1" style={{ color: theme.onSurfaceVariant }}>
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <p className="mb-3 text-sm" style={{ color: theme.onSurfaceVariant }}>{t("inviteBody")}</p>
+            <div className="flex items-center gap-2">
+              <input
+                readOnly
+                value={inviteLink}
+                dir="ltr"
+                onFocus={(e) => e.currentTarget.select()}
+                className="min-w-0 flex-1 rounded-lg border px-3 py-2.5 text-xs"
+                style={{ borderColor: theme.outlineVariant, backgroundColor: theme.surfaceContainerHigh, color: theme.onSurfaceVariant }}
+              />
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(inviteLink);
+                    setCopiedInvite(true);
+                    setTimeout(() => setCopiedInvite(false), 1800);
+                  } catch {
+                    setCopiedInvite(false);
+                  }
+                }}
+                className="shrink-0 rounded-lg px-3 py-2.5 text-xs font-semibold"
+                style={{ backgroundColor: theme.primary, color: theme.onPrimary }}
+              >
+                {copiedInvite ? t("copied") : t("copy")}
+              </button>
+            </div>
+            <p className="mt-2 text-xs" style={{ color: theme.secondary }}>{t("inviteExpiry")}</p>
+            <button
+              type="button"
+              onClick={() => setInviteLink(null)}
+              className="mt-4 w-full rounded-full px-5 py-2.5 text-sm font-semibold"
+              style={{ backgroundColor: theme.surfaceContainerHigh, color: theme.onSurfaceVariant }}
+            >
+              {t("done")}
+            </button>
           </div>
         </div>
       )}

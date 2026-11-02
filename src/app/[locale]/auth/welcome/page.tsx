@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { clerkClient } from "@clerk/nextjs/server";
 import { getOptionalUserId } from "@/lib/auth/session";
 import { getClientProfile, isProfileComplete } from "@/lib/marketplace/client";
-import { getUserFirstTenantSlug } from "@/lib/tenant/home";
+import { getUserFirstTenant, tenantHomePath } from "@/lib/tenant/home";
 import { isPlatformAdminByUserId } from "@/lib/platform/admin";
 import { Link } from "@/i18n/navigation";
 import { WelcomeForm } from "@/components/marketplace/welcome-form";
@@ -31,8 +31,8 @@ export default async function WelcomePage({
   // Platform admins go straight to the admin panel.
   if (await isPlatformAdminByUserId(userId)) redirect(`/${locale}/platform`);
 
-  const slug = await getUserFirstTenantSlug(userId);
-  if (slug) redirect(`/${locale}/${slug}/dashboard`);
+  const home = await getUserFirstTenant(userId);
+  if (home) redirect(tenantHomePath(locale, home.slug, home.role));
 
   const profile = await getClientProfile(userId);
   if (isProfileComplete(profile)) redirect(`/${locale}`);

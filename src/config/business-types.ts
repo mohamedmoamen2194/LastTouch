@@ -9,6 +9,8 @@ export type BusinessTypeConfig = {
   type: BusinessType;
   label: string;
   employeeLabel: string;
+  /** Built-in job titles for the team form dropdown (owner can add custom ones). */
+  staffRoles: string[];
   theme: ThemeName;
   defaultServices: { name: string; description?: string; durationMinutes: number; price: string }[];
   defaultCategories: { name: string; icon?: string }[];
@@ -19,6 +21,7 @@ export const BUSINESS_TYPE_CONFIGS: Record<BusinessType, BusinessTypeConfig> = {
     type: "barber_shop",
     label: "Men's Barber Shop",
     employeeLabel: "Barber",
+    staffRoles: ["Barber", "Senior Barber", "Junior Barber", "Cashier", "Receptionist", "Manager"],
     theme: "modern_men",
     defaultCategories: [
       { name: "Hair", icon: "content_cut" },
@@ -38,6 +41,7 @@ export const BUSINESS_TYPE_CONFIGS: Record<BusinessType, BusinessTypeConfig> = {
     type: "hair_salon",
     label: "Women's Hair Salon",
     employeeLabel: "Stylist",
+    staffRoles: ["Stylist", "Senior Stylist", "Colorist", "Cashier", "Receptionist", "Manager"],
     theme: "luxury_women",
     defaultCategories: [
       { name: "Cut & Style", icon: "content_cut" },
@@ -58,6 +62,7 @@ export const BUSINESS_TYPE_CONFIGS: Record<BusinessType, BusinessTypeConfig> = {
     type: "nail_studio",
     label: "Nail Studio",
     employeeLabel: "Nail Technician",
+    staffRoles: ["Nail Technician", "Senior Nail Technician", "Cashier", "Receptionist", "Manager"],
     theme: "luxury_women",
     defaultCategories: [
       { name: "Manicure", icon: "back_hand" },
@@ -75,6 +80,7 @@ export const BUSINESS_TYPE_CONFIGS: Record<BusinessType, BusinessTypeConfig> = {
     type: "beauty_center",
     label: "Beauty Center",
     employeeLabel: "Beauty Specialist",
+    staffRoles: ["Beauty Specialist", "Esthetician", "Makeup Artist", "Cashier", "Receptionist", "Manager"],
     theme: "luxury_women",
     defaultCategories: [
       { name: "Skin", icon: "face" },
@@ -91,6 +97,7 @@ export const BUSINESS_TYPE_CONFIGS: Record<BusinessType, BusinessTypeConfig> = {
     type: "spa",
     label: "Spa",
     employeeLabel: "Therapist",
+    staffRoles: ["Therapist", "Massage Therapist", "Cashier", "Receptionist", "Manager"],
     theme: "luxury_women",
     defaultCategories: [
       { name: "Massage", icon: "spa" },
@@ -106,6 +113,7 @@ export const BUSINESS_TYPE_CONFIGS: Record<BusinessType, BusinessTypeConfig> = {
     type: "makeup_studio",
     label: "Makeup Studio",
     employeeLabel: "Makeup Artist",
+    staffRoles: ["Makeup Artist", "Bridal Artist", "Cashier", "Receptionist", "Manager"],
     theme: "luxury_women",
     defaultCategories: [
       { name: "Makeup", icon: "brush" },
@@ -121,6 +129,7 @@ export const BUSINESS_TYPE_CONFIGS: Record<BusinessType, BusinessTypeConfig> = {
     type: "wellness_center",
     label: "Wellness Center",
     employeeLabel: "Coach",
+    staffRoles: ["Coach", "Trainer", "Cashier", "Receptionist", "Manager"],
     theme: "scandinavian",
     defaultCategories: [
       { name: "Wellness", icon: "self_improvement" },

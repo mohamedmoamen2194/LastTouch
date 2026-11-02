@@ -67,6 +67,7 @@ export default async function TenantLayout({
       theme={theme}
       logoUrl={tenantLogo?.logoUrl ?? null}
       features={featuresForPlan(ctx.subscriptionPlan)}
+      permissions={[...ctx.permissions]}
     >
       {children}
       <SubscriptionReminderGate

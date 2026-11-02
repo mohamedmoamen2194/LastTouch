@@ -1,6 +1,9 @@
 import type { BusinessType, Role, SubscriptionPlan, ThemeName } from "@/db/schema";
 import { ForbiddenError, UnauthorizedError } from "@/lib/errors";
-import { hasPermission, type Permission } from "@/lib/permissions";
+import {
+  resolvePermissions,
+  type Permission,
+} from "@/lib/permissions";
 import { cache } from "react";
 import { db } from "@/db";
 import { memberships, tenants } from "@/db/schema";
@@ -15,11 +18,15 @@ export type TenantContext = {
   userId: string;
   membershipId: string;
   role: Role;
+  /** Effective grants for this member (role defaults or owner overrides). */
+  permissions: Set<Permission>;
   slug: string;
   businessName: string;
   businessType: BusinessType;
   theme: ThemeName;
   subscriptionPlan: SubscriptionPlan;
+  timezone: string;
+  currency: string;
   enabledFeatures: Set<string>;
 };
 
@@ -87,11 +94,14 @@ export const getTenantContext = cache(async (args: {
     userId: args.userId,
     membershipId: membership.id,
     role: membership.role,
+    permissions: resolvePermissions(membership.role, membership.permissions),
     slug: tenant.slug,
     businessName: tenant.businessName,
     businessType: tenant.businessType,
     theme: tenant.theme,
     subscriptionPlan: tenant.subscriptionPlan,
+    timezone: tenant.timezone,
+    currency: tenant.currency,
     enabledFeatures: new Set(featuresForPlan(tenant.subscriptionPlan)),
   };
 });
@@ -100,8 +110,11 @@ export const getTenantContext = cache(async (args: {
  * Authorization guard. Call inside services/route handlers:
  *   assertPermission(ctx, Permission.customersRead);
  */
-export function assertPermission(ctx: Pick<TenantContext, "role">, permission: Permission) {
-  if (!hasPermission(ctx.role, permission)) {
+export function assertPermission(
+  ctx: Pick<TenantContext, "permissions">,
+  permission: Permission
+) {
+  if (!ctx.permissions.has(permission)) {
     throw new ForbiddenError(`Missing permission: ${permission}`);
   }
 }

@@ -9,6 +9,8 @@ export const PERMISSION_LIST = [
   "appointments.create",
   "appointments.update",
   "appointments.delete",
+  "appointments.confirm",
+  "appointments.complete",
   "customers.read",
   "customers.create",
   "customers.update",
@@ -17,6 +19,11 @@ export const PERMISSION_LIST = [
   "employees.manage",
   "services.read",
   "services.manage",
+  "inventory.read",
+  "inventory.manage",
+  "sales.read",
+  "sales.create",
+  "attendance.use",
   "billing.read",
   "billing.manage",
   "analytics.read",
@@ -50,6 +57,8 @@ export const ROLE_PERMISSIONS: Record<Role, ReadonlySet<Permission>> = {
     Permission["appointments.create"],
     Permission["appointments.update"],
     Permission["appointments.delete"],
+    Permission["appointments.confirm"],
+    Permission["appointments.complete"],
     Permission["customers.read"],
     Permission["customers.create"],
     Permission["customers.update"],
@@ -57,21 +66,70 @@ export const ROLE_PERMISSIONS: Record<Role, ReadonlySet<Permission>> = {
     Permission["employees.manage"],
     Permission["services.read"],
     Permission["services.manage"],
+    Permission["inventory.read"],
+    Permission["inventory.manage"],
+    Permission["sales.read"],
+    Permission["sales.create"],
+    Permission["attendance.use"],
     Permission["analytics.read"],
     Permission["reviews.read"],
     Permission["reviews.manage"],
   ]),
+  cashier: new Set<Permission>([
+    Permission["appointments.read"],
+    Permission["appointments.create"],
+    Permission["appointments.update"],
+    Permission["appointments.confirm"],
+    Permission["appointments.complete"],
+    Permission["customers.read"],
+    Permission["customers.create"],
+    Permission["customers.update"],
+    Permission["services.read"],
+    Permission["inventory.read"],
+    Permission["sales.read"],
+    Permission["sales.create"],
+    Permission["reviews.read"],
+  ]),
   employee: new Set<Permission>([
     Permission["appointments.read"],
     Permission["appointments.update"],
+    Permission["appointments.confirm"],
+    Permission["appointments.complete"],
     Permission["customers.read"],
     Permission["customers.update"],
+    Permission["services.read"],
+    Permission["inventory.read"],
+    Permission["attendance.use"],
   ]),
   customer: new Set<Permission>([Permission["appointments.create"]]),
 };
 
-export function hasPermission(role: Role, permission: Permission): boolean {
-  return ROLE_PERMISSIONS[role]?.has(permission) ?? false;
+/**
+ * Resolve the effective permissions for a membership.
+ * - Owners always have everything.
+ * - An explicit array (even empty) overrides the role defaults.
+ * - NULL/undefined falls back to the role defaults.
+ */
+export function resolvePermissions(
+  role: Role,
+  overrides?: readonly string[] | null
+): Set<Permission> {
+  if (role === "owner") return new Set(PERMISSION_LIST);
+  if (Array.isArray(overrides)) {
+    const valid = new Set<Permission>(PERMISSION_LIST);
+    return new Set(
+      overrides.filter((p): p is Permission => valid.has(p as Permission))
+    );
+  }
+  return new Set(ROLE_PERMISSIONS[role] ?? []);
+}
+
+export function hasPermission(
+  role: Role,
+  permission: Permission,
+  overrides?: readonly string[] | null
+): boolean {
+  return resolvePermissions(role, overrides).has(permission);
 }
 
 /** Business "owner-like" roles that manage billing + subscription. */
