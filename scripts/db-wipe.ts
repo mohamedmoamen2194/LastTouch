@@ -58,6 +58,15 @@ const TABLES = [
   "client_payment_methods",
   "client_points_ledger",
   "referrals",
+  // New tables from the multi-tenant SaaS feature set
+  "attendance_logs",
+  "machines",
+  "machine_maintenance",
+  "products",
+  "product_sale_items",
+  "product_sales",
+  "staff_invites",
+  "tenant_staff_roles",
 ];
 
 async function main() {
