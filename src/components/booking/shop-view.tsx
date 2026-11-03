@@ -164,7 +164,7 @@ export function ShopView({ slug, locale, currency, theme, products, initialCusto
                 </div>
                 <div className="flex flex-1 flex-col gap-2 p-4">
                   <div>
-                    <h3 className="text-sm font-semibold" style={{ color: theme.tertiary }}>
+                    <h3 className="text-sm font-semibold truncate" style={{ color: theme.tertiary }}>
                       {pick(product.name, product.nameAr)}
                     </h3>
                     {product.category && (

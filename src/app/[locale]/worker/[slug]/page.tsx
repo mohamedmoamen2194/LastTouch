@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { setRequestLocale } from "next-intl/server";
+import { LogIn } from "lucide-react";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { tenants } from "@/db/schema";
@@ -28,11 +29,12 @@ export default async function WorkerPage({
     notFound();
   }
 
-  let state;
+  let state: Awaited<ReturnType<typeof getWorkerState>> | null = null;
+  let stateError: string | null = null;
   try {
     state = await getWorkerState(ctx);
-  } catch {
-    redirect(`/${locale}/${slug}/dashboard`);
+  } catch (err) {
+    stateError = err instanceof Error ? err.message : "Unable to load attendance";
   }
 
   const theme = getThemeTokens(ctx.theme);
@@ -50,30 +52,55 @@ export default async function WorkerPage({
       logoUrl={tenant?.logoUrl ?? null}
       theme={theme}
     >
-      <WorkerAttendance
-        slug={slug}
-        locale={locale}
-        timezone={ctx.timezone}
-        theme={theme}
-        initialState={{
-          employee: state.employee,
-          location: state.location,
-          clockedIn: state.clockedIn,
-          lastLog: state.lastLog
-            ? {
-                type: state.lastLog.type,
-                createdAt: state.lastLog.createdAt.toISOString(),
-                distanceMeters: state.lastLog.distanceMeters,
-              }
-            : null,
-          today: state.today.map((log) => ({
-            id: log.id,
-            type: log.type,
-            createdAt: log.createdAt.toISOString(),
-            distanceMeters: log.distanceMeters,
-          })),
-        }}
-      />
+      {stateError || !state ? (
+        <div className="mx-auto w-full max-w-xl space-y-4 py-10">
+          <section
+            className="rounded-3xl border px-5 py-8 text-center"
+            style={{ borderColor: theme.outlineVariant, backgroundColor: theme.surfaceContainerLowest }}
+          >
+            <span
+              className="mx-auto flex h-16 w-16 items-center justify-center rounded-full"
+              style={{ backgroundColor: "#fef2f2", color: "#b91c1c" }}
+            >
+              <LogIn className="h-8 w-8" />
+            </span>
+            <h1 className="mt-3 text-xl font-bold" style={{ color: theme.primary }}>
+              Worker profile not linked
+            </h1>
+            <p className="mt-1 text-sm" style={{ color: theme.onSurfaceVariant }}>
+              {stateError}
+            </p>
+            <p className="mt-4 text-xs" style={{ color: theme.secondary }}>
+              Ask the business owner to link your account to a staff member in the Employees panel.
+            </p>
+          </section>
+        </div>
+      ) : (
+        <WorkerAttendance
+          slug={slug}
+          locale={locale}
+          timezone={ctx.timezone}
+          theme={theme}
+          initialState={{
+            employee: state.employee,
+            location: state.location,
+            clockedIn: state.clockedIn,
+            lastLog: state.lastLog
+              ? {
+                  type: state.lastLog.type,
+                  createdAt: state.lastLog.createdAt.toISOString(),
+                  distanceMeters: state.lastLog.distanceMeters,
+                }
+              : null,
+            today: state.today.map((log) => ({
+              id: log.id,
+              type: log.type,
+              createdAt: log.createdAt.toISOString(),
+              distanceMeters: log.distanceMeters,
+            })),
+          }}
+        />
+      )}
     </WorkerShell>
   );
 }
