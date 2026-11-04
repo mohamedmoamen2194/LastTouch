@@ -148,39 +148,41 @@ export default async function BookingPage({
       <header
         className="sticky top-0 z-50 border-b border-black/5 bg-white [transform:translateZ(0)] sm:bg-white/70 sm:backdrop-blur-md"
       >
-        <div className="mx-auto flex h-14 w-full max-w-screen-xl items-center justify-between gap-2 px-3 sm:h-16 sm:gap-3 sm:px-4 md:px-8">
-          <div className="min-w-0 flex-shrink">
-            {tenant.logoUrl ? (
-              <img src={tenant.logoUrl} alt={tenant.businessName} className="h-8 w-auto max-w-[110px] object-contain sm:h-10 sm:max-w-[170px]" />
-            ) : (
-              <Logo className="h-4 w-auto sm:h-5 md:h-6" />
-            )}
-          </div>
-          <div className="flex flex-col sm:flex-row items-center gap-1.5 sm:gap-3 w-full min-w-0">
-            <div className="flex flex-wrap gap-1.5 min-w-0">
+        <div className="mx-auto w-full max-w-screen-xl px-3 sm:px-4 md:px-8">
+          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 py-2 sm:h-16 sm:flex-nowrap sm:py-0">
+            <div className="flex min-w-0 shrink items-center">
+              {tenant.logoUrl ? (
+                <img src={tenant.logoUrl} alt={tenant.businessName} className="h-8 w-auto max-w-[110px] object-contain sm:h-10 sm:max-w-[170px]" />
+              ) : (
+                <Logo className="h-4 w-auto sm:h-5 md:h-6" />
+              )}
+            </div>
+            <div className="order-3 flex w-full min-w-0 items-center justify-center gap-3 sm:order-none sm:w-auto sm:justify-start">
               <Link
                 href="/"
-                className="max-w-[96px] truncate text-xs font-semibold underline sm:whitespace-nowrap"
+                className="max-w-[45vw] truncate text-xs font-semibold underline sm:max-w-[140px]"
                 style={{ color: theme.secondary }}
               >
                 {mt("allStores")}
               </Link>
               <Link
                 href={`/track/${slug}`}
-                className="text-xs font-semibold underline sm:whitespace-nowrap"
+                className="shrink-0 whitespace-nowrap text-xs font-semibold underline"
                 style={{ color: theme.secondary }}
               >
                 {bt("trackAppointment")}
               </Link>
               <LangSwitcher theme={theme} />
             </div>
-            <a
-              href="#booking"
-              className="whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-semibold sm:px-5 sm:py-2.5 sm:text-sm"
-              style={{ backgroundColor: theme.primary, color: theme.onPrimary }}
-            >
-              Book Now
-            </a>
+            <div className="flex shrink-0 items-center">
+              <a
+                href="#booking"
+                className="whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-semibold sm:px-5 sm:py-2.5 sm:text-sm"
+                style={{ backgroundColor: theme.primary, color: theme.onPrimary }}
+              >
+                Book Now
+              </a>
+            </div>
           </div>
         </div>
       </header>

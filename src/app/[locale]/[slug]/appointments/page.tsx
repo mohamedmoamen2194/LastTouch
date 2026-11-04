@@ -7,6 +7,7 @@ import { formatMoney } from "@/lib/utils";
 import { AppointmentList } from "@/components/dashboard/appointment-list";
 import { LockedPage } from "@/components/dashboard/locked-page";
 import { getSubscriptionState } from "@/lib/subscriptions";
+import { Permission } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +26,9 @@ export default async function AppointmentsPage({
   } catch {
     notFound();
   }
+  if (!ctx.permissions.has(Permission["appointments.read"])) notFound();
   const theme = getThemeTokens(ctx.theme);
+  const canManage = ctx.permissions.has(Permission["appointments.update"]);
   const sub = await getSubscriptionState(ctx.tenantId, { role: ctx.role });
   if (!sub.hasAccess) {
     return <LockedPage page="appointments" slug={slug} theme={theme} />;
@@ -53,7 +56,7 @@ export default async function AppointmentsPage({
           {t("noData")}
         </div>
       ) : (
-        <AppointmentList rows={cards} slug={slug} theme={theme} />
+        <AppointmentList rows={cards} slug={slug} theme={theme} canManage={canManage} />
       )}
     </div>
   );

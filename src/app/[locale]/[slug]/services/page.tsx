@@ -8,6 +8,7 @@ import { ServicesManager } from "@/components/dashboard/services-manager";
 import { PackagesManager } from "@/components/dashboard/packages-manager";
 import { LockedPage } from "@/components/dashboard/locked-page";
 import { getSubscriptionState } from "@/lib/subscriptions";
+import { Permission } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +27,7 @@ export default async function ServicesPage({
     notFound();
   }
 
+  if (!ctx.permissions.has(Permission["services.read"])) notFound();
   const theme = getThemeTokens(ctx.theme);
   const sub = await getSubscriptionState(ctx.tenantId, { role: ctx.role });
   if (!sub.hasAccess) {

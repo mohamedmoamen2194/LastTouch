@@ -141,7 +141,8 @@
     "reviews": "التقييمات",
     "settings": "الإعدادات",
     "logout": "تسجيل الخروج",
-    "bookPublic": "صفحة الحجز"
+    "bookPublic": "صفحة الحجز",
+    "attendance": "الحضور"
   },
   "dashboard": {
     "welcome": "مرحبًا بعودتك",

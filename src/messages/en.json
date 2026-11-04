@@ -141,7 +141,8 @@
     "reviews": "Reviews",
     "settings": "Settings",
     "logout": "Log out",
-    "bookPublic": "Book page"
+    "bookPublic": "Book page",
+    "attendance": "Attendance"
   },
   "dashboard": {
     "welcome": "Welcome back",

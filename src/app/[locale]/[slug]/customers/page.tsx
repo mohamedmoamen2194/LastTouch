@@ -5,6 +5,7 @@ import { getThemeTokens } from "@/config/business-types";
 import { listCustomers } from "@/modules/crm/application/customers";
 import { LockedPage } from "@/components/dashboard/locked-page";
 import { getSubscriptionState } from "@/lib/subscriptions";
+import { Permission } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +24,7 @@ export default async function CustomersPage({
   } catch {
     notFound();
   }
+  if (!ctx.permissions.has(Permission["customers.read"])) notFound();
   const theme = getThemeTokens(ctx.theme);
   const sub = await getSubscriptionState(ctx.tenantId, { role: ctx.role });
   if (!sub.hasAccess) {

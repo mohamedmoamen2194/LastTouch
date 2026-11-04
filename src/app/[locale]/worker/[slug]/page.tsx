@@ -51,6 +51,7 @@ export default async function WorkerPage({
       businessName={ctx.businessName}
       logoUrl={tenant?.logoUrl ?? null}
       theme={theme}
+      permissions={[...ctx.permissions]}
     >
       {stateError || !state ? (
         <div className="mx-auto w-full max-w-xl space-y-4 py-10">

@@ -132,8 +132,8 @@ export function ShopView({ slug, locale, currency, theme, products, initialCusto
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
-      <section>
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+      <section className="min-w-0">
         <div className="mb-4">
           <h2 className="text-xl font-bold" style={{ color: theme.primary }}>
             {t("title")}
@@ -147,7 +147,7 @@ export function ShopView({ slug, locale, currency, theme, products, initialCusto
             {t("empty")}
           </p>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {products.map((product) => (
               <article
                 key={product.id}
@@ -178,11 +178,11 @@ export function ShopView({ slug, locale, currency, theme, products, initialCusto
                       {pick(product.description ?? "", product.descriptionAr)}
                     </p>
                   )}
-                  <div className="mt-auto flex items-center justify-between">
-                    <span className="text-sm font-bold" style={{ color: theme.primary }}>
+                  <div className="mt-auto flex items-center justify-between gap-2">
+                    <span className="min-w-0 truncate text-sm font-bold" style={{ color: theme.primary }}>
                       {money(product.sellPrice, locale, currency)}
                     </span>
-                    <div className="flex items-center gap-1">
+                    <div className="flex shrink-0 items-center gap-1">
                       {cart[product.id] ? (
                         <>
                           <button
@@ -220,7 +220,7 @@ export function ShopView({ slug, locale, currency, theme, products, initialCusto
       </section>
 
       <aside
-        className="h-fit rounded-2xl p-4 lg:sticky lg:top-24"
+        className="h-fit min-w-0 rounded-2xl p-4 lg:sticky lg:top-24"
         style={{ backgroundColor: theme.surface, border: `1px solid ${theme.outlineVariant}` }}
       >
         <h2 className="flex items-center gap-2 text-sm font-semibold" style={{ color: theme.tertiary }}>
@@ -234,12 +234,12 @@ export function ShopView({ slug, locale, currency, theme, products, initialCusto
         ) : (
           <ul className="mt-3 space-y-2">
             {lines.map(({ product, quantity }) => (
-              <li key={product.id} className="flex items-center gap-2 text-sm">
+              <li key={product.id} className="flex min-w-0 items-center gap-2 text-sm">
                 <span className="min-w-0 flex-1 truncate" style={{ color: theme.tertiary }}>
                   {quantity}× {pick(product.name, product.nameAr)}
                 </span>
-                <span style={{ color: theme.secondary }}>{money(Number(product.sellPrice) * quantity, locale, currency)}</span>
-                <button type="button" onClick={() => add(product, -quantity)} style={{ color: "#dc2626" }}>
+                <span className="shrink-0" style={{ color: theme.secondary }}>{money(Number(product.sellPrice) * quantity, locale, currency)}</span>
+                <button type="button" className="shrink-0" onClick={() => add(product, -quantity)} style={{ color: "#dc2626" }}>
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
               </li>

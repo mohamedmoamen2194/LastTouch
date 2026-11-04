@@ -43,10 +43,12 @@ export function AppointmentList({
   rows,
   slug,
   theme,
+  canManage = true,
 }: {
   rows: AppointmentCardRow[];
   slug: string;
   theme: ThemeTokens;
+  canManage?: boolean;
 }) {
   const t = useTranslations("dashboard");
   const [openId, setOpenId] = useState<string | null>(null);
@@ -113,7 +115,11 @@ export function AppointmentList({
 
                 {/* Actions */}
                 <div className="md:col-span-4 md:justify-self-end">
-                  <AppointmentActions slug={slug} appointmentId={r.id} status={r.status} />
+                  {canManage ? (
+                    <AppointmentActions slug={slug} appointmentId={r.id} status={r.status} />
+                  ) : (
+                    <span className="text-xs" style={{ color: theme.outlineVariant }}>—</span>
+                  )}
                 </div>
               </div>
 
