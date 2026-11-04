@@ -308,6 +308,12 @@ export function BookingsList({ bookings, emptyHint, rebook = false }: { bookings
                         <dd className="font-semibold text-[#091426]">{b.employeeName}</dd>
                       </div>
                     )}
+                    {b.homeVisit && b.homeAddress && (
+                      <div className="flex items-start justify-between gap-3">
+                        <dt className="shrink-0 text-[#9aa0a6]">{t("homeVisits")}</dt>
+                        <dd className="text-end font-semibold text-[#091426]">{[b.homeAddress, b.homeCity].filter(Boolean).join(", ")}</dd>
+                      </div>
+                    )}
                     <div className="flex justify-between gap-3">
                       <dt className="text-[#9aa0a6]">{t("detailPrice")}</dt>
                       <dd className="font-bold tabular-nums text-[#091426]">

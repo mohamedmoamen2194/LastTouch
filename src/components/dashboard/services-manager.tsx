@@ -14,6 +14,7 @@ export type ManagedService = {
   durationMinutes: number;
   price: string;
   active: boolean;
+  homeVisit: boolean;
 };
 
 type Props = {
@@ -33,6 +34,7 @@ type FormState = {
   description: string;
   descriptionAr: string;
   active: boolean;
+  homeVisit: boolean;
 };
 
 const EMPTY_FORM: FormState = {
@@ -43,6 +45,7 @@ const EMPTY_FORM: FormState = {
   description: "",
   descriptionAr: "",
   active: true,
+  homeVisit: false,
 };
 
 export function ServicesManager({ slug, locale, theme, services: initial, businessName }: Props) {
@@ -76,6 +79,7 @@ export function ServicesManager({ slug, locale, theme, services: initial, busine
       description: s.description ?? "",
       descriptionAr: s.descriptionAr ?? "",
       active: s.active,
+      homeVisit: s.homeVisit ?? false,
     });
     setEditingId(s.id);
     setError(null);
@@ -107,6 +111,7 @@ export function ServicesManager({ slug, locale, theme, services: initial, busine
         description: form.description,
         descriptionAr: form.descriptionAr,
         active: form.active,
+        homeVisit: form.homeVisit,
       });
       const full: ManagedService = {
         id: result.id,
@@ -117,6 +122,7 @@ export function ServicesManager({ slug, locale, theme, services: initial, busine
         description: form.description.trim() || null,
         descriptionAr: form.descriptionAr.trim() || null,
         active: result.active,
+        homeVisit: form.homeVisit,
       };
       if (isEdit) {
         setServices((prev) => prev.map((s) => (s.id === result.id ? { ...s, ...full } : s)));
@@ -189,9 +195,16 @@ export function ServicesManager({ slug, locale, theme, services: initial, busine
             >
               <div className="flex items-start justify-between gap-3">
                 <h3 className="min-w-0 truncate text-base font-semibold md:text-lg" style={{ color: theme.primary }}>{s.name}</h3>
-                <span className="shrink-0 rounded-full px-2.5 py-1 text-xs font-medium" style={{ backgroundColor: theme.surfaceContainerHigh, color: theme.onSurfaceVariant }}>
-                  {s.active ? t("active") : t("inactive")}
-                </span>
+                <div className="flex shrink-0 flex-wrap justify-end gap-1.5">
+                  {s.homeVisit && (
+                    <span className="rounded-full px-2.5 py-1 text-[11px] font-semibold" style={{ backgroundColor: "#e3f2fd", color: "#04519b" }}>
+                      {t("homeVisit")}
+                    </span>
+                  )}
+                  <span className="rounded-full px-2.5 py-1 text-xs font-medium" style={{ backgroundColor: theme.surfaceContainerHigh, color: theme.onSurfaceVariant }}>
+                    {s.active ? t("active") : t("inactive")}
+                  </span>
+                </div>
               </div>
               {s.description && (
                 <p className="mt-2 text-sm leading-relaxed" style={{ color: theme.onSurfaceVariant }}>{s.description}</p>
@@ -327,6 +340,17 @@ export function ServicesManager({ slug, locale, theme, services: initial, busine
                 />
                 {t("active")}
               </label>
+              <label className="flex items-center gap-2 text-sm" style={{ color: theme.onSurfaceVariant }}>
+                <input
+                  type="checkbox"
+                  checked={form.homeVisit}
+                  onChange={(e) => setForm({ ...form, homeVisit: e.target.checked })}
+                  className="h-4 w-4"
+                  style={{ accentColor: theme.primary }}
+                />
+                {t("homeVisit")}
+              </label>
+              <p className="-mt-2 text-[11px]" style={{ color: theme.secondary }}>{t("homeVisitHint")}</p>
               <div className="flex justify-end gap-2 pt-2">
                 <button
                   type="button"

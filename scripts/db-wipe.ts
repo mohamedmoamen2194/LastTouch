@@ -60,6 +60,9 @@ const TABLES = [
   "referrals",
   // New tables from the multi-tenant SaaS feature set
   "attendance_logs",
+  "attendance_settings",
+  "attendance_requests",
+  "attendance_disputes",
   "machines",
   "machine_maintenance",
   "products",

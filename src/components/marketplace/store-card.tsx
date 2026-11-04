@@ -58,6 +58,14 @@ export async function StoreCard({
           >
             {t(`type_${store.businessType}` as never)}
           </span>
+          {store.offersHomeVisit && (
+            <span
+              className="absolute bottom-2 end-2 rounded-full px-2.5 py-0.5 text-[11px] font-bold"
+              style={{ backgroundColor: "#e3f2fd", color: "#04519b" }}
+            >
+              {t("homeVisits")}
+            </span>
+          )}
         </div>
         <div className="flex flex-1 flex-col gap-1 p-3">
           <div className="flex items-start gap-2.5">

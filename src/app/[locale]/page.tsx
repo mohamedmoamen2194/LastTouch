@@ -36,7 +36,7 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   };
 }
 
-type SearchParams = { q?: string; type?: string; city?: string; sort?: string; nearby?: string; lat?: string; lng?: string };
+type SearchParams = { q?: string; type?: string; city?: string; sort?: string; nearby?: string; lat?: string; lng?: string; homeVisit?: string };
 
 export default async function MarketplaceHome({
   params,
@@ -54,6 +54,7 @@ export default async function MarketplaceHome({
   const typeFilter = sp.type ?? "";
   const cityFilter = sp.city ?? "";
   const sort = sp.sort ?? "recommended";
+  const homeVisitOn = sp.homeVisit === "1";
   const nearbyOn = sp.nearby === "1";
   const userLat = sp.lat != null && sp.lat !== "" ? Number(sp.lat) : null;
   const userLng = sp.lng != null && sp.lng !== "" ? Number(sp.lng) : null;
@@ -81,6 +82,7 @@ export default async function MarketplaceHome({
   const filtered = allStores.filter((s) => {
     if (typeFilter && s.businessType !== typeFilter) return false;
     if (cityFilter && s.city !== cityFilter) return false;
+    if (homeVisitOn && !s.offersHomeVisit) return false;
     if (q && !`${s.businessName} ${s.city ?? ""}`.toLowerCase().includes(q)) return false;
     return true;
   });
@@ -139,12 +141,14 @@ export default async function MarketplaceHome({
       nearby: sp.nearby ?? "",
       lat: sp.lat ?? "",
       lng: sp.lng ?? "",
+      homeVisit: homeVisitOn ? "1" : "",
       ...over,
     };
     if (next.q) p.set("q", next.q);
     if (next.type) p.set("type", next.type);
     if (next.city) p.set("city", next.city);
     if (next.sort && next.sort !== "recommended") p.set("sort", next.sort);
+    if (next.homeVisit) p.set("homeVisit", next.homeVisit);
     if (next.nearby) {
       p.set("nearby", next.nearby);
       if (next.lat) p.set("lat", next.lat);
@@ -191,6 +195,7 @@ export default async function MarketplaceHome({
               nearby: sp.nearby ?? undefined,
               lat: sp.lat ?? undefined,
               lng: sp.lng ?? undefined,
+              homeVisit: homeVisitOn ? "1" : undefined,
             }}
           />
         </section>
@@ -226,6 +231,17 @@ export default async function MarketplaceHome({
               {t(`type_${b}` as never)}
             </Link>
           ))}
+          <Link
+            href={hrefWith({ homeVisit: homeVisitOn ? "" : "1" })}
+            scroll={false}
+            aria-pressed={homeVisitOn}
+            className={cn(
+              "shrink-0 rounded-full border px-4 py-2 text-xs font-semibold",
+              homeVisitOn ? "mp-solid border-transparent text-white" : "border-[#c5c6cd]/60 bg-white text-[#45474c]",
+            )}
+          >
+            {t("homeVisitsFilter")}
+          </Link>
         </div>
 
         {/* City + sort */}
@@ -233,7 +249,7 @@ export default async function MarketplaceHome({
           <Suspense fallback={null}>
             <FilterSelects cities={cities} />
           </Suspense>
-          {(q || typeFilter || cityFilter) && (
+          {(q || typeFilter || cityFilter || homeVisitOn) && (
             <Link href="/" scroll={false} className="text-xs font-semibold text-[#45474c] underline">
               {t("allTypes")} ✕
             </Link>

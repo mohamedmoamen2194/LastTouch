@@ -7,7 +7,7 @@ export type TenantHome = { slug: string; role: Role };
 /** Landing path for a member, based on their role in the tenant. */
 export function tenantHomePath(locale: string, slug: string, role: Role | string): string {
   if (role === "cashier") return `/${locale}/desk/${slug}`;
-  if (role === "employee") return `/${locale}/worker/${slug}`;
+  if (role === "employee") return `/${locale}/${slug}/attendance`;
   if (role === "customer") return `/${locale}`;
   return `/${locale}/${slug}/dashboard`;
 }

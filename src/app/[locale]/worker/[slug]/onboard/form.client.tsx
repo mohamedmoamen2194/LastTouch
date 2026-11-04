@@ -53,7 +53,7 @@ export function WorkerOnboardForm({
       if (!json.success) throw new Error(json.message ?? "Could not create account");
 
       const signInUrl = `/${locale}/auth/sign-in?redirect_url=${encodeURIComponent(
-        `/${locale}/worker/${slug}`
+        `/${locale}/${slug}/attendance`
       )}&email_hint=${encodeURIComponent(payload.email)}`;
       router.replace(signInUrl);
       router.refresh();

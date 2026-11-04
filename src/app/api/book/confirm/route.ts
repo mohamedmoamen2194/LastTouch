@@ -23,6 +23,10 @@ const bodySchema = z.object({
     .optional(),
   appointmentDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   startTime: z.string().regex(/^\d{2}:\d{2}$/),
+  homeAddress: z.string().max(500).optional().or(z.literal("")),
+  homeCity: z.string().max(120).optional().or(z.literal("")),
+  homeLatitude: z.number().min(-90).max(90).optional(),
+  homeLongitude: z.number().min(-180).max(180).optional(),
   customer: z.object({
     firstName: z.string().min(1).max(120),
     phone: z.string().min(6).max(30),
@@ -75,6 +79,10 @@ export async function POST(req: Request) {
       packageId: input.data.packageId,
       appointmentDate: input.data.appointmentDate,
       startTime: input.data.startTime,
+      homeAddress: input.data.homeAddress || undefined,
+      homeCity: input.data.homeCity || undefined,
+      homeLatitude: input.data.homeLatitude,
+      homeLongitude: input.data.homeLongitude,
       customer: {
         firstName: input.data.customer.firstName,
         phone: input.data.customer.phone,

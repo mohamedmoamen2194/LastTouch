@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { ChevronDown, Clock, User } from "lucide-react";
+import { ChevronDown, Clock, Home, MapPin, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ThemeTokens } from "@/config/business-types";
 import { AppointmentActions } from "./appointment-actions";
@@ -19,7 +19,14 @@ export type AppointmentCardRow = {
   employeeFirstName: string | null;
   employeeLastName: string | null;
   customerId: string | null;
+  customerFirstName?: string | null;
+  customerPhone?: string | null;
   durationMinutes: number | null;
+  homeVisit?: boolean;
+  homeAddress?: string | null;
+  homeCity?: string | null;
+  homeLatitude?: string | null;
+  homeLongitude?: string | null;
   services: {
     serviceId: string | null;
     name: string;
@@ -52,9 +59,49 @@ export function AppointmentList({
 }) {
   const t = useTranslations("dashboard");
   const [openId, setOpenId] = useState<string | null>(null);
+  const [view, setView] = useState<"all" | "home" | "store">("all");
+
+  const counts = {
+    all: rows.length,
+    home: rows.filter((r) => r.homeVisit).length,
+    store: rows.filter((r) => !r.homeVisit).length,
+  };
+  const visibleRows =
+    view === "home" ? rows.filter((r) => r.homeVisit) : view === "store" ? rows.filter((r) => !r.homeVisit) : rows;
+
+  const tabs: { key: "all" | "home" | "store"; label: string; count: number }[] = [
+    { key: "all", label: t("all"), count: counts.all },
+    { key: "home", label: t("homeVisits"), count: counts.home },
+    { key: "store", label: t("inStore"), count: counts.store },
+  ];
 
   return (
     <div className="flex flex-col gap-3 md:rounded-lg md:border" style={{ borderColor: theme.outlineVariant, backgroundColor: theme.surfaceContainerLowest }}>
+      {counts.home > 0 && (
+        <div className="flex gap-1.5 overflow-x-auto p-2 pb-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {tabs.map((tab) => {
+            const active = view === tab.key;
+            return (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => setView(tab.key)}
+                aria-pressed={active}
+                className="flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-semibold"
+                style={{
+                  borderColor: active ? theme.primary : theme.outlineVariant,
+                  backgroundColor: active ? theme.primary : theme.surfaceContainerLowest,
+                  color: active ? theme.onPrimary : theme.onSurfaceVariant,
+                }}
+              >
+                {tab.key === "home" && <Home className="h-3.5 w-3.5" />}
+                {tab.label}
+                <span className="tabular-nums opacity-75">{tab.count}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
       {/* Header row — hidden on small screens, shown md+ */}
       <div
         className="hidden grid-cols-12 items-center gap-3 border-b px-4 py-3 text-xs font-semibold uppercase tracking-wide md:grid"
@@ -68,7 +115,7 @@ export function AppointmentList({
 
       {/* Rows */}
       <div className="divide-y" style={{ borderColor: theme.outlineVariant }}>
-        {rows.map((r) => {
+        {visibleRows.map((r) => {
           const open = openId === r.id;
           return (
             <div key={r.id}>
@@ -105,7 +152,15 @@ export function AppointmentList({
 
                 {/* Status */}
                 <div className="flex items-center justify-between gap-3 md:contents">
-                  <StatusBadge status={r.status} theme={theme} />
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <StatusBadge status={r.status} theme={theme} />
+                    {r.homeVisit && (
+                      <span className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-semibold" style={{ backgroundColor: "#e3f2fd", color: "#04519b" }}>
+                        <Home className="h-3 w-3" />
+                        {t("homeVisit")}
+                      </span>
+                    )}
+                  </div>
 
                   {/* Price */}
                   <div className="whitespace-nowrap text-sm font-semibold tabular-nums md:col-span-2 md:w-auto md:text-end" style={{ color: theme.primary }}>
@@ -182,6 +237,37 @@ export function AppointmentList({
                           theme={theme}
                         />
                         <DetailRow label={t("appointmentSource")} value={r.source} theme={theme} />
+                        {r.customerFirstName && (
+                          <DetailRow label={t("customer")} value={r.customerFirstName} theme={theme} />
+                        )}
+                        {r.customerPhone && (
+                          <DetailRow label={t("phone")} value={r.customerPhone} theme={theme} />
+                        )}
+                        {r.homeVisit && r.homeAddress && (
+                          <div className="pt-2">
+                            <div className="flex items-start gap-2">
+                              <MapPin className="mt-0.5 h-4 w-4 shrink-0" style={{ color: theme.secondary }} />
+                              <div className="min-w-0">
+                                <p className="text-xs font-medium" style={{ color: theme.onSurfaceVariant }}>
+                                  {r.homeAddress}{r.homeCity ? `, ${r.homeCity}` : ""}
+                                </p>
+                                <a
+                                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                                    r.homeLatitude && r.homeLongitude
+                                      ? `${Number(r.homeLatitude)},${Number(r.homeLongitude)}`
+                                      : [r.homeAddress, r.homeCity].filter(Boolean).join(", ")
+                                  )}`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="mt-1 inline-block text-xs font-semibold underline"
+                                  style={{ color: theme.primary }}
+                                >
+                                  {t("getDirections")}
+                                </a>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -190,6 +276,11 @@ export function AppointmentList({
             </div>
           );
         })}
+        {visibleRows.length === 0 && (
+          <p className="rounded-none border-dashed p-8 text-center text-sm md:rounded-lg md:border" style={{ borderColor: theme.outlineVariant, color: theme.onSurfaceVariant }}>
+            {t("noData")}
+          </p>
+        )}
       </div>
     </div>
   );

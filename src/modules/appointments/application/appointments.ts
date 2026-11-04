@@ -1,6 +1,6 @@
 import { and, eq, gte, inArray, lte } from "drizzle-orm";
 import { db } from "@/db";
-import { appointments, appointmentEmployees, appointmentServices, employees, type AppointmentStatus } from "@/db/schema";
+import { appointments, appointmentEmployees, appointmentServices, customers, employees, type AppointmentStatus } from "@/db/schema";
 import { ConflictError, NotFoundError, ValidationAppError } from "@/lib/errors";
 import { completeAppointment as completeAppointmentWithPoints } from "@/lib/marketplace/client";
 import { assertPermission, type TenantContext } from "@/lib/tenant/context";
@@ -40,7 +40,14 @@ export type ListedAppointment = {
   employeeFirstName: string | null;
   employeeLastName: string | null;
   customerId: string | null;
+  customerFirstName: string | null;
+  customerPhone: string | null;
   durationMinutes: number | null;
+  homeVisit: boolean;
+  homeAddress: string | null;
+  homeCity: string | null;
+  homeLatitude: string | null;
+  homeLongitude: string | null;
   services: AppointmentServiceRow[];
 };
 
@@ -102,10 +109,18 @@ export async function listAppointments(
       employeeFirstName: employees.firstName,
       employeeLastName: employees.lastName,
       customerId: appointments.customerId,
+      customerFirstName: customers.firstName,
+      customerPhone: customers.phone,
       durationMinutes: appointments.durationMinutes,
+      homeVisit: appointments.homeVisit,
+      homeAddress: appointments.homeAddress,
+      homeCity: appointments.homeCity,
+      homeLatitude: appointments.homeLatitude,
+      homeLongitude: appointments.homeLongitude,
     })
     .from(appointments)
     .leftJoin(employees, eq(employees.id, appointments.employeeId))
+    .leftJoin(customers, eq(customers.id, appointments.customerId))
     .where(and(...conditions))
     .orderBy(appointments.appointmentDate)
     .limit(args.limit ?? 50)

@@ -90,6 +90,9 @@ export type ClientBooking = {
   price: number;
   services: string[];
   employeeName: string | null;
+  homeVisit: boolean;
+  homeAddress: string | null;
+  homeCity: string | null;
   canCancel: boolean;
 };
 
@@ -147,6 +150,9 @@ export async function getClientBookings(
       employeeName: employees.displayName,
       employeeFirst: employees.firstName,
       employeeLast: employees.lastName,
+      homeVisit: appointments.homeVisit,
+      homeAddress: appointments.homeAddress,
+      homeCity: appointments.homeCity,
     })
     .from(appointments)
     .innerJoin(tenants, eq(tenants.id, appointments.tenantId))
@@ -184,6 +190,9 @@ export async function getClientBookings(
     services: servicesByAppt.get(r.id) ?? [],
     employeeName:
       r.employeeName ?? (r.employeeFirst ? `${r.employeeFirst} ${r.employeeLast ?? ""}`.trim() : null),
+    homeVisit: r.homeVisit ?? false,
+    homeAddress: r.homeAddress,
+    homeCity: r.homeCity,
     canCancel:
       UPCOMING_STATUSES.includes(r.status) && new Date(r.appointmentDate) >= dayStart,
   }));

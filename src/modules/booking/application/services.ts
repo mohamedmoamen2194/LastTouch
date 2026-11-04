@@ -13,6 +13,8 @@ export type ServiceInput = {
   price: number | string;
   durationMinutes: number;
   active?: boolean;
+  /** When true the service is delivered at the client's home. */
+  homeVisit?: boolean;
 };
 
 /** Create a new service for the tenant. */
@@ -30,6 +32,7 @@ export async function createService(ctx: TenantContext, input: ServiceInput) {
       price: String(input.price),
       durationMinutes: input.durationMinutes,
       active: input.active ?? true,
+      homeVisit: input.homeVisit ?? false,
     })
     .returning();
 
@@ -57,6 +60,7 @@ export async function updateService(ctx: TenantContext, id: string, input: Servi
       price: String(input.price),
       durationMinutes: input.durationMinutes,
       active: input.active ?? existing.active,
+      homeVisit: input.homeVisit ?? existing.homeVisit ?? false,
       updatedAt: new Date(),
     })
     .where(eq(services.id, id))
@@ -113,5 +117,6 @@ export function validateServiceInput(input: unknown): ServiceInput {
     price,
     durationMinutes,
     active: typeof v.active === "boolean" ? v.active : true,
+    homeVisit: typeof (v as { homeVisit?: unknown }).homeVisit === "boolean" ? (v as { homeVisit: boolean }).homeVisit : undefined,
   };
 }

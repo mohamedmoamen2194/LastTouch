@@ -10,6 +10,7 @@ import {
   memberships,
   reviews,
   staffInvites,
+  services,
   tenantStaffRoles,
   workingHours,
 } from "@/db/schema";
@@ -62,6 +63,8 @@ export type EmployeeInput = {
   isGeneral?: boolean;
   isBookable?: boolean;
   active?: boolean;
+  /** Whether this worker may be booked for home-visit services. */
+  homeVisit?: boolean;
   serviceIds?: string[];
   workingHours?: WorkingDay[];
   /** Panel access requested by the owner. */
@@ -118,6 +121,17 @@ async function validateServiceIds(ctx: TenantContext, serviceIds?: string[]): Pr
   const catalog = await listTenantServicesForAdmin(ctx.tenantId);
   const owned = new Set(catalog.map((s) => s.id));
   return [...new Set(serviceIds)].filter((id) => owned.has(id));
+}
+
+/** True when any of the given services is a home-visit service. */
+async function hasHomeVisitService(ctx: TenantContext, serviceIds: string[]): Promise<boolean> {
+  if (serviceIds.length === 0) return false;
+  const rows = await db
+    .select({ id: services.id })
+    .from(services)
+    .where(and(eq(services.tenantId, ctx.tenantId), inArray(services.id, serviceIds), eq(services.homeVisit, true)))
+    .limit(1);
+  return rows.length > 0;
 }
 
 /** Built-in job titles for the business type + owner-added ones. */
@@ -214,6 +228,9 @@ export async function createEmployee(ctx: TenantContext, input: EmployeeInput): 
   const isBookable = input.isBookable ?? (accessRole ? accessRole === "employee" : true);
 
   const displayName = buildDisplayName(input.firstName, input.lastName);
+  const serviceIds = await validateServiceIds(ctx, input.serviceIds);
+  // Assigning any home-visit service makes the worker home-visit capable.
+  const homeVisit = input.homeVisit ?? (await hasHomeVisitService(ctx, serviceIds));
   const [created] = await db
     .insert(employees)
     .values({
@@ -226,6 +243,7 @@ export async function createEmployee(ctx: TenantContext, input: EmployeeInput): 
       phone: input.phone?.trim() || null,
       salary: input.salary != null && input.salary !== "" ? String(input.salary) : null,
       isGeneral: input.isGeneral ?? false,
+      homeVisit,
       isBookable,
       accessRole,
       active: input.active ?? true,
@@ -234,7 +252,6 @@ export async function createEmployee(ctx: TenantContext, input: EmployeeInput): 
 
   await maybeSaveCustomRole(ctx.businessType, ctx.tenantId, input, isBookable, accessRole);
 
-  const serviceIds = await validateServiceIds(ctx, input.serviceIds);
   if (serviceIds.length > 0) {
     await db.insert(employeeServices).values(serviceIds.map((serviceId) => ({ employeeId: created.id, serviceId })));
   }
@@ -289,6 +306,17 @@ export async function updateEmployee(
     : null;
   const isBookable = input.isBookable ?? existing.isBookable;
 
+  let nextServiceIds: string[] | null = null;
+  if (input.serviceIds) {
+    nextServiceIds = await validateServiceIds(ctx, input.serviceIds);
+  }
+  // Explicit flag wins; otherwise derive from the requested service links.
+  const homeVisit =
+    input.homeVisit ??
+    (nextServiceIds != null
+      ? await hasHomeVisitService(ctx, nextServiceIds)
+      : existing.homeVisit ?? false);
+
   const [updated] = await db
     .update(employees)
     .set({
@@ -300,6 +328,7 @@ export async function updateEmployee(
       phone: input.phone?.trim() || null,
       salary: input.salary != null && input.salary !== "" ? String(input.salary) : null,
       isGeneral: input.isGeneral ?? existing.isGeneral,
+      homeVisit,
       isBookable,
       accessRole,
       active: willBeActive,
@@ -310,11 +339,10 @@ export async function updateEmployee(
 
   await maybeSaveCustomRole(ctx.businessType, ctx.tenantId, input, isBookable, accessRole);
 
-  if (input.serviceIds) {
-    const serviceIds = await validateServiceIds(ctx, input.serviceIds);
+  if (nextServiceIds != null) {
     await db.delete(employeeServices).where(eq(employeeServices.employeeId, id));
-    if (serviceIds.length > 0) {
-      await db.insert(employeeServices).values(serviceIds.map((serviceId) => ({ employeeId: id, serviceId })));
+    if (nextServiceIds.length > 0) {
+      await db.insert(employeeServices).values(nextServiceIds.map((serviceId) => ({ employeeId: id, serviceId })));
     }
   }
 
@@ -467,6 +495,7 @@ export function validateEmployeeInput(input: unknown): EmployeeInput {
     phone: phone || null,
     salary,
     isGeneral: typeof v.isGeneral === "boolean" ? v.isGeneral : false,
+    homeVisit: typeof v.homeVisit === "boolean" ? v.homeVisit : undefined,
     isBookable: typeof v.isBookable === "boolean" ? v.isBookable : undefined,
     active: typeof v.active === "boolean" ? v.active : true,
     panelAccess: typeof v.panelAccess === "boolean" ? v.panelAccess : undefined,

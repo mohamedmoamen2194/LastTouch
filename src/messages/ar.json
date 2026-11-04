@@ -122,7 +122,20 @@
     "specificWorkers": "متخصصون لكل خدمة",
     "noGeneralWorkers": "لا يوجد أعضاء عامون بعد — يمكنك تعيين متخصص لكل خدمة بدلًا من ذلك.",
     "storeLocation": "موقع المتجر",
-    "getDirections": "الاتجاهات"
+    "getDirections": "الاتجاهات",
+    "homeVisit": "زيارة منزلية",
+    "homeVisits": "زيارات منزلية",
+    "atYourHome": "في منزلك",
+    "homeVisitsHint": "نأتيك إلى منزلك — اختر خدمة زيارة منزلية وأضف عنوانك عند التأكيد.",
+    "homeAddressTitle": "عنوان منزلك",
+    "homeAddressHint": "مطلوب للزيارات المنزلية. يصل الأخصائي إلى هذا العنوان.",
+    "homeAddressPlaceholder": "الشارع، المبنى، رقم الشقة…",
+    "homeCityPlaceholder": "المدينة / المحافظة (اختياري)",
+    "useMyLocation": "استخدام موقعي الحالي",
+    "locationCaptured": "تم التقاط الموقع ✓",
+    "locationDenied": "تعذر الحصول على موقعك. اكتب عنوانك بدلًا من ذلك.",
+    "locationUnsupported": "الموقع غير مدعوم على هذا الجهاز.",
+    "locating": "جاري تحديد الموقع…"
   },
   "nav": {
     "dashboard": "لوحة التحكم",
@@ -178,7 +191,15 @@
     "periodMonth": "شهر",
     "periodThreeMonths": "3 أشهر",
     "periodSixMonths": "6 أشهر",
-    "periodYear": "سنة"
+    "periodYear": "سنة",
+    "homeVisits": "زيارات منزلية",
+    "homeVisit": "زيارة منزلية",
+    "all": "الكل",
+    "inStore": "داخل المتجر",
+    "homeAddress": "العنوان المنزلي",
+    "getDirections": "الاتجاهات",
+    "customer": "العميل",
+    "phone": "الهاتف"
   },
   "auth": {
     "signIn": "تسجيل الدخول",
@@ -214,7 +235,9 @@
     "active": "نشطة",
     "inactive": "غير نشطة",
     "saved": "تم حفظ الخدمة",
-    "deleted": "تم حذف الخدمة"
+    "deleted": "تم حذف الخدمة",
+    "homeVisit": "زيارة منزلية",
+    "homeVisitHint": "تُقدَّم في منزل العميل — يجب على العملاء إضافة عنوانهم عند الحجز."
   },
   "packages": {
     "title": "الباقات",
@@ -364,7 +387,10 @@
     "rating": "التقييم",
     "notesLabel": "ملاحظات",
     "noNotes": "لا توجد ملاحظات",
-    "emptyState": "لا توجد بيانات بعد"
+    "emptyState": "لا توجد بيانات بعد",
+    "homeVisits": "زيارات منزلية",
+    "homeVisit": "زيارة منزلية",
+    "homeVisitsHint": "يمكن حجز هذا العضو للخدمات المنزلية. عيّن الخدمات المنزلية أدناه."
   },
   "settings": {
     "title": "الإعدادات",
@@ -644,7 +670,9 @@
     "aboutPoint3Body": "حجوزاتك وسجلك ومحلاتك المفضلة معك أينما ذهبت.",
     "partnerCtaTitle": "عندك محل تجميل أو حلاقة؟",
     "partnerCtaBody": "انضم إلى LastTouch كمحل شريك: الحجز أونلاين وملفات العملاء وإدارة الفريق والتحليلات — كلها في مكان واحد سيحبه عملاؤك.",
-    "partnerCtaButton": "كن شريكًا"
+    "partnerCtaButton": "كن شريكًا",
+    "homeVisits": "زيارات منزلية",
+    "homeVisitsFilter": "الزيارات المنزلية فقط"
   },
   "client": {
     "bookingsTitle": "حجوزاتي",

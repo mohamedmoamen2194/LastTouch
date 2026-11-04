@@ -30,7 +30,7 @@ const ROLE_LABELS: Record<string, string> = {
 
 function homePath(locale: string, slug: string, role: string) {
   if (role === "cashier") return `/${locale}/desk/${slug}`;
-  if (role === "employee") return `/${locale}/worker/${slug}`;
+  if (role === "employee") return `/${locale}/${slug}/attendance`;
   return `/${locale}/${slug}/dashboard`;
 }
 

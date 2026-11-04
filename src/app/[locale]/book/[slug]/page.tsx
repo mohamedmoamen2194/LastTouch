@@ -172,9 +172,9 @@ export default async function BookingPage({
               >
                 {bt("trackAppointment")}
               </Link>
-              <LangSwitcher theme={theme} />
             </div>
-            <div className="flex shrink-0 items-center">
+            <div className="flex shrink-0 items-center gap-2">
+              <LangSwitcher theme={theme} />
               <a
                 href="#booking"
                 className="whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-semibold sm:px-5 sm:py-2.5 sm:text-sm"
@@ -251,6 +251,7 @@ export default async function BookingPage({
                     description: s.descriptionAr && locale === "ar" ? s.descriptionAr : s.description,
                     durationMinutes: s.durationMinutes,
                     price: String(s.price),
+                    homeVisit: s.homeVisit,
                   }))}
                   packages={packages.map((p) => ({
                     id: p.id,
@@ -267,6 +268,7 @@ export default async function BookingPage({
                     lastName: e.lastName,
                     yearsExperience: e.yearsExperience,
                     isGeneral: e.isGeneral,
+                    homeVisit: e.homeVisit,
                     serviceIds: e.serviceIds,
                   }))}
                   initialCustomer={

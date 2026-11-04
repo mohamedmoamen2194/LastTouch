@@ -61,6 +61,7 @@ export default async function EmployeesPage({
           bio: e.bio,
           rating: e.rating ? String(e.rating) : null,
           isGeneral: e.isGeneral,
+          homeVisit: e.homeVisit,
           isBookable: e.isBookable,
           active: e.active,
           userId: e.userId,
@@ -73,7 +74,7 @@ export default async function EmployeesPage({
           workingHours: e.workingHours,
         };
       })}
-      services={services.map((s) => ({ id: s.id, name: s.name }))}
+      services={services.map((s) => ({ id: s.id, name: s.name, homeVisit: s.homeVisit }))}
     />
   );
 }

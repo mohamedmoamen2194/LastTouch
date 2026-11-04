@@ -33,6 +33,7 @@ export type ManagedEmployee = {
   bio: string | null;
   rating: string | null;
   isGeneral: boolean;
+  homeVisit: boolean;
   isBookable: boolean;
   active: boolean;
   userId: string | null;
@@ -48,6 +49,7 @@ export type ManagedEmployee = {
 export type ManagedServiceRef = {
   id: string;
   name: string;
+  homeVisit: boolean;
 };
 
 type Props = {
@@ -77,6 +79,7 @@ type FormState = {
   salary: string;
   isGeneral: boolean;
   isBookable: boolean;
+  homeVisit: boolean;
   active: boolean;
   panelAccess: boolean;
   accessRole: AccessRole;
@@ -117,6 +120,9 @@ export const PERMISSION_GROUPS: { key: string; permissions: { key: string; label
     key: "other",
     permissions: [
       { key: "attendance.use", label: "Arrive / leave" },
+      { key: "attendance.read", label: "View attendance history" },
+      { key: "attendance.request", label: "Request day off / late arrival" },
+      { key: "attendance.manage", label: "Manage all attendance" },
       { key: "services.read", label: "View services" },
       { key: "reviews.read", label: "View ratings" },
     ],
@@ -209,6 +215,7 @@ const EMPTY_FORM: FormState = {
   salary: "",
   isGeneral: false,
   isBookable: true,
+  homeVisit: false,
   active: true,
   panelAccess: false,
   accessRole: "employee",
@@ -315,6 +322,7 @@ export function EmployeesManager({ slug, locale, theme, employees: initial, serv
       salary: e.salary ?? "",
       isGeneral: e.isGeneral,
       isBookable: e.isBookable,
+      homeVisit: e.homeVisit ?? false,
       active: e.active,
       panelAccess: e.panelAccess,
       accessRole,
@@ -369,6 +377,7 @@ export function EmployeesManager({ slug, locale, theme, employees: initial, serv
         phone: form.phone,
         salary: form.salary,
         isGeneral: form.isGeneral,
+        homeVisit: form.homeVisit,
         isBookable: form.isBookable,
         active: form.active,
         panelAccess: form.panelAccess,
@@ -390,6 +399,7 @@ export function EmployeesManager({ slug, locale, theme, employees: initial, serv
         bio: null,
         rating: null,
         isGeneral: form.isGeneral,
+        homeVisit: form.homeVisit,
         isBookable: form.isBookable,
         active: form.active,
         userId: null,
@@ -562,6 +572,15 @@ export function EmployeesManager({ slug, locale, theme, employees: initial, serv
                   >
                     <Star className="h-3 w-3" />
                     {t("generalWorker")}
+                  </span>
+                )}
+                {e.homeVisit && (
+                  <span
+                    className="mt-2 inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold"
+                    style={{ backgroundColor: "#e3f2fd", color: "#04519b" }}
+                  >
+                    <CalendarDays className="h-3 w-3" />
+                    {t("homeVisits")}
                   </span>
                 )}
 
@@ -773,6 +792,20 @@ export function EmployeesManager({ slug, locale, theme, employees: initial, serv
                 <p className="mb-2 mt-1.5 text-xs" style={{ color: theme.onSurfaceVariant }}>
                   {t("generalHint")}
                 </p>
+                <label
+                  className="mb-2 flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2.5 text-sm font-medium"
+                  style={{ borderColor: form.homeVisit ? theme.primary : theme.outlineVariant, color: theme.onSurfaceVariant }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={form.homeVisit}
+                    onChange={(e) => setForm((f) => ({ ...f, homeVisit: e.target.checked }))}
+                    className="h-4 w-4 shrink-0"
+                    style={{ accentColor: theme.primary }}
+                  />
+                  <span>{t("homeVisits")}</span>
+                </label>
+                <p className="mb-2 text-xs" style={{ color: theme.secondary }}>{t("homeVisitsHint")}</p>
                 <label className="mb-1 block text-xs font-medium" style={{ color: theme.onSurfaceVariant }}>{t("services")}</label>
                 {services.length === 0 ? (
                   <p className="text-xs" style={{ color: theme.onSurfaceVariant }}>{t("noServicesHint")}</p>
@@ -787,7 +820,12 @@ export function EmployeesManager({ slug, locale, theme, employees: initial, serv
                           className="h-4 w-4"
                           style={{ accentColor: theme.primary }}
                         />
-                        <span className="truncate">{s.name}</span>
+                        <span className="min-w-0 flex-1 truncate">{s.name}</span>
+                        {s.homeVisit && (
+                          <span className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ backgroundColor: "#e3f2fd", color: "#04519b" }}>
+                            {t("homeVisit")}
+                          </span>
+                        )}
                       </label>
                     ))}
                   </div>

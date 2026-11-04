@@ -122,7 +122,20 @@
     "specificWorkers": "Specialists per service",
     "noGeneralWorkers": "No general team members yet — you can assign a specialist to each service instead.",
     "storeLocation": "Store location",
-    "getDirections": "Get directions"
+    "getDirections": "Get directions",
+    "homeVisit": "Home visit",
+    "homeVisits": "Home visits",
+    "atYourHome": "at your home",
+    "homeVisitsHint": "We come to you — pick a home-visit service and add your address when you confirm.",
+    "homeAddressTitle": "Your home address",
+    "homeAddressHint": "Required for home visits. Your specialist arrives at this address.",
+    "homeAddressPlaceholder": "Street, building, flat number…",
+    "homeCityPlaceholder": "City / governorate (optional)",
+    "useMyLocation": "Use my current location",
+    "locationCaptured": "Location captured ✓",
+    "locationDenied": "We couldn't get your location. Type your address instead.",
+    "locationUnsupported": "Location is not supported on this device.",
+    "locating": "Locating…"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -178,7 +191,15 @@
     "periodMonth": "Month",
     "periodThreeMonths": "3M",
     "periodSixMonths": "6M",
-    "periodYear": "Year"
+    "periodYear": "Year",
+    "homeVisits": "Home visits",
+    "homeVisit": "Home visit",
+    "all": "All",
+    "inStore": "In-store",
+    "homeAddress": "Home address",
+    "getDirections": "Get directions",
+    "customer": "Customer",
+    "phone": "Phone"
   },
   "auth": {
     "signIn": "Sign in",
@@ -214,7 +235,9 @@
     "active": "Active",
     "inactive": "Inactive",
     "saved": "Service saved",
-    "deleted": "Service deleted"
+    "deleted": "Service deleted",
+    "homeVisit": "Home visit",
+    "homeVisitHint": "Delivered at the client's home — clients must add their address when booking."
   },
   "packages": {
     "title": "Packages",
@@ -364,7 +387,10 @@
     "rating": "Rating",
     "notesLabel": "Notes",
     "noNotes": "No notes added",
-    "emptyState": "No data yet"
+    "emptyState": "No data yet",
+    "homeVisits": "Home visits",
+    "homeVisit": "Home visit",
+    "homeVisitsHint": "This worker can be booked for home-visit services. Assign home-visit services below."
   },
   "settings": {
     "title": "Settings",
@@ -644,7 +670,9 @@
     "aboutPoint3Body": "Bookings, history and favorites follow you everywhere.",
     "partnerCtaTitle": "Own a beauty or grooming business?",
     "partnerCtaBody": "Join LastTouch as a partner store: online booking, customer profiles, team management and analytics — all in one place your clients will love.",
-    "partnerCtaButton": "Become a partner"
+    "partnerCtaButton": "Become a partner",
+    "homeVisits": "Home visits",
+    "homeVisitsFilter": "Home visits only"
   },
   "client": {
     "bookingsTitle": "My bookings",

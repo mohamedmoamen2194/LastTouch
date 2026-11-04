@@ -27,7 +27,7 @@ export default async function DeskLayout({
     notFound();
   }
 
-  if (ctx.role === "employee") redirect(`/${locale}/worker/${slug}`);
+  if (ctx.role === "employee") redirect(`/${locale}/${slug}/attendance`);
 
   const theme = getThemeTokens(ctx.theme);
   const [tenant] = await db

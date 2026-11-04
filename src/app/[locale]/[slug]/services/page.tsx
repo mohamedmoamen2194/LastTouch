@@ -70,6 +70,7 @@ export default async function ServicesPage({
           durationMinutes: s.durationMinutes,
           price: String(s.price),
           active: s.active,
+          homeVisit: s.homeVisit,
         }))}
       />
     </div>

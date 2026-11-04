@@ -250,6 +250,8 @@ export const employees = pgTable(
     hireDate: timestamp("hire_date", { withTimezone: true }),
     rating: numeric("rating", { precision: 3, scale: 2 }).default("0"),
     isGeneral: boolean("is_general").default(false).notNull(),
+    /** When true, this worker can be booked for home-visit services. */
+    homeVisit: boolean("home_visit").default(false).notNull(),
     /** Cashiers / receptionists / managers are staff but not bookable. */
     isBookable: boolean("is_bookable").default(true).notNull(),
     /** Panel access role requested by the owner (actual grant lives on memberships). */
@@ -418,6 +420,8 @@ export const services = pgTable(
     bufferBefore: integer("buffer_before").default(0).notNull(),
     bufferAfter: integer("buffer_after").default(0).notNull(),
     price: numeric("price", { precision: 12, scale: 2 }).default("0").notNull(),
+    /** When true, this service is delivered at the client's home. */
+    homeVisit: boolean("home_visit").default(false).notNull(),
     active: boolean("active").default(true).notNull(),
     sortOrder: integer("sort_order").default(0).notNull(),
     createdAt,
@@ -428,6 +432,7 @@ export const services = pgTable(
     index("services_tenant_idx").on(t.tenantId),
     index("services_tenant_cat_idx").on(t.tenantId, t.categoryId),
     index("services_tenant_active_idx").on(t.tenantId, t.active),
+    index("services_tenant_homevisit_idx").on(t.tenantId, t.homeVisit),
   ]
 );
 
@@ -517,6 +522,12 @@ export const appointments = pgTable(
     source: varchar("source", { length: 20 }).$type<AppointmentSource>().default("website").notNull(),
     /** Staff account that created a phone / walk-in booking, if any. */
     createdByUserId: text("created_by_user_id"),
+    /** Home-visit bookings carry the client's address instead of a branch location. */
+    homeVisit: boolean("home_visit").default(false).notNull(),
+    homeAddress: text("home_address"),
+    homeCity: text("home_city"),
+    homeLatitude: numeric("home_latitude", { precision: 10, scale: 7 }),
+    homeLongitude: numeric("home_longitude", { precision: 10, scale: 7 }),
     cancelledBy: text("cancelled_by"),
     cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
     cancelReason: text("cancel_reason"),
@@ -536,6 +547,7 @@ export const appointments = pgTable(
     index("appointments_tenant_customer_idx").on(t.tenantId, t.customerId),
     index("appointments_client_idx").on(t.clientUserId),
     index("appointments_client_date_status_idx").on(t.clientUserId, t.appointmentDate, t.status),
+    index("appointments_tenant_homevisit_idx").on(t.tenantId, t.homeVisit),
   ]
 );
 
@@ -1136,6 +1148,106 @@ export const attendanceLogs = pgTable(
   (t) => [
     index("attendance_employee_created_idx").on(t.employeeId, t.createdAt),
     index("attendance_tenant_created_idx").on(t.tenantId, t.createdAt),
+  ]
+);
+
+/**
+ * Per-tenant attendance policy: early check-in window, grace period,
+ * no-show penalty and tiered late-arrival penalties.
+ */
+export const attendanceSettings = pgTable("attendance_settings", {
+  id,
+  tenantId: uuid("tenant_id")
+    .references(() => tenants.id, { onDelete: "cascade" })
+    .notNull()
+    .unique(),
+  earlyCheckInMinutes: integer("early_check_in_minutes").default(30).notNull(),
+  lateGraceMinutes: integer("late_grace_minutes").default(0).notNull(),
+  noShowPenalty: numeric("no_show_penalty", { precision: 12, scale: 2 })
+    .default("0")
+    .notNull(),
+  /**
+   * Tiered late penalties. A tier applies when the effective lateness (in
+   * minutes) is at least `minMinutes`; the highest matching tier wins.
+   * e.g. [{ minMinutes: 30, amount: 50 }, { minMinutes: 60, amount: 100 }]
+   */
+  lateTiers: jsonb("late_tiers")
+    .$type<{ minMinutes: number; amount: number }[]>()
+    .default(sql`'[]'::jsonb`)
+    .notNull(),
+  updatedAt,
+});
+
+export const ATTENDANCE_REQUEST_TYPES = ["day_off", "late_arrival"] as const;
+export type AttendanceRequestType = (typeof ATTENDANCE_REQUEST_TYPES)[number];
+
+export const ATTENDANCE_REQUEST_STATUSES = ["pending", "accepted", "rejected"] as const;
+export type AttendanceRequestStatus = (typeof ATTENDANCE_REQUEST_STATUSES)[number];
+
+/**
+ * Worker requests for a day off or a late arrival. An accepted day-off also
+ * creates a `time_off` row so booking availability reflects it.
+ */
+export const attendanceRequests = pgTable(
+  "attendance_requests",
+  {
+    id,
+    tenantId: uuid("tenant_id")
+      .references(() => tenants.id, { onDelete: "cascade" })
+      .notNull(),
+    employeeId: uuid("employee_id")
+      .references(() => employees.id, { onDelete: "cascade" })
+      .notNull(),
+    type: varchar("type", { length: 20 }).$type<AttendanceRequestType>().notNull(),
+    date: timestamp("date", { withTimezone: true }).notNull(),
+    lateTime: text("late_time"),
+    reason: text("reason"),
+    status: varchar("status", { length: 20 })
+      .$type<AttendanceRequestStatus>()
+      .default("pending")
+      .notNull(),
+    penaltyAmount: numeric("penalty_amount", { precision: 12, scale: 2 }),
+    ownerNote: text("owner_note"),
+    resolvedBy: text("resolved_by"),
+    resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+    createdAt,
+  },
+  (t) => [
+    index("attendance_requests_employee_idx").on(t.employeeId, t.date),
+    index("attendance_requests_tenant_status_idx").on(t.tenantId, t.status),
+  ]
+);
+
+export const ATTENDANCE_DISPUTE_STATUSES = ["pending", "accepted", "rejected"] as const;
+export type AttendanceDisputeStatus = (typeof ATTENDANCE_DISPUTE_STATUSES)[number];
+
+/**
+ * Worker-raised attendance disputes, one per day, with a note to the owner.
+ */
+export const attendanceDisputes = pgTable(
+  "attendance_disputes",
+  {
+    id,
+    tenantId: uuid("tenant_id")
+      .references(() => tenants.id, { onDelete: "cascade" })
+      .notNull(),
+    employeeId: uuid("employee_id")
+      .references(() => employees.id, { onDelete: "cascade" })
+      .notNull(),
+    date: timestamp("date", { withTimezone: true }).notNull(),
+    note: text("note").notNull(),
+    status: varchar("status", { length: 20 })
+      .$type<AttendanceDisputeStatus>()
+      .default("pending")
+      .notNull(),
+    ownerNote: text("owner_note"),
+    resolvedBy: text("resolved_by"),
+    resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+    createdAt,
+  },
+  (t) => [
+    index("attendance_disputes_employee_idx").on(t.employeeId, t.date),
+    index("attendance_disputes_tenant_status_idx").on(t.tenantId, t.status),
   ]
 );
 

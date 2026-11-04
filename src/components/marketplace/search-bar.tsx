@@ -10,7 +10,7 @@ import type { MarketplaceStore } from "@/lib/marketplace/stores";
 
 type Props = {
   /** Current search params that must survive a search (filters/sort/nearby). */
-  keep?: { type?: string; city?: string; sort?: string; nearby?: string; lat?: string; lng?: string };
+  keep?: { type?: string; city?: string; sort?: string; nearby?: string; lat?: string; lng?: string; homeVisit?: string };
 };
 
 /**
@@ -102,6 +102,7 @@ export function MarketplaceSearch({ keep = {} }: Props) {
       if (keep.lat) p.set("lat", keep.lat);
       if (keep.lng) p.set("lng", keep.lng);
     }
+    if (keep.homeVisit) p.set("homeVisit", keep.homeVisit);
     const qs = p.toString();
     router.replace(qs ? `/?${qs}` : "/", { scroll: false });
     setSubmitted(nextQ.trim() ? nextQ.trim() : null);

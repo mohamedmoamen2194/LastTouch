@@ -29,6 +29,8 @@ export type MarketplaceStore = {
   ratingCount: number;
   priceFrom: number | null;
   servicesCount: number;
+  /** True when the store offers at least one home-visit service. */
+  offersHomeVisit: boolean;
 };
 
 const BOOKABLE_STATUSES = ["active", "trial", "grace"];
@@ -149,6 +151,19 @@ export async function listMarketplaceStores(): Promise<MarketplaceStore[]> {
     .groupBy(services.tenantId);
   const priceByTenant = new Map(priceRows.map((r) => [r.tenantId, r]));
 
+  const homeVisitRows = await db
+    .select({ tenantId: services.tenantId })
+    .from(services)
+    .where(
+      and(
+        sql`${services.tenantId} IN (${sql.join(ids.map((id) => sql`${id}::uuid`), sql`, `)})`,
+        eq(services.active, true),
+        eq(services.homeVisit, true),
+      ),
+    )
+    .groupBy(services.tenantId);
+  const homeVisitTenants = new Set(homeVisitRows.map((r) => r.tenantId));
+
   return visible.map((t) => {
     const rating = ratingByTenant.get(t.id);
     const loc = locByTenant.get(t.id);
@@ -171,6 +186,7 @@ export async function listMarketplaceStores(): Promise<MarketplaceStore[]> {
       ratingCount: rating ? Number(rating.count ?? 0) : 0,
       priceFrom: price?.from != null ? Number(price.from) : null,
       servicesCount: price ? Number(price.count ?? 0) : 0,
+      offersHomeVisit: homeVisitTenants.has(t.id),
     };
   });
 }

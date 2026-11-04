@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { UserButton } from "@clerk/nextjs";
 import { LangSwitcher } from "@/components/shared/lang-switcher";
 import { PoweredByLastTouch } from "@/components/shared/powered-by-lasttouch";
-import { LayoutDashboard, CalendarDays, Users, Scissors, Contact, Settings, ExternalLink, Sparkles, Bot, ShoppingBag, Wrench, Receipt } from "lucide-react";
+import { LayoutDashboard, CalendarDays, Clock3, Users, Scissors, Contact, Settings, ExternalLink, Sparkles, Bot, ShoppingBag, Wrench, Receipt } from "lucide-react";
 import { Logo } from "@/components/booking/logo";
 
 import type { ThemeTokens } from "@/config/business-types";
@@ -36,6 +36,7 @@ export function DashboardShell({ slug, businessName, theme, logoUrl, features, p
   const allItems = [
     { href: `/${locale}/${slug}/dashboard`, key: "dashboard", icon: LayoutDashboard, feature: "analytics" as string | null, permission: "analytics.read" },
     { href: `/${locale}/${slug}/appointments`, key: "appointments", icon: CalendarDays, feature: null, permission: "appointments.read" },
+    { href: `/${locale}/${slug}/attendance`, key: "attendance", icon: Clock3, feature: null, permission: "attendance.read" },
     { href: `/${locale}/${slug}/customers`, key: "customers", icon: Users, feature: "customers" as string | null, permission: "customers.read" },
     { href: `/${locale}/${slug}/services`, key: "services", icon: Scissors, feature: null, permission: "services.read" },
     { href: `/${locale}/${slug}/employees`, key: "employees", icon: Contact, feature: "employees" as string | null, permission: "employees.read" },

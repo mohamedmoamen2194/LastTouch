@@ -12,6 +12,7 @@ type WidgetService = {
   description: string | null;
   durationMinutes: number;
   price: string;
+  homeVisit?: boolean;
 };
 type WidgetPackage = {
   id: string;
@@ -28,6 +29,7 @@ type WidgetEmployee = {
   lastName: string | null;
   yearsExperience: number | null;
   isGeneral: boolean;
+  homeVisit?: boolean;
   serviceIds: string[];
 };
 type WidgetTenant = {
@@ -113,6 +115,12 @@ export function BookingWidget({ tenant, themeId, services, packages = [], employ
     phone: initialCustomer?.phone ?? "",
     notes: "",
   });
+  // Home-visit location (only collected when the active services include a
+  // home-visit service).
+  const [homeAddress, setHomeAddress] = useState("");
+  const [homeCity, setHomeCity] = useState("");
+  const [homeCoords, setHomeCoords] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [locating, setLocating] = useState(false);
 
   // Sticky "continue" CTA: visible only when a selection exists but the
   // regular continue button is scrolled out of view. The anchor ref is
@@ -145,14 +153,36 @@ export function BookingWidget({ tenant, themeId, services, packages = [], employ
   // A package / custom bundle uses the grouped team-selection flow.
   const multiSelection = pkg !== null || customServices.length > 0;
 
+  const homeVisitServices = useMemo(
+    () => services.filter((s) => s.homeVisit),
+    [services]
+  );
+  const isHomeVisitBooking = useMemo(
+    () => activeServiceIds.some((id) => services.find((s) => s.id === id)?.homeVisit),
+    [activeServiceIds, services]
+  );
+
   // Workers who can take a given service (general / unmapped workers qualify).
-  const coversService = (e: WidgetEmployee, sid: string) =>
-    e.isGeneral || e.serviceIds.length === 0 || e.serviceIds.includes(sid);
+  // Home-visit services additionally require a home-visit capable worker.
+  const coversService = (e: WidgetEmployee, sid: string) => {
+    const base = e.isGeneral || e.serviceIds.length === 0 || e.serviceIds.includes(sid);
+    if (!base) return false;
+    const svc = services.find((s) => s.id === sid);
+    if (svc?.homeVisit && !e.homeVisit) return false;
+    return true;
+  };
 
   // General workers for the packages team step.
   const generalWorkers = useMemo(
-    () => employees.filter((e) => e.isGeneral || e.serviceIds.length === 0),
-    [employees]
+    () =>
+      employees.filter((e) => {
+        if (!(e.isGeneral || e.serviceIds.length === 0)) return false;
+        // When any active service is a home visit, the general worker must
+        // be home-visit capable too.
+        if (isHomeVisitBooking && !e.homeVisit) return false;
+        return true;
+      }),
+    [employees, isHomeVisitBooking]
   );
   const specificWorkersFor = (sid: string) => employees.filter((e) => coversService(e, sid));
 
@@ -422,6 +452,26 @@ export function BookingWidget({ tenant, themeId, services, packages = [], employ
   const customPrice = (ids: string[]) =>
     ids.reduce((sum, id) => sum + Number(services.find((s) => s.id === id)?.price ?? 0), 0);
 
+  const useMyLocation = () => {
+    if (!("geolocation" in navigator)) {
+      setError(t("locationUnsupported"));
+      return;
+    }
+    setLocating(true);
+    setError(null);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setHomeCoords({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
+        setLocating(false);
+      },
+      () => {
+        setError(t("locationDenied"));
+        setLocating(false);
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+    );
+  };
+
   // ---- Confirm ----
 
   const confirm = async () => {
@@ -436,6 +486,14 @@ export function BookingWidget({ tenant, themeId, services, packages = [], employ
         startTime: time,
         customer: { ...form, marketingConsent: true },
       };
+      if (isHomeVisitBooking) {
+        payload.homeAddress = homeAddress.trim();
+        if (homeCity.trim()) payload.homeCity = homeCity.trim();
+        if (homeCoords) {
+          payload.homeLatitude = homeCoords.latitude;
+          payload.homeLongitude = homeCoords.longitude;
+        }
+      }
       if (pkg) payload.packageId = pkg.id;
       if (multiSelection) {
         if (generalWorkerId) {
@@ -694,6 +752,63 @@ export function BookingWidget({ tenant, themeId, services, packages = [], employ
           <div>
             <Heading title={t("selectService")} subtitle={t("subtitle")} theme={theme} />
 
+            {homeVisitServices.length > 0 && (
+              <div className="mb-8">
+                <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide" style={{ color: theme.secondary }}>
+                  {t("homeVisits")}
+                  <span className="rounded-full px-2 py-0.5 text-[10px] font-bold normal-case tracking-normal" style={{ backgroundColor: "#e3f2fd", color: "#04519b" }}>
+                    {t("atYourHome")}
+                  </span>
+                </h3>
+                <p className="mb-3 text-xs leading-relaxed" style={{ color: theme.onSurfaceVariant }}>
+                  {t("homeVisitsHint")} 
+                </p>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
+                  {homeVisitServices.map((s) => {
+                    const selected = serviceId === s.id;
+                    return (
+                      <button
+                        key={s.id}
+                        type="button"
+                        onClick={() => pickService(s.id)}
+                        className="relative flex flex-col gap-2 rounded-lg border p-3 text-start transition-all sm:gap-3 sm:p-4 md:p-5"
+                        style={{
+                          borderColor: selected ? theme.primary : theme.outlineVariant,
+                          boxShadow: selected ? `0 4px 20px -5px ${theme.primary}` : "none",
+                        }}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <span
+                            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold sm:h-10 sm:w-10"
+                            style={{ backgroundColor: theme.primaryContainer, color: theme.onSurfaceVariant }}
+                          >
+                            {s.name.charAt(0)}
+                          </span>
+                          <span
+                            className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2"
+                            style={{ borderColor: selected ? theme.primary : theme.outlineVariant }}
+                          >
+                            {selected && <span className="block h-2 w-2 rounded-full" style={{ backgroundColor: theme.primary }} />}
+                          </span>
+                        </div>
+                        <div className="min-w-0">
+                          <h3 className="line-clamp-2 break-words text-sm font-semibold leading-snug sm:text-base" style={{ color: theme.primary }}>{s.name}</h3>
+                          {s.description && <p className="mt-0.5 line-clamp-2 break-words text-xs leading-relaxed sm:mt-1 sm:text-sm" style={{ color: theme.onSurfaceVariant }}>{s.description}</p>}
+                          <span className="mt-1.5 inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ backgroundColor: "#e3f2fd", color: "#04519b" }}>
+                            {t("homeVisit")}
+                          </span>
+                        </div>
+                        <div className="mt-auto flex flex-col gap-0.5 border-t pt-2 text-sm sm:flex-row sm:items-center sm:justify-between" style={{ borderColor: theme.surfaceContainerHigh, color: theme.secondary }}>
+                          <span className="text-xs sm:text-sm">{s.durationMinutes} {t("min")}</span>
+                          <span dir="ltr" className="whitespace-nowrap text-xs font-semibold tabular-nums sm:text-sm" style={{ color: theme.primary }}>{formatMoney(s.price, tenant.currency, numTag)}</span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {packages.length > 0 && (
               <div className="mb-8">
                 <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide" style={{ color: theme.secondary }}>
@@ -870,6 +985,11 @@ export function BookingWidget({ tenant, themeId, services, packages = [], employ
                         </div>
                         <div className="min-w-0">
                           <h3 className="line-clamp-2 break-words text-sm font-semibold leading-snug sm:text-base" style={{ color: theme.primary }}>{s.name}</h3>
+                          {s.homeVisit && (
+                            <span className="mt-1.5 inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ backgroundColor: "#e3f2fd", color: "#04519b" }}>
+                              {t("homeVisit")}
+                            </span>
+                          )}
                           {s.description && <p className="mt-0.5 line-clamp-2 break-words text-xs leading-relaxed sm:mt-1 sm:text-sm" style={{ color: theme.onSurfaceVariant }}>{s.description}</p>}
                         </div>
                         <div className="mt-auto flex flex-col gap-0.5 border-t pt-2 text-sm sm:flex-row sm:items-center sm:justify-between" style={{ borderColor: theme.surfaceContainerHigh, color: theme.secondary }}>
@@ -1327,6 +1447,42 @@ export function BookingWidget({ tenant, themeId, services, packages = [], employ
               />
             </div>
 
+            {isHomeVisitBooking && (
+              <div
+                className="mt-4 rounded-xl border p-4"
+                style={{ borderColor: theme.primary, backgroundColor: theme.surfaceContainerLowest }}
+              >
+                <h3 className="text-sm font-semibold" style={{ color: theme.primary }}>{t("homeAddressTitle")}</h3>
+                <p className="mt-1 text-xs leading-relaxed" style={{ color: theme.onSurfaceVariant }}>{t("homeAddressHint")}</p>
+                <div className="mt-3 space-y-3">
+                  <input
+                    value={homeAddress}
+                    onChange={(e) => setHomeAddress(e.target.value)}
+                    placeholder={t("homeAddressPlaceholder")}
+                    className="w-full rounded-lg border px-4 py-3 text-base outline-none"
+                    style={{ borderColor: theme.outlineVariant, backgroundColor: theme.surface, color: theme.onSurfaceVariant }}
+                    required
+                  />
+                  <input
+                    value={homeCity}
+                    onChange={(e) => setHomeCity(e.target.value)}
+                    placeholder={t("homeCityPlaceholder")}
+                    className="w-full rounded-lg border px-4 py-3 text-base outline-none"
+                    style={{ borderColor: theme.outlineVariant, backgroundColor: theme.surface, color: theme.onSurfaceVariant }}
+                  />
+                  <button
+                    type="button"
+                    onClick={useMyLocation}
+                    disabled={locating}
+                    className="w-full rounded-lg border px-4 py-2.5 text-sm font-semibold disabled:opacity-50"
+                    style={{ borderColor: theme.outlineVariant, color: theme.primary }}
+                  >
+                    {locating ? t("locating") : homeCoords ? t("locationCaptured") : t("useMyLocation")}
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className="mt-8 flex flex-col items-center justify-between gap-4 border-t pt-4 sm:flex-row" style={{ borderColor: theme.outlineVariant }}>
               <div>
                 <p className="text-sm" style={{ color: theme.secondary }}>{t("totalPrice")}</p>
@@ -1343,7 +1499,7 @@ export function BookingWidget({ tenant, themeId, services, packages = [], employ
               <button
                 type="button"
                 onClick={confirm}
-                disabled={submitting || !time || !form.firstName || !form.phone}
+                disabled={submitting || !time || !form.firstName || !form.phone || (isHomeVisitBooking && !homeAddress.trim())}
                 className="w-full rounded-full px-8 py-3 text-sm font-semibold disabled:opacity-50 sm:w-auto"
                 style={{ backgroundColor: theme.primary, color: theme.onPrimary }}
               >

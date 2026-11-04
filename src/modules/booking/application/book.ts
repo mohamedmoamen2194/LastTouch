@@ -21,6 +21,11 @@ export type CreateBookingInput = {
   packageId?: string;
   appointmentDate: string; // "YYYY-MM-DD"
   startTime: string; // "HH:MM"
+  /** Required when any selected service is a home-visit service. */
+  homeAddress?: string;
+  homeCity?: string;
+  homeLatitude?: number | null;
+  homeLongitude?: number | null;
   customer: {
     firstName: string;
     phone: string;
@@ -39,6 +44,7 @@ export type BookingAvailability = {
   endTime: string;
   durationMinutes: number;
   price: string;
+  homeVisit: boolean;
 };
 
 function parseBookingDay(value: string): Date {
@@ -46,13 +52,15 @@ function parseBookingDay(value: string): Date {
   return new Date(y, (m ?? 1) - 1, d ?? 1);
 }
 
+type WorkerCapability = { isGeneral: boolean; homeVisit: boolean; serviceIds: string[] };
+
 /** All active workers of a tenant with their service mappings, keyed by id. */
 async function tenantWorkers(tenantId: string) {
   const staff = await db
     .select()
     .from(employees)
     .where(and(eq(employees.tenantId, tenantId), eq(employees.active, true)));
-  if (staff.length === 0) return new Map<string, { isGeneral: boolean; serviceIds: string[] }>();
+  if (staff.length === 0) return new Map<string, WorkerCapability>();
 
   const links = await db
     .select()
@@ -63,17 +71,17 @@ async function tenantWorkers(tenantId: string) {
     byWorker.set(l.employeeId, [...(byWorker.get(l.employeeId) ?? []), l.serviceId]);
   }
 
-  const map = new Map<string, { isGeneral: boolean; serviceIds: string[] }>();
-  for (const s of staff) map.set(s.id, { isGeneral: s.isGeneral, serviceIds: byWorker.get(s.id) ?? [] });
+  const map = new Map<string, WorkerCapability>();
+  for (const s of staff) map.set(s.id, { isGeneral: s.isGeneral, homeVisit: s.homeVisit ?? false, serviceIds: byWorker.get(s.id) ?? [] });
   return map;
 }
 
-function workerCovers(worker: { isGeneral: boolean; serviceIds: string[] }, serviceId: string): boolean {
+function workerCovers(worker: WorkerCapability, serviceId: string): boolean {
   return worker.isGeneral || worker.serviceIds.length === 0 || worker.serviceIds.includes(serviceId);
 }
 
 /** True when a worker can cover every requested service. */
-function workerCoversAll(worker: { isGeneral: boolean; serviceIds: string[] }, serviceIds: string[]): boolean {
+function workerCoversAll(worker: WorkerCapability, serviceIds: string[]): boolean {
   if (worker.isGeneral || worker.serviceIds.length === 0) return true;
   const has = new Set(worker.serviceIds);
   return serviceIds.every((id) => has.has(id));
@@ -160,6 +168,16 @@ export async function validateBookingAvailability(args: {
     priceNum += Number(svc.price);
   }
 
+  // A booking is a home visit when ANY requested service is a home-visit
+  // service. The assigned worker(s) must then be home-visit capable, and a
+  // client address is required at creation time.
+  const isHomeVisit = args.serviceIds.some((serviceId) => svcById.get(serviceId)?.homeVisit === true);
+  const assertHomeCapable = (worker: WorkerCapability | undefined) => {
+    if (isHomeVisit && (!worker || !worker.homeVisit)) {
+      throw new NotFoundError("This staff member does not offer home visits");
+    }
+  };
+
   const workers = await tenantWorkers(args.tenantId);
   const assignmentOf = (serviceId: string) =>
     args.employeeAssignments?.find((a) => a.serviceId === serviceId)?.employeeId;
@@ -179,6 +197,7 @@ export async function validateBookingAvailability(args: {
       if (!worker || !workerCovers(worker, serviceId)) {
         throw new NotFoundError("This staff member does not offer the selected service");
       }
+      assertHomeCapable(worker);
       assignments.push({ serviceId, employeeId });
     }
 
@@ -206,6 +225,7 @@ export async function validateBookingAvailability(args: {
       endTime: found?.end ?? addMinutes(args.startTime, durationMinutes),
       durationMinutes,
       price: priceNum.toFixed(2),
+      homeVisit: isHomeVisit,
     };
   }
 
@@ -216,15 +236,18 @@ export async function validateBookingAvailability(args: {
     if (!worker || !workerCoversAll(worker, args.serviceIds)) {
       throw new NotFoundError("This staff member does not offer the selected service");
     }
+    assertHomeCapable(worker);
   } else {
     // Auto-assign: prefer one worker covering all services, else one per service.
-    const coveringAll = [...workers.entries()].find(([, w]) => workerCoversAll(w, args.serviceIds))?.[0];
+    // Home-visit bookings only auto-assign workers who offer home visits.
+    const pool = [...workers.entries()].filter(([, w]) => !isHomeVisit || w.homeVisit);
+    const coveringAll = pool.find(([, w]) => workerCoversAll(w, args.serviceIds))?.[0];
     if (coveringAll) {
       employeeId = coveringAll;
     } else {
       const perService: string[] = [];
       for (const serviceId of args.serviceIds) {
-        const candidate = [...workers.entries()].find(([, w]) => workerCovers(w, serviceId))?.[0];
+        const candidate = pool.find(([, w]) => workerCovers(w, serviceId))?.[0];
         if (!candidate) throw new ConflictError("No staff member offers the selected services");
         perService.push(candidate);
       }
@@ -253,7 +276,7 @@ export async function validateBookingAvailability(args: {
   if (!found) throw new ValidationAppError("The selected time is unavailable");
   if (!found.available) throw new ConflictError("The selected time is no longer available");
 
-  return { employeeId, assignments, endTime: found.end, durationMinutes, price: priceNum.toFixed(2) };
+  return { employeeId, assignments, endTime: found.end, durationMinutes, price: priceNum.toFixed(2), homeVisit: isHomeVisit };
 }
 
 function addMinutes(hhmm: string, minutes: number): string {
@@ -294,6 +317,12 @@ export async function createBooking(input: CreateBookingInput) {
   }
 
   const price = packagePrice ?? availability.price;
+
+  // Home visits happen at the client's address — it is required, never optional.
+  const homeAddress = availability.homeVisit ? (input.homeAddress?.trim() ?? "") : "";
+  if (availability.homeVisit && !homeAddress) {
+    throw new ValidationAppError("Your home address is required for a home visit booking");
+  }
 
   // One client, one body: a signed-in account cannot hold two live
   // bookings whose time windows intersect (any store). Checked BEFORE
@@ -393,6 +422,17 @@ export async function createBooking(input: CreateBookingInput) {
         status: "pending",
         source: input.source ?? "website",
         notes: input.customer.notes ?? null,
+        homeVisit: availability.homeVisit,
+        homeAddress: availability.homeVisit ? homeAddress : null,
+        homeCity: availability.homeVisit ? input.homeCity?.trim() || null : null,
+        homeLatitude:
+          availability.homeVisit && typeof input.homeLatitude === "number" && Number.isFinite(input.homeLatitude)
+            ? String(input.homeLatitude)
+            : null,
+        homeLongitude:
+          availability.homeVisit && typeof input.homeLongitude === "number" && Number.isFinite(input.homeLongitude)
+            ? String(input.homeLongitude)
+            : null,
       })
       .returning();
 
