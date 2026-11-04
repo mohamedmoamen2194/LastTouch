@@ -23,7 +23,16 @@ export default async function SignUpPage({
   const redirectUrl = safeRedirect(sp.redirect_url);
   // ?as=business (partners CTA) keeps the owner flow; ?as=client starts the
   // client flow; no param shows the role chooser first.
-  const role = sp.as === "business" ? "business" : sp.as === "client" ? "client" : null;
+  const role =
+    sp.as === "business"
+      ? "business"
+      : sp.as === "client"
+        ? "client"
+        // Staff invite flows always sign up as a client account (role is
+        // assigned by the invite claim, not by the sign-up flow).
+        : redirectUrl && redirectUrl.includes("/staff/join")
+          ? "client"
+          : null;
   const afterAuth = redirectUrl ?? (role === "business" ? `/${locale}/onboard` : role === "client" ? `/${locale}/auth/welcome` : `/${locale}`);
   const redirectQuery = redirectUrl ? `&redirect_url=${encodeURIComponent(redirectUrl)}` : "";
 

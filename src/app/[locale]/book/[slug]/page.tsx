@@ -156,22 +156,24 @@ export default async function BookingPage({
               <Logo className="h-4 w-auto sm:h-5 md:h-6" />
             )}
           </div>
-          <div className="flex flex-wrap min-w-0 shrink-0 items-center gap-1.5 sm:gap-3">
-            <Link
-              href="/"
-              className="max-w-[96px] truncate text-xs font-semibold underline"
-              style={{ color: theme.secondary }}
-            >
-              {mt("allStores")}
-            </Link>
-            <Link
-              href={`/track/${slug}`}
-              className="text-xs font-semibold underline sm:whitespace-nowrap"
-              style={{ color: theme.secondary }}
-            >
-              {bt("trackAppointment")}
-            </Link>
-            <LangSwitcher theme={theme} />
+          <div className="flex flex-col sm:flex-row items-center gap-1.5 sm:gap-3 w-full min-w-0">
+            <div className="flex flex-wrap gap-1.5 min-w-0">
+              <Link
+                href="/"
+                className="max-w-[96px] truncate text-xs font-semibold underline sm:whitespace-nowrap"
+                style={{ color: theme.secondary }}
+              >
+                {mt("allStores")}
+              </Link>
+              <Link
+                href={`/track/${slug}`}
+                className="text-xs font-semibold underline sm:whitespace-nowrap"
+                style={{ color: theme.secondary }}
+              >
+                {bt("trackAppointment")}
+              </Link>
+              <LangSwitcher theme={theme} />
+            </div>
             <a
               href="#booking"
               className="whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-semibold sm:px-5 sm:py-2.5 sm:text-sm"

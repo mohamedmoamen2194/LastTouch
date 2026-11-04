@@ -151,7 +151,7 @@ export function ShopView({ slug, locale, currency, theme, products, initialCusto
             {products.map((product) => (
               <article
                 key={product.id}
-                className="flex flex-col overflow-hidden rounded-2xl"
+                className="flex flex-col overflow-hidden rounded-2xl min-w-0"
                 style={{ backgroundColor: theme.surface, border: `1px solid ${theme.outlineVariant}` }}
               >
                 <div className="flex h-36 items-center justify-center" style={{ backgroundColor: theme.background }}>
@@ -162,7 +162,7 @@ export function ShopView({ slug, locale, currency, theme, products, initialCusto
                     <Package className="h-10 w-10" style={{ color: theme.secondary }} />
                   )}
                 </div>
-                <div className="flex flex-1 flex-col gap-2 p-4">
+                  <div className="flex flex-1 flex-col gap-2 p-4 min-w-0">
                   <div>
                     <h3 className="text-sm font-semibold truncate" style={{ color: theme.tertiary }}>
                       {pick(product.name, product.nameAr)}
