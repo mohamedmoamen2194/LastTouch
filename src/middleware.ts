@@ -22,6 +22,7 @@ const isPublicRoute = createRouteMatcher([
   "/:locale/auth(.*)",
   "/:locale/book(.*)",
   "/:locale/staff/join",
+  "/:locale/worker([^/]+)/onboard",
 ]);
 
 export default async function middleware(

@@ -156,7 +156,7 @@ export default async function BookingPage({
               <Logo className="h-4 w-auto sm:h-5 md:h-6" />
             )}
           </div>
-          <div className="flex min-w-0 shrink-0 items-center gap-1.5 sm:gap-3">
+          <div className="flex flex-wrap min-w-0 shrink-0 items-center gap-1.5 sm:gap-3">
             <Link
               href="/"
               className="max-w-[96px] truncate text-xs font-semibold underline"
@@ -166,7 +166,7 @@ export default async function BookingPage({
             </Link>
             <Link
               href={`/track/${slug}`}
-              className="whitespace-nowrap text-xs font-semibold underline"
+              className="text-xs font-semibold underline sm:whitespace-nowrap"
               style={{ color: theme.secondary }}
             >
               {bt("trackAppointment")}
