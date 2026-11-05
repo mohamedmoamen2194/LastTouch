@@ -68,10 +68,12 @@ export async function GET(req: Request) {
 /**
  * POST /api/visits/scan — appointment check-in / check-out from the client
  * bookings page. Guards, in order: ownership, open status, QR belongs to
- * the appointment's store, same-day check-in window (start +10 min),
- * check-out deadline (end +3h). Checkout closes the visit AND completes
- * the appointment (points accrue); a checkout with no open visit records
- * check-in + check-out together instead of failing.
+ * the appointment's store, same-day check-in window (start +5 min — after
+ * that the booking is considered cancelled for self check-in),
+ * check-out deadline (end +3h).
+ * Check-in completes the appointment (points accrue) — checkout does too,
+ * even with no prior check-in, so a client who never scanned in but loops
+ * back to check out still completes.
  */
 export async function POST(req: Request) {
   return withApi(async () => {
@@ -130,7 +132,7 @@ export async function POST(req: Request) {
     const tz = tenant.timezone ?? "Africa/Cairo";
     const now = tenantNow(tz);
     const day = apptDayYmd(appt.appointmentDate, tz);
-    const lateCheckin = addMinutesHm(appt.startTime, 10);
+    const lateCheckin = addMinutesHm(appt.startTime, 5);
     const checkoutDeadline = addMinutesHm(appt.endTime, 180);
 
     const [open] = await db
@@ -146,14 +148,11 @@ export async function POST(req: Request) {
       // Idempotent: tapping check-in twice (or a retry after a timeout) must
       // stay green instead of surfacing "already checked in".
       if (open) {
-        if (appt.status === "pending") {
-          await db
-            .update(appointments)
-            .set({ status: "confirmed", updatedAt: new Date() })
-            .where(eq(appointments.id, appt.id));
+        if (appt.status === "pending" || appt.status === "confirmed") {
+          await completeAppointment(appt.id);
         }
         return NextResponse.json(
-          ok({ action: "checked_in", status: "confirmed", visitId: open.id, already: true }),
+          ok({ action: "checked_in", status: "completed", visitId: open.id, already: true }),
           { status: HttpStatus.Ok },
         );
       }
@@ -185,14 +184,11 @@ export async function POST(req: Request) {
           { status: HttpStatus.Ok },
         );
       }
-      if (appt.status === "pending") {
-        await db
-          .update(appointments)
-          .set({ status: "confirmed", updatedAt: new Date() })
-          .where(eq(appointments.id, appt.id));
-      }
+      // Check-in completes the appointment (points accrue) — anyone who
+      // checks in is completed; checkout below completes again idempotently.
+      await completeAppointment(appt.id);
       return NextResponse.json(
-        ok({ action: "checked_in", status: "confirmed", visitId: created.id }),
+        ok({ action: "checked_in", status: "completed", visitId: created.id }),
         { status: HttpStatus.Ok },
       );
     }

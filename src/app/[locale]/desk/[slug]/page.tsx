@@ -7,6 +7,9 @@ import { getThemeTokens } from "@/config/business-types";
 import { listAppointments } from "@/modules/appointments/application/appointments";
 import { formatMoney } from "@/lib/utils";
 import { AppointmentList } from "@/components/dashboard/appointment-list";
+import { AppointmentCreator } from "@/components/dashboard/appointment-creator";
+import { listTenantServicesForAdmin, listTenantTeam } from "@/modules/booking/domain/catalog";
+import { Permission } from "@/lib/permissions";
 import { LockedPage } from "@/components/dashboard/locked-page";
 import { getSubscriptionState } from "@/lib/subscriptions";
 
@@ -33,7 +36,17 @@ export default async function DeskPage({
 
   const today = new Date();
   const iso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-  const rows = await listAppointments(ctx, { from: iso, to: iso });
+  const [rows, svcRows, team] = await Promise.all([
+    listAppointments(ctx, { from: iso, to: iso }),
+    listTenantServicesForAdmin(ctx.tenantId),
+    listTenantTeam(ctx.tenantId),
+  ]);
+  const catalogServices = svcRows
+    .filter((s) => s.active)
+    .map((s) => ({ id: s.id, name: s.name, homeVisit: s.homeVisit, durationMinutes: s.durationMinutes, price: String(s.price) }));
+  const creatorEmployees = team
+    .filter((e) => e.active && e.isBookable)
+    .map((e) => ({ id: e.id, name: e.displayName ?? `${e.firstName}${e.lastName ? " " + e.lastName : ""}`, homeVisit: e.homeVisit }));
   const cards = rows.map((r) => ({ ...r, price: formatMoney(r.price, "EGP", locale) }));
 
   const quickLinks = [
@@ -53,6 +66,14 @@ export default async function DeskPage({
           {ctx.businessName} · {new Intl.DateTimeFormat(locale, { weekday: "long", day: "numeric", month: "long", timeZone: ctx.timezone }).format(today)}
         </p>
       </div>
+
+      <AppointmentCreator
+        slug={slug}
+        theme={theme}
+        services={catalogServices}
+        employees={creatorEmployees}
+        canCreate={ctx.permissions.has(Permission["appointments.create"])}
+      />
 
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {quickLinks.map((link) => {

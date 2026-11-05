@@ -6,6 +6,7 @@ import { completeAppointment as completeAppointmentWithPoints } from "@/lib/mark
 import { assertPermission, type TenantContext } from "@/lib/tenant/context";
 import { Permission } from "@/lib/permissions";
 import { buildDaySlots } from "../../availability/domain/engine";
+import { sweepStaleAppointments } from "./no-show-sweep";
 
 const OPEN_STATUSES: AppointmentStatus[] = ["pending", "confirmed"];
 
@@ -89,6 +90,9 @@ export async function listAppointments(
   args: ListAppointmentsArgs = {}
 ): Promise<ListedAppointment[]> {
   assertPermission(ctx, Permission["appointments.read"]);
+
+  // Lazy no-show safety net: absent bookings flip once end+30 passes.
+  await sweepStaleAppointments(ctx.tenantId, ctx.timezone);
 
   const conditions = [eq(appointments.tenantId, ctx.tenantId)];
   if (args.status) conditions.push(inArray(appointments.status, [args.status]));

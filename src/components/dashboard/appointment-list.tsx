@@ -2,10 +2,18 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { ChevronDown, Clock, Home, MapPin, User } from "lucide-react";
+import { ChevronDown, Clock, Home, MapPin, Plus, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ThemeTokens } from "@/config/business-types";
 import { AppointmentActions } from "./appointment-actions";
+
+export type CatalogService = {
+  id: string;
+  name: string;
+  homeVisit: boolean;
+  durationMinutes: number;
+  price: string;
+};
 
 export type AppointmentCardRow = {
   id: string;
@@ -51,15 +59,46 @@ export function AppointmentList({
   slug,
   theme,
   canManage = true,
+  catalogServices = [],
+  canCreate = false,
 }: {
   rows: AppointmentCardRow[];
   slug: string;
   theme: ThemeTokens;
   canManage?: boolean;
+  catalogServices?: CatalogService[];
+  canCreate?: boolean;
 }) {
   const t = useTranslations("dashboard");
   const [openId, setOpenId] = useState<string | null>(null);
   const [view, setView] = useState<"all" | "home" | "store">("all");
+  const [attachId, setAttachId] = useState<string | null>(null);
+  const [attachSelected, setAttachSelected] = useState<string[]>([]);
+  const [attachBusy, setAttachBusy] = useState(false);
+  const [attachError, setAttachError] = useState<string | null>(null);
+
+  const attachServices = async (appointmentId: string) => {
+    if (attachSelected.length === 0) return;
+    setAttachBusy(true);
+    setAttachError(null);
+    try {
+      const res = await fetch(`/api/admin/appointments?slug=${encodeURIComponent(slug)}&action=attach-services`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ appointmentId, serviceIds: attachSelected }),
+      });
+      const json = await res.json().catch(() => ({ success: false, message: t("error") }));
+      if (!json.success) throw new Error(json.message ?? t("error"));
+      setAttachId(null);
+      setAttachSelected([]);
+      // Keep openId so the detail stays expanded with fresh data.
+      window.location.reload();
+    } catch (e) {
+      setAttachError(e instanceof Error ? e.message : t("error"));
+    } finally {
+      setAttachBusy(false);
+    }
+  };
 
   const counts = {
     all: rows.length,
@@ -183,9 +222,67 @@ export function AppointmentList({
                 <div className="border-t px-4 py-4 md:px-4" style={{ borderColor: theme.outlineVariant, backgroundColor: theme.surfaceContainerLowest }}>
                   <div className="grid gap-4 md:grid-cols-2">
                     <div>
-                      <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide" style={{ color: theme.secondary }}>
-                        {t("appointmentServices")}
+                      <h4 className="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs font-semibold uppercase tracking-wide" style={{ color: theme.secondary }}>
+                        <span>{t("appointmentServices")}</span>
+                        {canCreate && catalogServices.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setAttachId(attachId === r.id ? null : r.id);
+                              setAttachSelected([]);
+                              setAttachError(null);
+                            }}
+                            className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold normal-case"
+                            style={{ borderColor: theme.outlineVariant, color: theme.primary }}
+                          >
+                            <Plus className="h-3 w-3" />
+                            {t("addServices")}
+                          </button>
+                        )}
                       </h4>
+                      {attachId === r.id && (
+                        <div className="mb-2 rounded-lg border p-3" style={{ borderColor: theme.outlineVariant, backgroundColor: theme.surface }}>
+                          <div className="grid max-h-40 grid-cols-1 gap-1.5 overflow-y-auto sm:grid-cols-2">
+                            {catalogServices.map((s) => {
+                              const checked = attachSelected.includes(s.id);
+                              return (
+                                <label key={s.id} className="flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-xs" style={{ borderColor: checked ? theme.primary : theme.outlineVariant, color: theme.onSurfaceVariant }}>
+                                  <input
+                                    type="checkbox"
+                                    checked={checked}
+                                    onChange={() =>
+                                      setAttachSelected((prev) => (prev.includes(s.id) ? prev.filter((x) => x !== s.id) : [...prev, s.id]))
+                                    }
+                                    className="h-3.5 w-3.5"
+                                    style={{ accentColor: theme.primary }}
+                                  />
+                                  <span className="min-w-0 flex-1 truncate">{s.name}</span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                          {attachError && <p className="mt-2 text-xs" style={{ color: "#a12b2b" }}>{attachError}</p>}
+                          <div className="mt-2 flex justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setAttachId(null)}
+                              className="rounded-full px-3 py-1.5 text-xs font-semibold"
+                              style={{ color: theme.onSurfaceVariant }}
+                            >
+                              {t("cancel")}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => attachServices(r.id)}
+                              disabled={attachBusy || attachSelected.length === 0}
+                              className="rounded-full px-4 py-1.5 text-xs font-semibold disabled:opacity-40"
+                              style={{ backgroundColor: theme.primary, color: theme.onPrimary }}
+                            >
+                              {attachBusy ? t("processing") : t("save")}
+                            </button>
+                          </div>
+                        </div>
+                      )}
                       {r.services.length > 0 ? (
                         <ul className="space-y-2">
                           {r.services.map((s) => (

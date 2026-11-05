@@ -259,7 +259,9 @@ export function BookingsList({ bookings, emptyHint, rebook = false }: { bookings
       <ul className="flex flex-col gap-3">
         {bookings.map((b) => {
           const expanded = openId === b.id;
-          const scannable = b.status === "pending" || b.status === "confirmed";
+          // Check-in completes the appointment, so a completed booking with
+          // an open visit still needs a scan entry to check out + rate.
+          const scannable = b.status === "pending" || b.status === "confirmed" || (b.status === "completed" && b.hasOpenVisit);
           return (
             <li key={b.id} className="rounded-2xl border border-[#c5c6cd]/60 bg-white shadow-sm">
               <button type="button" onClick={() => setOpenId(expanded ? null : b.id)} className="flex w-full items-start gap-3 p-4 text-start">

@@ -41,6 +41,25 @@ type WidgetTenant = {
 };
 
 type Slot = { start: string; end: string; available: boolean };
+
+type PersistedBooking = {
+  step?: number;
+  serviceId?: string | null;
+  packageId?: string | null;
+  customServices?: string[];
+  customizeOpen?: boolean;
+  employeeId?: string;
+  generalWorkerId?: string | null;
+  assignments?: Record<string, string>;
+  date?: string | null;
+  hour?: string | null;
+  time?: string | null;
+  arrivalTime?: string;
+  form?: { firstName: string; phone: string; notes: string };
+  homeAddress?: string;
+  homeCity?: string;
+  homeCoords?: { latitude: number; longitude: number } | null;
+};
 type Receipt = {
   appointmentId: string;
   startTime: string;
@@ -128,7 +147,7 @@ export function BookingWidget({ tenant, themeId, services, packages = [], employ
   const continueAnchorRef = useRef<HTMLDivElement | null>(null);
   const [anchorVisible, setAnchorVisible] = useState(true);
 
-  useEffect(() => {
+{}  useEffect(() => {
     setAnchorVisible(true);
     const el = continueAnchorRef.current;
     if (!el) return;
@@ -185,6 +204,109 @@ export function BookingWidget({ tenant, themeId, services, packages = [], employ
     [employees, isHomeVisitBooking]
   );
   const specificWorkersFor = (sid: string) => employees.filter((e) => coversService(e, sid));
+
+  // ---- Persist progress across reloads and locale switches ----
+  // The booking is a multi-step flow; losing selections on refresh or a
+  // language swap is hostile, so the in-progress selection (inputs only —
+  // no transient fetch state) is persisted to localStorage, keyed by the
+  // store slug, and restored once on mount. Cleared when a booking completes.
+  const storageKey = `lt:booking:${typeof window !== "undefined" ? slugFromPath() : ""}`;
+  const [restoredState, setRestoredState] = useState(false);
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(storageKey);
+      if (raw) {
+        const s = JSON.parse(raw) as Partial<PersistedBooking>;
+        if (s.step) setStep(s.step as number);
+        if (s.serviceId !== undefined) setServiceId(s.serviceId);
+        if (s.packageId !== undefined) setPackageId(s.packageId);
+        if (Array.isArray(s.customServices)) setCustomServices(s.customServices);
+        if (typeof s.customizeOpen === "boolean") setCustomizeOpen(s.customizeOpen);
+        if (s.employeeId != null) setEmployeeId(s.employeeId);
+        if (s.generalWorkerId !== undefined) setGeneralWorkerId(s.generalWorkerId);
+        if (s.assignments && typeof s.assignments === "object") setAssignments(s.assignments);
+        if (s.date !== undefined) setDate(s.date);
+        if (s.hour !== undefined) setHour(s.hour);
+        if (s.time !== undefined) setTime(s.time);
+        if (typeof s.arrivalTime === "string") setArrivalTime(s.arrivalTime);
+        if (s.form && typeof s.form === "object") setForm(s.form);
+        if (typeof s.homeAddress === "string") setHomeAddress(s.homeAddress);
+        if (typeof s.homeCity === "string") setHomeCity(s.homeCity);
+        if (s.homeCoords && typeof s.homeCoords === "object") setHomeCoords(s.homeCoords);
+      }
+    } catch {
+      /* storage unavailable — booking simply won't persist */
+    }
+    setRestoredState(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (!restoredState) return;
+    try {
+      window.localStorage.setItem(
+        storageKey,
+        JSON.stringify({
+          step,
+          serviceId,
+          packageId,
+          customServices,
+          customizeOpen,
+          employeeId,
+          generalWorkerId,
+          assignments,
+          date,
+          hour,
+          time,
+          arrivalTime,
+          form,
+          homeAddress,
+          homeCity,
+          homeCoords,
+        } satisfies PersistedBooking),
+      );
+    } catch {
+      /* storage unavailable */
+    }
+  }, [
+    restoredState,
+    storageKey,
+    step,
+    serviceId,
+    packageId,
+    customServices,
+    customizeOpen,
+    employeeId,
+    generalWorkerId,
+    assignments,
+    date,
+    hour,
+    time,
+    arrivalTime,
+    form,
+    homeAddress,
+    homeCity,
+    homeCoords,
+  ]);
+
+  function clearPersisted() {
+    try {
+      window.localStorage.removeItem(storageKey);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  // After a restore, re-fetch slots once so a restored date/time is usable.
+  const restoreFetchRef = useRef(false);
+  useEffect(() => {
+    if (!restoredState || restoreFetchRef.current) return;
+    if (date && activeServiceIds.length > 0) {
+      restoreFetchRef.current = true;
+      fetchSlots(date);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [restoredState, date, activeServiceIds]);
 
   const assignmentsComplete = activeServiceIds.length > 0 && activeServiceIds.every((id) => Boolean(assignments[id]));
   const assignedIds = useMemo(
@@ -525,6 +647,7 @@ export function BookingWidget({ tenant, themeId, services, packages = [], employ
       }
       setReceipt(json.data as Receipt);
       setDone(true);
+      clearPersisted();
     } catch {
       setError("Something went wrong");
     } finally {
@@ -566,6 +689,9 @@ export function BookingWidget({ tenant, themeId, services, packages = [], employ
         </div>
         <h2 className="text-2xl font-semibold" style={{ color: theme.primary }}>{t("success")}</h2>
         <p className="mt-2 text-sm" style={{ color: theme.onSurfaceVariant }}>{t("receiptNote")}</p>
+        <p className="mx-auto mt-2 max-w-md rounded-xl px-3 py-2 text-xs font-semibold" style={{ backgroundColor: "#fff4e5", color: "#9a6b00" }}>
+          {t("lateNotice")}
+        </p>
 
         {receipt && (
           <div
@@ -681,6 +807,14 @@ export function BookingWidget({ tenant, themeId, services, packages = [], employ
               setTime(null);
               setSlots([]);
               setCalOpen(false);
+              setAssignments({});
+              setGeneralWorkerId(null);
+              setArrivalTime("");
+              setForm((f) => ({ ...f, notes: "" }));
+              setHomeAddress("");
+              setHomeCity("");
+              setHomeCoords(null);
+              clearPersisted();
             }}
             className="rounded-full px-6 py-3 text-sm font-semibold"
             style={{ backgroundColor: theme.primary, color: theme.onPrimary }}

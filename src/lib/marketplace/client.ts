@@ -11,9 +11,11 @@ import {
   referrals,
   services,
   tenants,
+  visits,
   type AppointmentStatus,
 } from "@/db/schema";
 import { ConflictError, NotFoundError } from "@/lib/errors";
+import { sweepStaleAppointments } from "@/modules/appointments/application/no-show-sweep";
 
 export type ClientProfile = typeof clientProfiles.$inferSelect;
 
@@ -93,6 +95,8 @@ export type ClientBooking = {
   homeVisit: boolean;
   homeAddress: string | null;
   homeCity: string | null;
+  /** True when a check-in is still open (client can check out + rate). */
+  hasOpenVisit: boolean;
   canCancel: boolean;
 };
 
@@ -161,6 +165,30 @@ export async function getClientBookings(
     .orderBy(scope === "upcoming" ? appointments.appointmentDate : desc(appointments.appointmentDate))
     .limit(100);
 
+  // Lazy no-show safety net per tenant: absent bookings flip once end+30
+  // passes. Timezone-aware, so each tenant's bookings use its own clock.
+  {
+    const tenantIds = [...new Set(rows.map((r) => r.tenantId))];
+    if (tenantIds.length > 0) {
+      const tzRows = await db.select({ id: tenants.id, timezone: tenants.timezone }).from(tenants).where(inArray(tenants.id, tenantIds));
+      for (const t of tzRows) {
+        await sweepStaleAppointments(t.id, t.timezone);
+      }
+    }
+  }
+
+  // Open (not yet checked-out) visits, so clients who already checked in —
+  // and whose appointment is therefore completed — can still check out and
+  // leave a rating.
+  const openVisitRows =
+    rows.length > 0
+      ? await db
+          .select({ appointmentId: visits.appointmentId })
+          .from(visits)
+          .where(and(inArray(visits.appointmentId, rows.map((r) => r.id)), eq(visits.status, "checked_in")))
+      : [];
+  const openVisitIds = new Set(openVisitRows.map((v) => v.appointmentId));
+
   const serviceRows =
     rows.length > 0
       ? await db
@@ -193,6 +221,7 @@ export async function getClientBookings(
     homeVisit: r.homeVisit ?? false,
     homeAddress: r.homeAddress,
     homeCity: r.homeCity,
+    hasOpenVisit: openVisitIds.has(r.id),
     canCancel:
       UPCOMING_STATUSES.includes(r.status) && new Date(r.appointmentDate) >= dayStart,
   }));

@@ -5,6 +5,8 @@ import { getThemeTokens } from "@/config/business-types";
 import { listAppointments } from "@/modules/appointments/application/appointments";
 import { formatMoney } from "@/lib/utils";
 import { AppointmentList } from "@/components/dashboard/appointment-list";
+import { AppointmentCreator } from "@/components/dashboard/appointment-creator";
+import { listTenantServicesForAdmin, listTenantTeam } from "@/modules/booking/domain/catalog";
 import { LockedPage } from "@/components/dashboard/locked-page";
 import { getSubscriptionState } from "@/lib/subscriptions";
 import { Permission } from "@/lib/permissions";
@@ -37,7 +39,17 @@ export default async function AppointmentsPage({
   const today = new Date();
   const iso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
 
-  const rows = await listAppointments(ctx, { from: iso });
+  const [rows, svcRows, team] = await Promise.all([
+    listAppointments(ctx, { from: iso }),
+    listTenantServicesForAdmin(ctx.tenantId),
+    listTenantTeam(ctx.tenantId),
+  ]);
+  const catalogServices = svcRows
+    .filter((s) => s.active)
+    .map((s) => ({ id: s.id, name: s.name, homeVisit: s.homeVisit, durationMinutes: s.durationMinutes, price: String(s.price) }));
+  const creatorEmployees = team
+    .filter((e) => e.active && e.isBookable)
+    .map((e) => ({ id: e.id, name: e.displayName ?? `${e.firstName}${e.lastName ? " " + e.lastName : ""}`, homeVisit: e.homeVisit }));
 
   const cards = rows.map((r) => ({
     ...r,
@@ -51,12 +63,20 @@ export default async function AppointmentsPage({
         <p className="mt-1 text-sm" style={{ color: theme.onSurfaceVariant }}>{ctx.businessName}</p>
       </div>
 
+      <AppointmentCreator
+        slug={slug}
+        theme={theme}
+        services={catalogServices}
+        employees={creatorEmployees}
+        canCreate={ctx.permissions.has(Permission["appointments.create"])}
+      />
+
       {cards.length === 0 ? (
         <div className="rounded-xl border border-dashed p-8 text-center text-sm md:p-10" style={{ borderColor: theme.outlineVariant, color: theme.onSurfaceVariant }}>
           {t("noData")}
         </div>
       ) : (
-        <AppointmentList rows={cards} slug={slug} theme={theme} canManage={canManage} />
+        <AppointmentList rows={cards} slug={slug} theme={theme} canManage={canManage} catalogServices={catalogServices} canCreate={ctx.permissions.has(Permission["appointments.create"])} />
       )}
     </div>
   );
