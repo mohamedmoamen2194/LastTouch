@@ -150,6 +150,9 @@ function defaultPermissionsFor(role: AccessRole): string[] {
         "sales.create",
         "sales.read",
         "reviews.read",
+        "attendance.use",
+        "attendance.read",
+        "attendance.request",
       ];
     case "manager":
       return [
@@ -170,6 +173,8 @@ function defaultPermissionsFor(role: AccessRole): string[] {
         "sales.create",
         "sales.read",
         "attendance.use",
+        "attendance.read",
+        "attendance.request",
         "reviews.read",
       ];
     default:
@@ -182,6 +187,8 @@ function defaultPermissionsFor(role: AccessRole): string[] {
         "services.read",
         "inventory.read",
         "attendance.use",
+        "attendance.read",
+        "attendance.request",
       ];
   }
 }

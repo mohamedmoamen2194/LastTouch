@@ -121,18 +121,36 @@ export const ROLE_PERMISSIONS: Record<Role, ReadonlySet<Permission>> = {
  * - An explicit array (even empty) overrides the role defaults.
  * - NULL/undefined falls back to the role defaults.
  */
+/**
+ * Attendance for oneself (view own history, punch in/out, make requests) is
+ * not optional for staff: every staff role already includes it in
+ * ROLE_PERMISSIONS. Always grant it, even when the membership was created
+ * with an older explicit snapshot that predates these permissions or was
+ * built from form defaults that missed them — otherwise workers silently
+ * lose the arrive/leave buttons. Customers never get it.
+ */
+const STAFF_ATTENDANCE: readonly Permission[] = [
+  Permission["attendance.use"],
+  Permission["attendance.read"],
+  Permission["attendance.request"],
+];
+
 export function resolvePermissions(
   role: Role,
   overrides?: readonly string[] | null
 ): Set<Permission> {
   if (role === "owner") return new Set(PERMISSION_LIST);
+  let base: Set<Permission>;
   if (Array.isArray(overrides)) {
     const valid = new Set<Permission>(PERMISSION_LIST);
-    return new Set(
-      overrides.filter((p): p is Permission => valid.has(p as Permission))
-    );
+    base = new Set(overrides.filter((p): p is Permission => valid.has(p as Permission)));
+  } else {
+    base = new Set(ROLE_PERMISSIONS[role] ?? []);
   }
-  return new Set(ROLE_PERMISSIONS[role] ?? []);
+  if (role !== "customer") {
+    for (const p of STAFF_ATTENDANCE) base.add(p);
+  }
+  return base;
 }
 
 export function hasPermission(
