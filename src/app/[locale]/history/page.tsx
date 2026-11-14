@@ -6,7 +6,8 @@ import { getOptionalUserId } from "@/lib/auth/session";
 import { getClientBookings, getClientProfile, getClientPointsTotal, clientAccentForGender } from "@/lib/marketplace/client";
 import { MarketplaceTabs } from "@/components/marketplace/tabs";
 import { MarketplaceFooter } from "@/components/marketplace/footer";
-import { BookingsList } from "@/components/marketplace/bookings-list";
+import { ManageBookingsList } from "@/components/marketplace/booking-manage-list";
+import { GuestBookingsPanel } from "@/components/marketplace/guest-bookings-panel";
 import { MarketplaceTopbar } from "@/components/marketplace/topbar";
 
 export const dynamic = "force-dynamic";
@@ -43,18 +44,21 @@ export default async function HistoryPage({
           <p className="mt-0.5 text-sm text-[#45474c]">{t("historySubtitle")}</p>
         </div>
         {!userId ? (
-          <div className="flex flex-col items-center gap-3 rounded-3xl border border-[#c5c6cd]/60 bg-white px-6 py-10 text-center shadow-sm">
-            <span className="mp-solid flex h-14 w-14 items-center justify-center rounded-full text-white">
-              <History className="h-6 w-6" />
-            </span>
-            <p className="max-w-sm text-sm font-bold text-[#091426]">{t("guestHistoryTitle")}</p>
-            <p className="max-w-sm text-xs leading-relaxed text-[#45474c]">{t("guestHistoryBody")}</p>
-            <Link
-              href={`/auth/sign-in?redirect_url=/${locale}/history`}
-              className="mp-solid rounded-full px-8 py-2.5 text-sm font-semibold text-white"
-            >
-              {t("guestLoginCta")}
-            </Link>
+          <div className="space-y-4">
+            <div className="flex flex-col items-center gap-3 rounded-3xl border border-[#c5c6cd]/60 bg-white px-6 py-8 text-center shadow-sm">
+              <span className="mp-solid flex h-14 w-14 items-center justify-center rounded-full text-white">
+                <History className="h-6 w-6" />
+              </span>
+              <p className="max-w-sm text-sm font-bold text-[#091426]">{t("guestHistoryTitle")}</p>
+              <p className="max-w-sm text-xs leading-relaxed text-[#45474c]">{t("guestHistoryBody")}</p>
+              <Link
+                href={`/auth/sign-in?redirect_url=/${locale}/history`}
+                className="mp-solid rounded-full px-8 py-2.5 text-sm font-semibold text-white"
+              >
+                {t("guestLoginCta")}
+              </Link>
+            </div>
+            <GuestBookingsPanel initialScope="history" />
           </div>
         ) : (
           <>
@@ -67,18 +71,7 @@ export default async function HistoryPage({
                 <p className="mt-1 text-xs text-white/75">{t("pointsTotal")}</p>
               </div>
             </div>
-            <BookingsList
-              bookings={bookings}
-              rebook
-              emptyHint={
-                <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-[#c5c6cd] bg-white px-5 py-10 text-center">
-                  <p className="text-sm text-[#45474c]">{t("noHistory")}</p>
-                  <Link href="/" className="mp-solid rounded-full px-6 py-2.5 text-sm font-semibold text-white">
-                    {t("browseStores")}
-                  </Link>
-                </div>
-              }
-            />
+            <ManageBookingsList bookings={bookings} scope="history" rebook />
           </>
         )}
       </div>

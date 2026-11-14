@@ -2,10 +2,10 @@
 
 import { useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
-import { CalendarCheck, QrCode, ShoppingBag, Star } from "lucide-react";
+import { CalendarCheck, ShoppingBag, Star, ClipboardList } from "lucide-react";
 import type { ThemeTokens } from "@/config/business-types";
 
-type Tab = "booking" | "scan" | "shop" | "ratings";
+type Tab = "booking" | "bookings" | "shop" | "ratings";
 
 /**
  * Bottom tab bar for the public booking page: Booking | Scan | Shop | Ratings.
@@ -15,13 +15,13 @@ type Tab = "booking" | "scan" | "shop" | "ratings";
 export function BookingTabs({
   theme,
   booking,
-  scan,
+  bookingsTab,
   shop,
   ratings,
 }: {
   theme: ThemeTokens;
   booking: ReactNode;
-  scan: ReactNode;
+  bookingsTab: ReactNode;
   shop?: ReactNode;
   ratings: ReactNode;
 }) {
@@ -30,7 +30,7 @@ export function BookingTabs({
 
   const items: { key: Tab; label: string; icon: typeof CalendarCheck }[] = [
     { key: "booking", label: t("tabBooking"), icon: CalendarCheck },
-    { key: "scan", label: t("tabScan"), icon: QrCode },
+    { key: "bookings", label: t("tabBookings"), icon: ClipboardList },
     ...(shop ? [{ key: "shop" as const, label: t("tabShop"), icon: ShoppingBag }] : []),
     { key: "ratings", label: t("tabRatings"), icon: Star },
   ];
@@ -47,7 +47,7 @@ export function BookingTabs({
   return (
     <>
       <div className={tab === "booking" ? undefined : "hidden"}>{booking}</div>
-      <div className={tab === "scan" ? undefined : "hidden"}>{scan}</div>
+      <div className={tab === "bookings" ? undefined : "hidden"}>{bookingsTab}</div>
       {shop && <div className={tab === "shop" ? undefined : "hidden"}>{shop}</div>}
       <div className={tab === "ratings" ? undefined : "hidden"}>{ratings}</div>
 
@@ -65,7 +65,7 @@ export function BookingTabs({
             const Icon = item.icon;
             const active = tab === item.key;
             return (
-              <button
+              <button suppressHydrationWarning
                 key={item.key}
                 role="tab"
                 aria-selected={active}

@@ -13,6 +13,7 @@ import {
   tenants,
   visits,
   type AppointmentStatus,
+  type ClientArrivalStatus,
 } from "@/db/schema";
 import { ConflictError, NotFoundError } from "@/lib/errors";
 import { sweepStaleAppointments } from "@/modules/appointments/application/no-show-sweep";
@@ -85,10 +86,13 @@ export type ClientBooking = {
   businessName: string;
   slug: string;
   logoUrl: string | null;
+  trackingNumber: string;
   appointmentDate: Date;
   startTime: string;
   endTime: string;
   status: string;
+  clientArrivalStatus: ClientArrivalStatus | null;
+  timezone: string;
   price: number;
   services: string[];
   employeeName: string | null;
@@ -98,6 +102,7 @@ export type ClientBooking = {
   /** True when a check-in is still open (client can check out + rate). */
   hasOpenVisit: boolean;
   canCancel: boolean;
+  canModify: boolean;
 };
 
 const UPCOMING_STATUSES: AppointmentStatus[] = ["pending", "confirmed"];
@@ -129,7 +134,10 @@ export async function getClientBookings(
   const dateCond =
     scope === "upcoming"
       ? and(gte(appointments.appointmentDate, dayStart), inArray(appointments.status, UPCOMING_STATUSES))
-      : lt(appointments.appointmentDate, dayStart);
+      : or(
+          inArray(appointments.status, ["completed", "cancelled", "no_show"]),
+          lt(appointments.appointmentDate, dayStart),
+        );
 
   const matchCond =
     phoneCustomerIds.length > 0
@@ -146,10 +154,13 @@ export async function getClientBookings(
       businessName: tenants.businessName,
       slug: tenants.slug,
       logoUrl: tenants.logoUrl,
+      timezone: tenants.timezone,
+      trackingNumber: appointments.trackingNumber,
       appointmentDate: appointments.appointmentDate,
       startTime: appointments.startTime,
       endTime: appointments.endTime,
       status: appointments.status,
+      clientArrivalStatus: appointments.clientArrivalStatus,
       price: appointments.price,
       employeeName: employees.displayName,
       employeeFirst: employees.firstName,
@@ -204,27 +215,36 @@ export async function getClientBookings(
     servicesByAppt.set(s.appointmentId, [...(servicesByAppt.get(s.appointmentId) ?? []), s.name]);
   }
 
-  return rows.map((r) => ({
-    id: r.id,
-    tenantId: r.tenantId,
-    businessName: r.businessName,
-    slug: r.slug,
-    logoUrl: r.logoUrl,
-    appointmentDate: new Date(r.appointmentDate),
-    startTime: r.startTime,
-    endTime: r.endTime,
-    status: r.status,
-    price: Number(r.price ?? 0),
-    services: servicesByAppt.get(r.id) ?? [],
-    employeeName:
-      r.employeeName ?? (r.employeeFirst ? `${r.employeeFirst} ${r.employeeLast ?? ""}`.trim() : null),
-    homeVisit: r.homeVisit ?? false,
-    homeAddress: r.homeAddress,
-    homeCity: r.homeCity,
-    hasOpenVisit: openVisitIds.has(r.id),
-    canCancel:
-      UPCOMING_STATUSES.includes(r.status) && new Date(r.appointmentDate) >= dayStart,
-  }));
+  return rows.map((r) => {
+    const dayYmd = apptDayYmd(new Date(r.appointmentDate), r.timezone);
+    const startInstant = zonedDateTime(dayYmd, r.startTime, r.timezone).getTime();
+    const msToStart = startInstant - Date.now();
+    const canModify = UPCOMING_STATUSES.includes(r.status) && msToStart > 30 * 60_000;
+    return {
+      id: r.id,
+      tenantId: r.tenantId,
+      businessName: r.businessName,
+      slug: r.slug,
+      logoUrl: r.logoUrl,
+      trackingNumber: r.trackingNumber,
+      timezone: r.timezone ?? "Africa/Cairo",
+      appointmentDate: new Date(r.appointmentDate),
+      startTime: r.startTime,
+      endTime: r.endTime,
+      status: r.status,
+      clientArrivalStatus: (r.clientArrivalStatus as ClientArrivalStatus | null) ?? null,
+      price: Number(r.price ?? 0),
+      services: servicesByAppt.get(r.id) ?? [],
+      employeeName:
+        r.employeeName ?? (r.employeeFirst ? `${r.employeeFirst} ${r.employeeLast ?? ""}`.trim() : null),
+      homeVisit: r.homeVisit ?? false,
+      homeAddress: r.homeAddress,
+      homeCity: r.homeCity,
+      hasOpenVisit: openVisitIds.has(r.id),
+      canCancel: canModify,
+      canModify,
+    };
+  });
 }
 
 /** Accent color + filter priority follow the client's gender. */
@@ -277,6 +297,40 @@ export function apptDayYmd(date: Date, tz: string | null | undefined): string {
   return tenantNow(tz, new Date(date)).ymd;
 }
 
+/** Interpret a tenant-local day+time as an absolute instant. */
+export function zonedDateTime(ymd: string, hm: string, tz: string | null | undefined): Date {
+  const zone = tz || "Africa/Cairo";
+  const [y, mo, d] = ymd.split("-").map(Number);
+  const [h, mi] = hm.split(":").map(Number);
+  const want = Date.UTC(y, (mo ?? 1) - 1, d ?? 1, h ?? 0, mi ?? 0, 0);
+  let date = new Date(want);
+  const parts = (dt: Date) => {
+    const p = Object.fromEntries(
+      new Intl.DateTimeFormat("en-CA", {
+        timeZone: zone,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false,
+      })
+        .formatToParts(dt)
+        .map((x) => [x.type, x.value]),
+    );
+    const hour = p.hour === "24" ? "00" : (p.hour ?? "00");
+    return Date.UTC(Number(p.year), Number(p.month) - 1, Number(p.day), Number(hour), Number(p.minute ?? "0"), Number(p.second ?? "0"));
+  };
+  for (let i = 0; i < 3; i++) {
+    const asUtc = parts(date);
+    const diff = want - asUtc;
+    if (diff === 0) break;
+    date = new Date(date.getTime() + diff);
+  }
+  return date;
+}
+
 /**
  * Single atomic completion path for scan check-out AND store manual
  * completion. Flips pending/confirmed → completed exactly once and grants
@@ -322,23 +376,32 @@ export async function completeAppointment(appointmentId: string) {
  * future bookings, and only when the account link (or profile phone)
  * proves ownership.
  */
-export async function cancelClientBooking(userId: string, appointmentId: string) {
-  const [appt] = await db.select().from(appointments).where(eq(appointments.id, appointmentId)).limit(1);
-  if (!appt) throw new Error("Booking not found");
-
-  let owned = appt.clientUserId === userId;
+async function assertClientOwnsAppointment(userId: string, appointmentId: string) {
+  const [row] = await db
+    .select({ appt: appointments, timezone: tenants.timezone })
+    .from(appointments)
+    .innerJoin(tenants, eq(tenants.id, appointments.tenantId))
+    .where(eq(appointments.id, appointmentId))
+    .limit(1);
+  if (!row) throw new Error("Booking not found");
+  let owned = row.appt.clientUserId === userId;
   if (!owned) {
     const profile = await getClientProfile(userId);
-    if (profile?.phone && appt.customerId) {
-      const [cust] = await db.select().from(customers).where(eq(customers.id, appt.customerId)).limit(1);
+    if (profile?.phone && row.appt.customerId) {
+      const [cust] = await db.select().from(customers).where(eq(customers.id, row.appt.customerId)).limit(1);
       owned = cust?.phone === profile.phone;
     }
   }
   if (!owned) throw new Error("Not authorized");
+  return row;
+}
 
-  const dayStart = new Date();
-  dayStart.setHours(0, 0, 0, 0);
-  if (!UPCOMING_STATUSES.includes(appt.status) || new Date(appt.appointmentDate) < dayStart) {
+export async function cancelClientBooking(userId: string, appointmentId: string) {
+  const row = await assertClientOwnsAppointment(userId, appointmentId);
+  const appt = row.appt;
+  const startAt = zonedDateTime(apptDayYmd(new Date(appt.appointmentDate), row.timezone), appt.startTime, row.timezone);
+  const canCancel = UPCOMING_STATUSES.includes(appt.status) && startAt.getTime() - Date.now() > 30 * 60_000;
+  if (!canCancel) {
     throw new Error("This booking can no longer be cancelled");
   }
 
@@ -348,6 +411,20 @@ export async function cancelClientBooking(userId: string, appointmentId: string)
       status: "cancelled",
       cancelledBy: "client",
       cancelledAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .where(eq(appointments.id, appointmentId));
+}
+
+export async function setClientArrivalStatus(userId: string, appointmentId: string, status: ClientArrivalStatus) {
+  const row = await assertClientOwnsAppointment(userId, appointmentId);
+  const appt = row.appt;
+  if (!UPCOMING_STATUSES.includes(appt.status)) throw new Error("This booking can no longer be updated");
+  await db
+    .update(appointments)
+    .set({
+      clientArrivalStatus: status,
+      clientArrivalUpdatedAt: new Date(),
       updatedAt: new Date(),
     })
     .where(eq(appointments.id, appointmentId));

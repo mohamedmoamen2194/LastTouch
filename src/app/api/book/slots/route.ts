@@ -20,6 +20,7 @@ const bodySchema = z.object({
     .array(z.object({ serviceId: z.string().uuid(), employeeId: z.string().uuid() }))
     .optional(),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  excludeAppointmentId: z.string().uuid().optional(),
 });
 
 /**
@@ -64,7 +65,12 @@ export async function POST(req: Request) {
       const worker = eligible.find((e) => e.id === employeeId);
       if (!worker) throw new ValidationAppError("This staff member does not offer the selected service");
 
-      const slots = await buildDaySlots({ employeeId, date, serviceDurationMinutes: duration });
+      const slots = await buildDaySlots({
+        employeeId,
+        date,
+        serviceDurationMinutes: duration,
+        excludeAppointmentId: input.data.excludeAppointmentId,
+      });
       return NextResponse.json(ok({ slots, employeeId }), { status: HttpStatus.Ok });
     }
 
@@ -87,7 +93,11 @@ export async function POST(req: Request) {
         throw new ValidationAppError("One of the selected staff members does not offer the selected service");
       }
 
-      const slots = await buildSequentialChainSlots({ assignments, date });
+      const slots = await buildSequentialChainSlots({
+        assignments,
+        date,
+        excludeAppointmentId: input.data.excludeAppointmentId,
+      });
       return NextResponse.json(ok({ slots, assignments }), { status: HttpStatus.Ok });
     }
 
@@ -102,7 +112,12 @@ export async function POST(req: Request) {
 
       const perWorker = await Promise.all(
         unique.map(async (id) => {
-          const day = await buildDaySlots({ employeeId: id, date, serviceDurationMinutes: duration });
+          const day = await buildDaySlots({
+            employeeId: id,
+            date,
+            serviceDurationMinutes: duration,
+            excludeAppointmentId: input.data.excludeAppointmentId,
+          });
           return new Map(day.map((s) => [s.start, s.available]));
         })
       );
@@ -127,7 +142,14 @@ export async function POST(req: Request) {
     const staff = await listEligibleEmployees(tenant.id, input.data.serviceIds);
     // Fan out across staff concurrently — each day-build is independent.
     const days = await Promise.all(
-      staff.map((emp) => buildDaySlots({ employeeId: emp.id, date, serviceDurationMinutes: duration })),
+      staff.map((emp) =>
+        buildDaySlots({
+          employeeId: emp.id,
+          date,
+          serviceDurationMinutes: duration,
+          excludeAppointmentId: input.data.excludeAppointmentId,
+        }),
+      ),
     );
     const byStart = new Map<string, { start: string; end: string; available: boolean }>();
     for (const day of days) {

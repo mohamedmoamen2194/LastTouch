@@ -13,7 +13,6 @@ import { BookingTabs } from "@/components/booking/booking-tabs";
 import { ShopView } from "@/components/booking/shop-view";
 import { RecordRecentStore } from "@/components/marketplace/continue-row";
 import { Link } from "@/i18n/navigation";
-import { ScanView } from "@/components/booking/scan-view";
 import { RatingsView } from "@/components/booking/ratings-view";
 import { Logo } from "@/components/booking/logo";
 import { ShopCarousel } from "@/components/booking/shop-carousel";
@@ -22,6 +21,7 @@ import { LangSwitcher } from "@/components/shared/lang-switcher";
 import { getSubscriptionState } from "@/lib/subscriptions";
 import { getOptionalUserId } from "@/lib/auth/session";
 import { getClientProfile, getRebookSelection } from "@/lib/marketplace/client";
+import { GuestBookingsPanel } from "@/components/marketplace/guest-bookings-panel";
 
 export const dynamic = "force-dynamic";
 
@@ -278,13 +278,14 @@ export default async function BookingPage({
                   }
                   initialServiceIds={rebook?.serviceIds ?? null}
                   initialAssignments={rebook?.assignments ?? null}
+                  signedIn={Boolean(bookerId)}
                 />
               </section>
             </>
           }
-          scan={
+          bookingsTab={
             <section className="py-2">
-              <ScanView theme={theme} slug={slug} />
+              <GuestBookingsPanel slug={slug} />
             </section>
           }
           shop={

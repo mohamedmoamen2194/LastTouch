@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
-import { CalendarDays, CheckCircle2, ChevronDown, Clock, QrCode, Star, X } from "lucide-react";
+import { CalendarDays, CheckCircle2, ChevronDown, Clock, ExternalLink, MapPin, QrCode, Star, X } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import type { ClientBooking } from "@/lib/marketplace/client";
 import { QrScanner } from "@/components/marketplace/qr-scanner";
@@ -253,6 +253,26 @@ export function BookingsList({ bookings, emptyHint, rebook = false }: { bookings
   };
 
   const statusKey = (s: string) => `status_${s}` as never;
+  const arrivalKey = (s: string) => `arrival_${s}` as never;
+  const arrivalOptions = ["at_home", "on_my_way", "five_min", "arrived"] as const;
+
+  const updateArrival = async (id: string, status: (typeof arrivalOptions)[number]) => {
+    setBusyId(id);
+    try {
+      const res = await fetch("/api/client/bookings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, action: "arrival", status }),
+      });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.message ?? "Failed");
+      router.refresh();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Failed");
+    } finally {
+      setBusyId(null);
+    }
+  };
 
   return (
     <>
@@ -262,6 +282,7 @@ export function BookingsList({ bookings, emptyHint, rebook = false }: { bookings
           // Check-in completes the appointment, so a completed booking with
           // an open visit still needs a scan entry to check out + rate.
           const scannable = b.status === "pending" || b.status === "confirmed" || (b.status === "completed" && b.hasOpenVisit);
+          const upcomingOpen = b.status === "pending" || b.status === "confirmed";
           return (
             <li key={b.id} className="rounded-2xl border border-[#c5c6cd]/60 bg-white shadow-sm">
               <button type="button" onClick={() => setOpenId(expanded ? null : b.id)} className="flex w-full items-start gap-3 p-4 text-start">
@@ -270,7 +291,7 @@ export function BookingsList({ bookings, emptyHint, rebook = false }: { bookings
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-bold text-[#091426]">{b.businessName}</span>
-                  <span className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs font-medium text-[#091426]">
+                  <span className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-medium text-[#091426]">
                     <span className="flex items-center gap-1">
                       <CalendarDays className="h-3.5 w-3.5" />
                       {dayLabel(b.appointmentDate, t as (k: string) => string, locale)}
@@ -280,6 +301,9 @@ export function BookingsList({ bookings, emptyHint, rebook = false }: { bookings
                       <span dir="ltr">{b.startTime}</span>
                     </span>
                     <span className="rounded-full bg-[#eff1f3] px-2 py-0.5 text-[11px] font-bold">{t(statusKey(b.status))}</span>
+                    {b.clientArrivalStatus && upcomingOpen && (
+                      <span className="rounded-full bg-purple-100 px-2 py-0.5 text-[11px] font-bold text-purple-700">{t(arrivalKey(b.clientArrivalStatus))}</span>
+                    )}
                   </span>
                 </span>
                 <ChevronDown className={`mt-1 h-4 w-4 shrink-0 text-[#9aa0a6] transition-transform ${expanded ? "rotate-180" : ""}`} />
@@ -288,6 +312,10 @@ export function BookingsList({ bookings, emptyHint, rebook = false }: { bookings
               {expanded && (
                 <div className="border-t border-[#c5c6cd]/50 px-4 py-3 text-sm">
                   <dl className="flex flex-col gap-1.5 text-xs">
+                    <div className="flex justify-between gap-3">
+                      <dt className="text-[#9aa0a6]">{t("trackingNumber")}</dt>
+                      <dd dir="ltr" className="font-mono font-semibold text-[#091426]">{b.trackingNumber}</dd>
+                    </div>
                     <div className="flex justify-between gap-3">
                       <dt className="text-[#9aa0a6]">{t("detailDate")}</dt>
                       <dd className="font-semibold text-[#091426]">
@@ -302,7 +330,7 @@ export function BookingsList({ bookings, emptyHint, rebook = false }: { bookings
                     </div>
                     <div className="flex justify-between gap-3">
                       <dt className="text-[#9aa0a6]">{t("services")}</dt>
-                      <dd className="max-w-[60%] text-end font-semibold text-[#091426]">{b.services.join(" · ") || "—"}</dd>
+                      <dd className="max-w-[60%] text-end font-semibold text-[#091426]">{b.services.join(" • ") || "—"}</dd>
                     </div>
                     {b.employeeName && (
                       <div className="flex justify-between gap-3">
@@ -323,42 +351,83 @@ export function BookingsList({ bookings, emptyHint, rebook = false }: { bookings
                       </dd>
                     </div>
                   </dl>
-                  <div className="mt-3 flex flex-col gap-2">
+
+                  {upcomingOpen && (
+                    <div className="mt-3 rounded-xl bg-[#f6f7f9] p-3">
+                      <p className="text-xs font-semibold text-[#091426]">{t("arrivalTitle")}</p>
+                      <p className="mt-0.5 text-[11px] text-[#45474c]">{t("arrivalHint")}</p>
+                      <div className="mt-2 grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+                        {arrivalOptions.map((opt) => {
+                          const active = b.clientArrivalStatus === opt;
+                          return (
+                            <button
+                              key={opt}
+                              type="button"
+                              disabled={busyId === b.id}
+                              onClick={() => void updateArrival(b.id, opt)}
+                              className={`rounded-full px-2 py-1.5 text-[11px] font-semibold transition-colors disabled:opacity-50 ${active ? "bg-[#091426] text-white" : "border border-[#c5c6cd]/70 bg-white text-[#45474c]"}`}
+                            >
+                              {t(arrivalKey(opt))}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                    <Link
+                      href={`/track/${b.slug}?code=${encodeURIComponent(b.trackingNumber)}`}
+                      className="flex w-full items-center justify-center gap-2 rounded-full border border-[#c5c6cd]/70 px-4 py-2 text-xs font-semibold text-[#091426] sm:flex-1"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" />
+                      {t("trackBooking")}
+                    </Link>
                     {scannable && (
                       <button
                         type="button"
                         onClick={() => setScanId(b.id)}
-                        className="mp-solid flex w-full items-center justify-center gap-2 rounded-full px-4 py-2.5 text-xs font-semibold text-white"
+                        className="mp-solid flex w-full items-center justify-center gap-2 rounded-full px-4 py-2.5 text-xs font-semibold text-white sm:flex-1"
                       >
                         <QrCode className="h-4 w-4" />
                         {t("scanCta")}
                       </button>
                     )}
+                  </div>
+                  <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                     <Link
                       href={`/book/${b.slug}`}
-                      className="w-full rounded-full border border-[#c5c6cd]/70 px-4 py-2 text-center text-xs font-semibold text-[#091426]"
+                      className="w-full rounded-full border border-[#c5c6cd]/70 px-4 py-2 text-center text-xs font-semibold text-[#091426] sm:flex-1"
                     >
                       {t("viewStore")}
                     </Link>
                     {rebook && b.status !== "cancelled" && (
                       <Link
                         href={`/book/${b.slug}?rebook=${b.id}`}
-                        className="mp-solid w-full rounded-full px-4 py-2 text-center text-xs font-semibold text-white"
+                        className="mp-solid w-full rounded-full px-4 py-2 text-center text-xs font-semibold text-white sm:flex-1"
                       >
                         {t("bookAgain")}
                       </Link>
                     )}
-                    {b.canCancel && (
-                      <button
-                        type="button"
-                        disabled={busyId === b.id}
-                        onClick={() => cancel(b.id)}
-                        className="w-full rounded-full border border-red-200 px-4 py-2 text-xs font-semibold text-red-700 disabled:opacity-50"
-                      >
-                        {busyId === b.id ? t("cancelling") : t("cancel")}
-                      </button>
-                    )}
                   </div>
+                  {(b.canCancel || (upcomingOpen && !b.canCancel)) && (
+                    <div className="mt-2">
+                      {b.canCancel ? (
+                        <button
+                          type="button"
+                          disabled={busyId === b.id}
+                          onClick={() => cancel(b.id)}
+                          className="w-full rounded-full border border-red-200 px-4 py-2 text-xs font-semibold text-red-700 disabled:opacity-50"
+                        >
+                          {busyId === b.id ? t("cancelling") : t("cancel")}
+                        </button>
+                      ) : (
+                        <p className="rounded-xl bg-amber-50 px-3 py-2 text-center text-[11px] font-medium text-amber-800">
+                          {t("cancelCutoff")}
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </li>

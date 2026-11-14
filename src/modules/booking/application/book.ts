@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { appointmentServices, appointmentEmployees, appointments, customers, employees, employeeServices, services, tenants, type AppointmentSource } from "@/db/schema";
-import { and, eq, gte, inArray, lte } from "drizzle-orm";
+import { and, eq, gte, inArray, lte, ne } from "drizzle-orm";
 import { ConflictError, NotFoundError, ValidationAppError } from "@/lib/errors";
 import { normalizePhone } from "@/lib/marketplace/client";
 import { buildDaySlots, buildSequentialChainSlots } from "../../availability/domain/engine";
@@ -21,7 +21,9 @@ export type CreateBookingInput = {
   packageId?: string;
   appointmentDate: string; // "YYYY-MM-DD"
   startTime: string; // "HH:MM"
-  /** Required when any selected service is a home-visit service. */
+  /** Explicit mode from client; falls back to selected services when omitted. */
+  homeVisit?: boolean;
+  /** Required for home-visit bookings. */
   homeAddress?: string;
   homeCity?: string;
   homeLatitude?: number | null;
@@ -98,6 +100,7 @@ export async function assertNoClientOverlap(
   appointmentDate: Date,
   startTime: string,
   endTime: string,
+  excludeAppointmentId?: string,
 ): Promise<void> {
   const dayStart = new Date(appointmentDate);
   dayStart.setHours(0, 0, 0, 0);
@@ -119,6 +122,7 @@ export async function assertNoClientOverlap(
         gte(appointments.appointmentDate, dayStart),
         lte(appointments.appointmentDate, dayEnd),
         inArray(appointments.status, ["pending", "confirmed"]),
+        ...(excludeAppointmentId ? [ne(appointments.id, excludeAppointmentId)] : []),
       ),
     )
     .limit(20);
@@ -148,6 +152,8 @@ export async function validateBookingAvailability(args: {
   employeeAssignments?: EmployeeAssignment[];
   appointmentDate: Date;
   startTime: string;
+  homeVisit?: boolean;
+  excludeAppointmentId?: string;
 }): Promise<BookingAvailability> {
   if (args.serviceIds.length === 0) throw new ValidationAppError("Select at least one service");
 
@@ -168,10 +174,9 @@ export async function validateBookingAvailability(args: {
     priceNum += Number(svc.price);
   }
 
-  // A booking is a home visit when ANY requested service is a home-visit
-  // service. The assigned worker(s) must then be home-visit capable, and a
-  // client address is required at creation time.
-  const isHomeVisit = args.serviceIds.some((serviceId) => svcById.get(serviceId)?.homeVisit === true);
+  // A booking is a home visit when the client explicitly selects home-visit
+  // mode, or (fallback) when any requested service is home-visit-only.
+  const isHomeVisit = args.homeVisit ?? args.serviceIds.some((serviceId) => svcById.get(serviceId)?.homeVisit === true);
   const assertHomeCapable = (worker: WorkerCapability | undefined) => {
     if (isHomeVisit && (!worker || !worker.homeVisit)) {
       throw new NotFoundError("This staff member does not offer home visits");
@@ -212,6 +217,7 @@ export async function validateBookingAvailability(args: {
         serviceDurationMinutes: durationByService.get(a.serviceId) ?? 0,
       })),
       date: args.appointmentDate,
+      excludeAppointmentId: args.excludeAppointmentId,
     });
     if (!chain.some((s) => s.start === args.startTime && s.available)) {
       throw new ConflictError("One of the selected staff members is unavailable at that time");
@@ -257,21 +263,36 @@ export async function validateBookingAvailability(args: {
   }
 
   if (assignments.length === 0) {
-    const slots = await buildDaySlots({ employeeId, date: args.appointmentDate, serviceDurationMinutes: durationMinutes });
+    const slots = await buildDaySlots({
+      employeeId,
+      date: args.appointmentDate,
+      serviceDurationMinutes: durationMinutes,
+      excludeAppointmentId: args.excludeAppointmentId,
+    });
     if (!slots.some((s) => s.start === args.startTime && s.available)) {
       throw new ConflictError("No employee available at the selected time");
     }
     assignments.push(...args.serviceIds.map((serviceId) => ({ serviceId, employeeId })));
   } else {
     for (const employeeId of [...new Set(assignments.map((a) => a.employeeId))]) {
-      const slots = await buildDaySlots({ employeeId, date: args.appointmentDate, serviceDurationMinutes: durationMinutes });
+      const slots = await buildDaySlots({
+        employeeId,
+        date: args.appointmentDate,
+        serviceDurationMinutes: durationMinutes,
+        excludeAppointmentId: args.excludeAppointmentId,
+      });
       if (!slots.some((s) => s.start === args.startTime && s.available)) {
         throw new ConflictError("No employee available at the selected time");
       }
     }
   }
 
-  const slot = await buildDaySlots({ employeeId, date: args.appointmentDate, serviceDurationMinutes: durationMinutes });
+  const slot = await buildDaySlots({
+    employeeId,
+    date: args.appointmentDate,
+    serviceDurationMinutes: durationMinutes,
+    excludeAppointmentId: args.excludeAppointmentId,
+  });
   const found = slot.find((s) => s.start === args.startTime);
   if (!found) throw new ValidationAppError("The selected time is unavailable");
   if (!found.available) throw new ConflictError("The selected time is no longer available");
@@ -301,6 +322,7 @@ export async function createBooking(input: CreateBookingInput) {
     employeeAssignments: input.employeeAssignments,
     appointmentDate,
     startTime: input.startTime,
+    homeVisit: input.homeVisit,
   });
 
   // A package is priced as a bundle, never as the sum of its services.

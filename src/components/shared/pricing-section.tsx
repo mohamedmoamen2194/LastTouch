@@ -50,9 +50,7 @@ export function PricingSection() {
     if (!card) return;
     const gap = 16;
     const step = card.offsetWidth + gap;
-    const from = track.scrollLeft;
-    const snap = step * Math.round(from / step);
-    track.scrollTo({ left: snap + dir * step, behavior: "smooth" });
+    track.scrollBy({ left: dir * step, behavior: "smooth" });
   };
 
   return (
@@ -94,28 +92,10 @@ export function PricingSection() {
       </div>
 
       {/* Carousel */}
-      <div className="relative px-10 md:px-0">
-        {/* Prev / Next arrows (mobile only) */}
-        <button
-          type="button"
-          aria-label="Previous"
-          onClick={() => scrollCarousel(-1)}
-          className="absolute left-1 top-1/2 z-10 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-[#c5c6cd]/60 bg-white text-[#091426] shadow-md transition-colors hover:bg-[#f2f4f6] md:hidden"
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </button>
-        <button
-          type="button"
-          aria-label="Next"
-          onClick={() => scrollCarousel(1)}
-          className="absolute right-1 top-1/2 z-10 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-[#c5c6cd]/60 bg-white text-[#091426] shadow-md transition-colors hover:bg-[#f2f4f6] md:hidden"
-        >
-          <ChevronRight className="h-4 w-4" />
-        </button>
-
+      <div className="relative -mx-4 md:mx-0">
         <div
           ref={trackRef}
-          className="flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-2 pt-6 md:scroll-mx-0 md:mx-auto md:max-w-5xl md:grid md:grid-cols-3 md:gap-6 md:overflow-visible md:pb-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          className="flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth px-4 pb-4 pt-6 [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:hidden md:mx-auto md:grid md:max-w-5xl md:grid-cols-3 md:gap-6 md:overflow-visible md:px-0 md:pb-0"
         >
           {PLANS.map((plan) => {
             const featured = "popular" in plan && plan.popular;
@@ -129,7 +109,7 @@ export function PricingSection() {
               <div
                 key={plan.key}
                 data-pricing-card
-                className={`relative flex min-h-[25rem] w-[88%] max-w-[20rem] shrink-0 snap-center flex-col rounded-2xl border p-5 md:min-h-[27rem] md:w-auto md:max-w-none md:snap-none md:min-w-0 md:p-6 ${
+                className={`relative flex min-h-0 w-[84vw] max-w-[22rem] shrink-0 snap-center flex-col rounded-2xl border p-6 shadow-sm md:min-h-[27rem] md:w-auto md:max-w-none md:snap-none md:min-w-0 ${
                   featured
                     ? "border-[#091426] bg-[#091426] text-white shadow-lg"
                     : "border-[#c5c6cd]/60 bg-white"
@@ -212,6 +192,24 @@ export function PricingSection() {
               </div>
             );
           })}
+        </div>
+        <div className="mt-2 flex justify-center gap-3 md:hidden">
+          <button
+            type="button"
+            aria-label="Previous plan"
+            onClick={() => scrollCarousel(-1)}
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-[#c5c6cd]/60 bg-white text-[#091426] shadow-sm"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+          <button
+            type="button"
+            aria-label="Next plan"
+            onClick={() => scrollCarousel(1)}
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-[#c5c6cd]/60 bg-white text-[#091426] shadow-sm"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </button>
         </div>
       </div>
     </section>

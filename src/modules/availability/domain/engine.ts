@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { appointments, appointmentEmployees, appointmentServices, breaks as breaksTable, timeOff, workingHours, type AppointmentStatus } from "@/db/schema";
-import { and, eq, gte, inArray, lte } from "drizzle-orm";
+import { and, eq, gte, inArray, lte, ne } from "drizzle-orm";
 import { format, parse } from "date-fns";
 
 /**
@@ -40,13 +40,18 @@ function dayBounds(date: Date) {
   return { start, end };
 }
 
-export async function existingBookings(employeeId: string, date: Date) {
+export async function existingBookings(
+  employeeId: string,
+  date: Date,
+  opts?: { excludeAppointmentId?: string },
+) {
   const { start, end } = dayBounds(date);
 
   const activeWhere = and(
     gte(appointments.appointmentDate, start),
     lte(appointments.appointmentDate, end),
-    inArray(appointments.status, APPOINTMENT_ACTIVE)
+    inArray(appointments.status, APPOINTMENT_ACTIVE),
+    ...(opts?.excludeAppointmentId ? [ne(appointments.id, opts.excludeAppointmentId)] : []),
   );
 
   // Appointments where this worker is the PRIMARY staff member.
@@ -171,6 +176,7 @@ export async function buildDaySlots(args: {
   serviceDurationMinutes: number;
   bufferBefore?: number;
   bufferAfter?: number;
+  excludeAppointmentId?: string;
 }): Promise<TimeSlot[]> {
   const weekday = args.date.getDay();
   const schedule = await db.query.workingHours.findMany({
@@ -190,7 +196,9 @@ export async function buildDaySlots(args: {
   });
   if (leaves.length > 0) return [];
 
-  const bookings = await existingBookings(args.employeeId, args.date);
+  const bookings = await existingBookings(args.employeeId, args.date, {
+    excludeAppointmentId: args.excludeAppointmentId,
+  });
   const restBreaks = await db.query.breaks.findMany({
     where: and(eq(breaksTable.employeeId, args.employeeId), eq(breaksTable.weekday, weekday)),
   });
@@ -352,7 +360,11 @@ type WorkerDayModel = {
  * rest breaks and existing bookings (both as minute ranges). Returns
  * `working: false` when the worker is off that day or on time-off.
  */
-async function workerDayModel(employeeId: string, date: Date): Promise<WorkerDayModel> {
+async function workerDayModel(
+  employeeId: string,
+  date: Date,
+  opts?: { excludeAppointmentId?: string },
+): Promise<WorkerDayModel> {
   const weekday = date.getDay();
   const schedule = await db.query.workingHours.findMany({
     where: and(eq(workingHours.employeeId, employeeId), eq(workingHours.weekday, weekday)),
@@ -370,7 +382,9 @@ async function workerDayModel(employeeId: string, date: Date): Promise<WorkerDay
   });
   if (leaves.length > 0) return { working: false, windows: [], busy: [] };
 
-  const bookings = await existingBookings(employeeId, date);
+  const bookings = await existingBookings(employeeId, date, {
+    excludeAppointmentId: opts?.excludeAppointmentId,
+  });
   const restBreaks = await db.query.breaks.findMany({
     where: and(eq(breaksTable.employeeId, employeeId), eq(breaksTable.weekday, weekday)),
   });
@@ -399,10 +413,15 @@ async function workerDayModel(employeeId: string, date: Date): Promise<WorkerDay
 export async function buildSequentialChainSlots(args: {
   assignments: Array<{ employeeId: string; serviceDurationMinutes: number }>;
   date: Date;
+  excludeAppointmentId?: string;
 }): Promise<TimeSlot[]> {
   if (args.assignments.length === 0) return [];
 
-  const models = await Promise.all(args.assignments.map((a) => workerDayModel(a.employeeId, args.date)));
+  const models = await Promise.all(
+    args.assignments.map((a) =>
+      workerDayModel(a.employeeId, args.date, { excludeAppointmentId: args.excludeAppointmentId }),
+    ),
+  );
 
   const prefixes: number[] = [];
   let running = 0;

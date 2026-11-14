@@ -52,20 +52,22 @@ export async function StoreCard({
             className="absolute inset-0"
             style={{ background: `linear-gradient(to top, ${th.primary} 5%, transparent 75%)` }}
           />
-          <span
-            className="absolute bottom-2 start-2 rounded-full px-2.5 py-0.5 text-[11px] font-bold"
-            style={{ backgroundColor: th.onPrimary, color: th.primary }}
-          >
-            {t(`type_${store.businessType}` as never)}
-          </span>
-          {store.offersHomeVisit && (
+          <div className="absolute inset-x-2 bottom-2 flex flex-wrap items-end justify-between gap-1.5">
             <span
-              className="absolute bottom-2 end-2 rounded-full px-2.5 py-0.5 text-[11px] font-bold"
-              style={{ backgroundColor: "#e3f2fd", color: "#04519b" }}
+              className="rounded-full px-2.5 py-0.5 text-[11px] font-bold"
+              style={{ backgroundColor: th.onPrimary, color: th.primary }}
             >
-              {t("homeVisits")}
+              {t(`type_${store.businessType}` as never)}
             </span>
-          )}
+            {store.offersHomeVisit && (
+              <span
+                className="rounded-full px-2.5 py-0.5 text-[11px] font-bold"
+                style={{ backgroundColor: "#e3f2fd", color: "#04519b" }}
+              >
+                {t("homeVisits")}
+              </span>
+            )}
+          </div>
         </div>
         <div className="flex flex-1 flex-col gap-1 p-3">
           <div className="flex items-start gap-2.5">

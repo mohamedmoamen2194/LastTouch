@@ -28,6 +28,7 @@
     "subtitle": "Choose a service, pick your favorite specialist and reserve your slot.",
     "tabBooking": "Booking",
     "tabScan": "Scan",
+    "tabBookings": "My bookings",
     "tabShop": "Shop",
     "tabRatings": "Ratings",
     "scanTitle": "Scan store QR",
@@ -108,6 +109,10 @@
     "arrivalHint": "Tell us when you can arrive and we'll pick the earliest available slot at or after that time.",
     "receipt": "Your receipt",
     "receiptNote": "Your appointment is booked. Here's your receipt — save it or show it when you arrive.",
+    "yourDetails": "Your details",
+    "guestDetailsHint": "Enter your name and phone number so we can confirm and help you track this booking.",
+    "guestReceiptHint": "Save your tracking number or link to view this booking later.",
+    "signInToSave": "Sign in to save it to My bookings",
     "trackingNumber": "Tracking number",
     "copy": "Copy",
     "copied": "Copied",
@@ -136,7 +141,9 @@
     "locationCaptured": "Location captured ✓",
     "locationDenied": "We couldn't get your location. Type your address instead.",
     "locationUnsupported": "Location is not supported on this device.",
-    "locating": "Locating…"
+    "locating": "Locating…",
+    "inStore": "In store",
+    "myBookingsCta": "My bookings"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -217,7 +224,11 @@
     "homeAddress": "Home address",
     "getDirections": "Get directions",
     "customer": "Customer",
-    "phone": "Phone"
+    "phone": "Phone",
+    "arrival_at_home": "Client: at home",
+    "arrival_on_my_way": "Client: on the way",
+    "arrival_five_min": "Client: 5 min away",
+    "arrival_arrived": "Client: arrived"
   },
   "auth": {
     "signIn": "Sign in",
@@ -491,18 +502,66 @@
       "storesLabel": "Trusted by salons & barbershops"
     },
     "businesses": {
-      "label": "Built for every business"
+      "label": "Built for every business",
+      "types": {
+        "barber_shop": {
+          "label": "Men's Barber Shop",
+          "employeeLabel": "Barber"
+        },
+        "hair_salon": {
+          "label": "Women's Hair Salon",
+          "employeeLabel": "Stylist"
+        },
+        "nail_studio": {
+          "label": "Nail Studio",
+          "employeeLabel": "Nail Technician"
+        },
+        "beauty_center": {
+          "label": "Beauty Center",
+          "employeeLabel": "Beauty Specialist"
+        },
+        "spa": {
+          "label": "Spa",
+          "employeeLabel": "Therapist"
+        },
+        "makeup_studio": {
+          "label": "Makeup Studio",
+          "employeeLabel": "Makeup Artist"
+        },
+        "wellness_center": {
+          "label": "Wellness Center",
+          "employeeLabel": "Coach"
+        }
+      }
     },
     "features": {
       "title": "Everything your business needs",
       "subtitle": "One platform that grows with you.",
       "items": {
-        "booking": { "title": "Online booking", "desc": "A beautiful, mobile-first booking page for your clients." },
-        "customers": { "title": "Customer CRM", "desc": "Profiles, visit history and preferences in one place." },
-        "ai": { "title": "AI receptionist", "desc": "Coming soon: automated booking assistance around the clock." },
-        "reports": { "title": "Analytics", "desc": "Revenue, top services and trends at a glance." },
-        "marketing": { "title": "Marketing", "desc": "Coming soon: win back lapsed clients and grow repeat visits." },
-        "payments": { "title": "Payments", "desc": "Coming soon: deposits and online payments." }
+        "booking": {
+          "title": "Online booking",
+          "desc": "A beautiful, mobile-first booking page for your clients."
+        },
+        "customers": {
+          "title": "Customer CRM",
+          "desc": "Profiles, visit history and preferences in one place."
+        },
+        "ai": {
+          "title": "AI receptionist",
+          "desc": "Coming soon: automated booking assistance around the clock."
+        },
+        "reports": {
+          "title": "Analytics",
+          "desc": "Revenue, top services and trends at a glance."
+        },
+        "marketing": {
+          "title": "Marketing",
+          "desc": "Coming soon: win back lapsed clients and grow repeat visits."
+        },
+        "payments": {
+          "title": "Payments",
+          "desc": "Coming soon: deposits and online payments."
+        }
       }
     },
     "cta": {
@@ -695,7 +754,8 @@
     "scan_not_today": "Check-in is only available on the appointment day.",
     "scan_too_early": "This appointment hasn't started yet.",
     "scan_too_late_checkin": "Check-in closes 5 minutes after the start time — this booking has been cancelled.",
-    "scan_too_late_checkout": "Check-out is no longer available for this appointment."
+    "scan_too_late_checkout": "Check-out is no longer available for this appointment.",
+    "forBusinessBody": "Run your store on LastTouch — booking, customers and analytics."
   },
   "client": {
     "bookingsTitle": "My bookings",
@@ -707,7 +767,7 @@
     "noUpcoming": "No upcoming bookings — find a store and book your visit.",
     "noHistory": "No past visits yet.",
     "guestBookingsTitle": "Your bookings live here",
-    "guestBookingsBody": "Sign in as a client to see upcoming appointments, check in with a scan, and manage everything in one place.",
+    "guestBookingsBody": "Sign in as a client to see upcoming appointments, check in with a scan, and manage everything in one place. Or find a booking as a guest below.",
     "guestHistoryTitle": "Your history lives here",
     "guestHistoryBody": "Sign in as a client to revisit past appointments, rebook in one tap, and collect loyalty points.",
     "guestLoginCta": "Login as a client",
@@ -715,7 +775,7 @@
     "browseStores": "Browse stores",
     "today": "Today",
     "tomorrow": "Tomorrow",
-    "cancel": "Cancel booking",
+    "cancel": "Cancel",
     "cancelling": "Cancelling…",
     "cancelConfirm": "Cancel this booking?",
     "cancelled": "Booking cancelled",
@@ -768,15 +828,16 @@
     "cardNote": "Only the last 4 digits leave your device — your full card number is never sent or stored.",
     "defaultBadge": "Default",
     "removeCard": "Remove",
-    "cancel": "Cancel",
     "close": "Close",
     "detailDate": "Date",
     "detailTime": "Time",
     "detailPrice": "Price",
     "viewStore": "View store",
     "bookAgain": "Book again",
-    "scanCta": "Scan check-in",
+    "scanCta": "Check in / out",
     "scanTitle": "Scan at the store",
+    "checkInOutTitle": "Check in / out",
+    "checkInOutHint": "Tap to check in when you arrive, then check out when you're done (we'll confirm you're at the store).",
     "scanWorking": "Checking…",
     "checkIn": "Check in",
     "checkOut": "Check out",
@@ -793,6 +854,22 @@
     "scan_too_late_checkin": "Check-in closed (10 minutes past start).",
     "scan_too_late_checkout": "Check-out window has passed.",
     "scan_already_checked_in": "Already checked in.",
+    "scan_out_of_range": "You're too far from the store. Move closer and try again.",
+    "scan_location_not_set": "Store location isn't set yet. Please contact the store.",
+    "rescheduleAction": "Reschedule",
+    "rescheduleTitle": "Reschedule booking",
+    "rescheduleHint": "Pick a new date and an available time slot.",
+    "noSlots": "No available slots on this day.",
+    "manageLookupTitle": "Find your booking",
+    "manageLookupHint": "Use your tracking number, or your phone and name.",
+    "lookupByTracking": "Tracking number",
+    "lookupByPhone": "Phone + name",
+    "trackingPlaceholder": "e.g. ABC123",
+    "namePlaceholder": "Your name",
+    "lookupAction": "Find bookings",
+    "lookupEmpty": "No bookings found.",
+    "upcomingTab": "Upcoming",
+    "historyTab": "History",
     "languageTitle": "Language",
     "languageBody": "Switch the app language anytime.",
     "businessesTitle": "My businesses",
@@ -819,7 +896,16 @@
     "refAwaiting": "Awaiting payout",
     "refPaid": "Paid",
     "refPending": "Waiting for store plan",
-    "refPendingHint": "Prize unlocks when this store activates a paid plan — then choose points or cash."
+    "refPendingHint": "Prize unlocks when this store activates a paid plan — then choose points or cash.",
+    "trackingNumber": "Tracking number",
+    "trackBooking": "Track booking",
+    "arrivalTitle": "I'm on my way status",
+    "arrivalHint": "Optional: let the store know your ETA.",
+    "arrival_at_home": "Still at home",
+    "arrival_on_my_way": "On my way",
+    "arrival_five_min": "5 min away",
+    "arrival_arrived": "Arrived",
+    "cancelCutoff": "Cancellation is available only more than 30 minutes before the appointment."
   },
   "legal": {
     "privacyTitle": "Privacy Policy",

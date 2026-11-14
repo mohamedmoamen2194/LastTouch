@@ -6,7 +6,8 @@ import { getOptionalUserId } from "@/lib/auth/session";
 import { getClientBookings, getClientProfile, clientAccentForGender } from "@/lib/marketplace/client";
 import { MarketplaceTabs } from "@/components/marketplace/tabs";
 import { MarketplaceFooter } from "@/components/marketplace/footer";
-import { BookingsList } from "@/components/marketplace/bookings-list";
+import { ManageBookingsList } from "@/components/marketplace/booking-manage-list";
+import { GuestBookingsPanel } from "@/components/marketplace/guest-bookings-panel";
 import { MarketplaceTopbar } from "@/components/marketplace/topbar";
 
 export const dynamic = "force-dynamic";
@@ -43,31 +44,24 @@ export default async function ReservationsPage({
           <p className="mt-0.5 text-sm text-[#45474c]">{t("bookingsSubtitle")}</p>
         </div>
         {!userId ? (
-          <div className="flex flex-col items-center gap-3 rounded-3xl border border-[#c5c6cd]/60 bg-white px-6 py-10 text-center shadow-sm">
-            <span className="mp-solid flex h-14 w-14 items-center justify-center rounded-full text-white">
-              <CalendarCheck className="h-6 w-6" />
-            </span>
-            <p className="max-w-sm text-sm font-bold text-[#091426]">{t("guestBookingsTitle")}</p>
-            <p className="max-w-sm text-xs leading-relaxed text-[#45474c]">{t("guestBookingsBody")}</p>
-            <Link
-              href={`/auth/sign-in?redirect_url=/${locale}/reservations`}
-              className="mp-solid rounded-full px-8 py-2.5 text-sm font-semibold text-white"
-            >
-              {t("guestLoginCta")}
-            </Link>
+          <div className="space-y-4">
+            <div className="flex flex-col items-center gap-3 rounded-3xl border border-[#c5c6cd]/60 bg-white px-6 py-8 text-center shadow-sm">
+              <span className="mp-solid flex h-14 w-14 items-center justify-center rounded-full text-white">
+                <CalendarCheck className="h-6 w-6" />
+              </span>
+              <p className="max-w-sm text-sm font-bold text-[#091426]">{t("guestBookingsTitle")}</p>
+              <p className="max-w-sm text-xs leading-relaxed text-[#45474c]">{t("guestBookingsBody")}</p>
+              <Link
+                href={`/auth/sign-in?redirect_url=/${locale}/reservations`}
+                className="mp-solid rounded-full px-8 py-2.5 text-sm font-semibold text-white"
+              >
+                {t("guestLoginCta")}
+              </Link>
+            </div>
+            <GuestBookingsPanel initialScope="upcoming" />
           </div>
         ) : (
-          <BookingsList
-            bookings={bookings}
-            emptyHint={
-              <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-[#c5c6cd] bg-white px-5 py-10 text-center">
-                <p className="text-sm text-[#45474c]">{t("noUpcoming")}</p>
-                <Link href="/" className="mp-solid rounded-full px-6 py-2.5 text-sm font-semibold text-white">
-                  {t("browseStores")}
-                </Link>
-              </div>
-            }
-          />
+          <ManageBookingsList bookings={bookings} scope="upcoming" rebook={false} />
         )}
         <Link href="/history" className="text-center text-xs font-semibold text-[#45474c] underline">
           {tm("tabsHistory")} →

@@ -23,6 +23,7 @@ export type AppointmentCardRow = {
   status: string;
   price: string;
   source: string;
+  clientArrivalStatus?: string | null;
   employeeId: string | null;
   employeeFirstName: string | null;
   employeeLastName: string | null;
@@ -193,6 +194,11 @@ export function AppointmentList({
                 <div className="flex items-center justify-between gap-3 md:contents">
                   <div className="flex flex-wrap items-center gap-1.5">
                     <StatusBadge status={r.status} theme={theme} />
+                    {r.clientArrivalStatus && (
+                      <span className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-semibold" style={{ backgroundColor: "#f3e8ff", color: "#6b21a8" }}>
+                        {t(`arrival_${r.clientArrivalStatus}` as any)}
+                      </span>
+                    )}
                     {r.homeVisit && (
                       <span className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-semibold" style={{ backgroundColor: "#e3f2fd", color: "#04519b" }}>
                         <Home className="h-3 w-3" />

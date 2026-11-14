@@ -3,11 +3,11 @@ import { z } from "zod";
 import { and, eq } from "drizzle-orm";
 import { withApi, readJson } from "@/lib/api";
 import { ok, HttpStatus } from "@/lib/response";
-import { ValidationAppError } from "@/lib/errors";
-import { requireUserId } from "@/lib/auth/session";
+import { ValidationAppError, ForbiddenError } from "@/lib/errors";
+import { getOptionalUserId } from "@/lib/auth/session";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 import { db } from "@/db";
-import { appointments, customers, tenants, visits } from "@/db/schema";
+import { appointments, customers, locations, tenants, visits } from "@/db/schema";
 import {
   addMinutesHm,
   apptDayYmd,
@@ -15,42 +15,50 @@ import {
   getClientProfile,
   tenantNow,
 } from "@/lib/marketplace/client";
+import { haversineMeters, ATTENDANCE_GEOFENCE_METERS } from "@/modules/attendance/application/attendance";
+import { readGuestBookingToken } from "@/lib/marketplace/guest-access";
 
 const bodySchema = z.object({
   appointmentId: z.string().uuid(),
-  /** auto = first scan checks in, second checks out; in/out force one side. */
   mode: z.enum(["auto", "in", "out"]).default("auto"),
-  /** Raw QR content from the camera — must belong to the booking's store. */
-  qr: z.string().min(1).max(2000),
+  /** Optional: QR can be used to reach/open the booking; in-app check-in/out does not require scanning. */
+  qr: z.string().min(1).max(2000).optional(),
+  latitude: z.number().min(-90).max(90),
+  longitude: z.number().min(-180).max(180),
+  accuracyMeters: z.number().optional(),
+  guestToken: z.string().optional(),
 });
 
-/**
- * GET /api/visits/scan?appointmentId=… — visit state for the scan popup:
- * whether a check-in is open (so the UI preselects check-out), and the
- * booking status. Ownership-checked, no side effects.
- */
-export async function GET(req: Request) {
-  return withApi(async () => {
-    const userId = await requireUserId();
-    const appointmentId = new URL(req.url).searchParams.get("appointmentId");
-    if (!appointmentId || !z.string().uuid().safeParse(appointmentId).success) {
-      throw new ValidationAppError("Missing appointment");
-    }
-
-    const [appt] = await db.select().from(appointments).where(eq(appointments.id, appointmentId)).limit(1);
-    if (!appt) throw new ValidationAppError("Booking not found");
-
+async function assertScanAccess(appt: typeof appointments.$inferSelect, userId: string | null, guestToken?: string) {
+  if (userId) {
     let owned = appt.clientUserId === userId;
     if (!owned && appt.customerId) {
-      const [c] = await db
-        .select({ phone: customers.phone })
-        .from(customers)
-        .where(eq(customers.id, appt.customerId))
-        .limit(1);
+      const [c] = await db.select({ phone: customers.phone }).from(customers).where(eq(customers.id, appt.customerId)).limit(1);
       const profile = await getClientProfile(userId);
       owned = Boolean(profile?.phone && c?.phone && profile.phone === c.phone);
     }
     if (!owned) throw new ValidationAppError("This booking is not yours");
+    return;
+  }
+  const tok = readGuestBookingToken(guestToken);
+  if (!tok || tok.aid !== appt.id) throw new ValidationAppError("Not authorized");
+  if (tok.s === "store" && tok.tid && tok.tid !== appt.tenantId) throw new ValidationAppError("Not authorized");
+}
+
+export async function GET(req: Request) {
+  return withApi(async () => {
+    const url = new URL(req.url);
+    const appointmentId = url.searchParams.get("appointmentId");
+    const guestToken = url.searchParams.get("guestToken") ?? undefined;
+    if (!appointmentId || !z.string().uuid().safeParse(appointmentId).success) {
+      throw new ValidationAppError("Missing appointment");
+    }
+    const userId = await getOptionalUserId();
+    if (!userId && !guestToken) throw new ValidationAppError("Not authorized");
+
+    const [appt] = await db.select().from(appointments).where(eq(appointments.id, appointmentId)).limit(1);
+    if (!appt) throw new ValidationAppError("Booking not found");
+    await assertScanAccess(appt, userId, guestToken);
 
     const [open] = await db
       .select({ id: visits.id })
@@ -65,30 +73,20 @@ export async function GET(req: Request) {
   });
 }
 
-/**
- * POST /api/visits/scan — appointment check-in / check-out from the client
- * bookings page. Guards, in order: ownership, open status, QR belongs to
- * the appointment's store, same-day check-in window (start +5 min — after
- * that the booking is considered cancelled for self check-in),
- * check-out deadline (end +3h).
- * Check-in completes the appointment (points accrue) — checkout does too,
- * even with no prior check-in, so a client who never scanned in but loops
- * back to check out still completes.
- */
 export async function POST(req: Request) {
   return withApi(async () => {
     rateLimit(`visits:scan:${clientIp(req)}`, 20);
-    const userId = await requireUserId();
     const body = await readJson<unknown>(req);
     const input = bodySchema.safeParse(body);
     if (!input.success) throw new ValidationAppError("Invalid scan request");
-    const { appointmentId, mode, qr } = input.data;
+    const { appointmentId, mode, qr, latitude, longitude, guestToken } = input.data;
+    const userId = await getOptionalUserId();
+    if (!userId && !guestToken) throw new ValidationAppError("Not authorized");
 
     const [appt] = await db.select().from(appointments).where(eq(appointments.id, appointmentId)).limit(1);
     if (!appt) throw new ValidationAppError("Booking not found");
+    await assertScanAccess(appt, userId, guestToken);
 
-    // Ownership: account link, or profile phone matching the booking customer.
-    let owned = appt.clientUserId === userId;
     let customer = null as null | { id: string; phone: string | null; firstName: string };
     if (appt.customerId) {
       const [c] = await db
@@ -97,15 +95,7 @@ export async function POST(req: Request) {
         .where(eq(customers.id, appt.customerId))
         .limit(1);
       customer = c ?? null;
-      if (!owned) {
-        const profile = await getClientProfile(userId);
-        owned = Boolean(profile?.phone && customer?.phone && profile.phone === customer.phone);
-      }
-    } else if (!owned) {
-      // No customer row and no account link — nothing ties this booking here.
-      owned = false;
     }
-    if (!owned) throw new ValidationAppError("This booking is not yours");
 
     if (appt.status !== "pending" && appt.status !== "confirmed") {
       throw new ValidationAppError("This booking is closed");
@@ -118,16 +108,28 @@ export async function POST(req: Request) {
       .limit(1);
     if (!tenant) throw new ValidationAppError("Store not found");
 
-    // The scanned QR must belong to this appointment's store.
-    let qrOk = false;
-    try {
-      const url = new URL(qr, "https://lasttouch.app");
-      qrOk =
-        url.pathname.includes(`/book/${tenant.slug}`) || url.pathname.includes(`/checkin/${tenant.slug}`);
-    } catch {
-      qrOk = false;
+    if (qr) {
+      let qrOk = false;
+      try {
+        const url = new URL(qr, "https://lasttouch.app");
+        qrOk = url.pathname.includes(`/book/${tenant.slug}`) || url.pathname.includes(`/checkin/${tenant.slug}`);
+      } catch {
+        qrOk = false;
+      }
+      if (!qrOk) throw new ValidationAppError("wrong_store");
     }
-    if (!qrOk) throw new ValidationAppError("wrong_store");
+
+    const [storeLoc] = await db
+      .select({ latitude: locations.latitude, longitude: locations.longitude })
+      .from(locations)
+      .where(and(eq(locations.tenantId, appt.tenantId), eq(locations.active, true)))
+      .limit(1);
+    if (!storeLoc?.latitude || !storeLoc.longitude) throw new ValidationAppError("location_not_set");
+    const distanceMeters = haversineMeters(
+      { latitude, longitude },
+      { latitude: Number(storeLoc.latitude), longitude: Number(storeLoc.longitude) },
+    );
+    if (distanceMeters > ATTENDANCE_GEOFENCE_METERS) throw new ForbiddenError("out_of_range");
 
     const tz = tenant.timezone ?? "Africa/Cairo";
     const now = tenantNow(tz);
@@ -144,23 +146,11 @@ export async function POST(req: Request) {
     const wantOut = mode === "out" || (mode === "auto" && open);
 
     if (!wantOut) {
-      // ---- check-in ----
-      // Idempotent: tapping check-in twice (or a retry after a timeout) must
-      // stay green instead of surfacing "already checked in".
       if (open) {
-        if (appt.status === "pending" || appt.status === "confirmed") {
-          await completeAppointment(appt.id);
-        }
-        return NextResponse.json(
-          ok({ action: "checked_in", status: "completed", visitId: open.id, already: true }),
-          { status: HttpStatus.Ok },
-        );
+        return NextResponse.json(ok({ action: "checked_in", status: appt.status, visitId: open.id, already: true }), { status: HttpStatus.Ok });
       }
       if (day !== now.ymd) throw new ValidationAppError("not_today");
       if (now.hm > lateCheckin) throw new ValidationAppError("too_late_checkin");
-      // Idempotent under double-tap/retry races: the partial unique index
-      // on open visits makes a concurrent second insert a no-op, and the
-      // loser gets a green response instead of a duplicate visit.
       const [created] = await db
         .insert(visits)
         .values({
@@ -174,38 +164,23 @@ export async function POST(req: Request) {
         .onConflictDoNothing()
         .returning({ id: visits.id });
       if (!created) {
-        const [winner] = await db
-          .select({ id: visits.id })
-          .from(visits)
-          .where(and(eq(visits.appointmentId, appointmentId), eq(visits.status, "checked_in")))
-          .limit(1);
-        return NextResponse.json(
-          ok({ action: "checked_in", status: "confirmed", visitId: winner?.id ?? null, already: true }),
-          { status: HttpStatus.Ok },
-        );
+        const [winner] = await db.select({ id: visits.id }).from(visits).where(and(eq(visits.appointmentId, appointmentId), eq(visits.status, "checked_in"))).limit(1);
+        return NextResponse.json(ok({ action: "checked_in", status: appt.status, visitId: winner?.id ?? null, already: true }), { status: HttpStatus.Ok });
       }
-      // Check-in completes the appointment (points accrue) — anyone who
-      // checks in is completed; checkout below completes again idempotently.
-      await completeAppointment(appt.id);
-      return NextResponse.json(
-        ok({ action: "checked_in", status: "completed", visitId: created.id }),
-        { status: HttpStatus.Ok },
-      );
+      // keep appointment in upcoming state until check-out; only mark visit checked_in
+      if (appt.status === "pending") {
+        await db.update(appointments).set({ status: "confirmed", updatedAt: new Date() }).where(eq(appointments.id, appt.id));
+      }
+      return NextResponse.json(ok({ action: "checked_in", status: appt.status === "pending" ? "confirmed" : appt.status, visitId: created.id }), { status: HttpStatus.Ok });
     }
 
-    // ---- check-out ----
     if (day > now.ymd) throw new ValidationAppError("too_early");
     if (day < now.ymd) throw new ValidationAppError("too_late_checkout");
     if (now.hm > checkoutDeadline) throw new ValidationAppError("too_late_checkout");
 
     if (open) {
-      await db
-        .update(visits)
-        .set({ status: "checked_out", checkOutAt: new Date(), updatedAt: new Date() })
-        .where(eq(visits.id, open.id));
+      await db.update(visits).set({ status: "checked_out", checkOutAt: new Date(), updatedAt: new Date() }).where(eq(visits.id, open.id));
     } else {
-      // No open visit (missed check-in): record both legs at once so the
-      // visit isn't lost — the admin panel can correct mistakes.
       await db.insert(visits).values({
         tenantId: appt.tenantId,
         customerId: appt.customerId,
@@ -217,14 +192,7 @@ export async function POST(req: Request) {
       });
     }
     await completeAppointment(appt.id);
-    const [closed] = await db
-      .select({ id: visits.id })
-      .from(visits)
-      .where(and(eq(visits.appointmentId, appointmentId), eq(visits.status, "checked_out")))
-      .orderBy(visits.id)
-      .limit(1);
-    return NextResponse.json(ok({ action: "checked_out", status: "completed", visitId: closed?.id ?? null }), {
-      status: HttpStatus.Ok,
-    });
+    const [closed] = await db.select({ id: visits.id }).from(visits).where(and(eq(visits.appointmentId, appointmentId), eq(visits.status, "checked_out"))).orderBy(visits.id).limit(1);
+    return NextResponse.json(ok({ action: "checked_out", status: "completed", visitId: closed?.id ?? null }), { status: HttpStatus.Ok });
   });
 }

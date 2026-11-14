@@ -105,6 +105,9 @@ export const APPOINTMENT_SOURCES = [
 ] as const;
 export type AppointmentSource = (typeof APPOINTMENT_SOURCES)[number];
 
+export const CLIENT_ARRIVAL_STATUSES = ["at_home", "on_my_way", "five_min", "arrived"] as const;
+export type ClientArrivalStatus = (typeof CLIENT_ARRIVAL_STATUSES)[number];
+
 export const NOTIFICATION_CHANNELS = ["email", "in_app", "whatsapp", "sms", "push"] as const;
 export const NOTIFICATION_STATUSES = ["pending", "sent", "delivered", "opened", "failed"] as const;
 
@@ -528,6 +531,9 @@ export const appointments = pgTable(
     homeCity: text("home_city"),
     homeLatitude: numeric("home_latitude", { precision: 10, scale: 7 }),
     homeLongitude: numeric("home_longitude", { precision: 10, scale: 7 }),
+    /** Optional live ETA/status set by the client (informational for the store). */
+    clientArrivalStatus: varchar("client_arrival_status", { length: 20 }).$type<ClientArrivalStatus>(),
+    clientArrivalUpdatedAt: timestamp("client_arrival_updated_at", { withTimezone: true }),
     cancelledBy: text("cancelled_by"),
     cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
     cancelReason: text("cancel_reason"),

@@ -91,16 +91,24 @@ export default async function LandingPage({
       {/* Businesses supported */}
       <section id="businesses" className="mx-auto w-full max-w-6xl px-4 py-12 md:px-8 md:py-16">
         <p className="mb-6 text-center text-xs font-semibold uppercase tracking-widest text-[#515f74] md:mb-8">{t("businesses.label")}</p>
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
-          {businessTypes.map((b) => (
-            <div
-              key={b.type}
-              className="flex h-full min-h-[7.5rem] flex-col items-center justify-center gap-1 rounded-xl border border-[#c5c6cd]/60 bg-white p-4 text-center md:min-h-[8.5rem]"
-            >
-              <p className="w-full break-words text-sm font-semibold leading-relaxed text-[#091426] md:text-base">{b.label}</p>
-              <p className="w-full break-words text-xs leading-relaxed text-[#45474c] md:text-sm">{b.employeeLabel}</p>
-            </div>
-          ))}
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-12 md:gap-4">
+          {businessTypes.map((b, i) => {
+            const span =
+              i === businessTypes.length - 1
+                ? "col-span-2 md:col-span-4"
+                : i >= businessTypes.length - 3
+                  ? "md:col-span-4"
+                  : "md:col-span-3";
+            return (
+              <div
+                key={b.type}
+                className={`flex h-full min-h-[7.5rem] flex-col items-center justify-center gap-1 rounded-xl border border-[#c5c6cd]/60 bg-white p-4 text-center md:min-h-[8.5rem] ${span}`}
+              >
+                <p className="w-full break-words text-sm font-semibold leading-relaxed text-[#091426] md:text-base">{t(`businesses.types.${b.type}.label`)}</p>
+                <p className="w-full break-words text-xs leading-relaxed text-[#45474c] md:text-sm">{t(`businesses.types.${b.type}.employeeLabel`)}</p>
+              </div>
+            );
+          })}
         </div>
       </section>
 

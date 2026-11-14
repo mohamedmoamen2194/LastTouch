@@ -31,12 +31,13 @@ export type AppointmentServiceRow = {
 
 export type ListedAppointment = {
   id: string;
-  dateTime: Date;
+  dateTime: Date | string;
   startTime: string;
   endTime: string;
   status: AppointmentStatus;
   price: string;
   source: string;
+  clientArrivalStatus: string | null;
   employeeId: string | null;
   employeeFirstName: string | null;
   employeeLastName: string | null;
@@ -109,6 +110,7 @@ export async function listAppointments(
       status: appointments.status,
       price: appointments.price,
       source: appointments.source,
+      clientArrivalStatus: appointments.clientArrivalStatus,
       employeeId: appointments.employeeId,
       employeeFirstName: employees.firstName,
       employeeLastName: employees.lastName,
@@ -237,6 +239,7 @@ export async function rescheduleAppointment(
     employeeId: appt.employeeId,
     date,
     serviceDurationMinutes: appt.durationMinutes,
+    excludeAppointmentId: appt.id,
   });
   const pick = slots.find((s) => s.start === startTime && s.available);
   if (!pick) throw new ConflictError("The requested slot is no longer available");

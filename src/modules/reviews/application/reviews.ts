@@ -2,6 +2,8 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { appointments, reviews, visits } from "@/db/schema";
 import { NotFoundError, ValidationAppError } from "@/lib/errors";
+import { assertManageAccess } from "@/lib/marketplace/booking-manage";
+import { readGuestBookingToken } from "@/lib/marketplace/guest-access";
 
 export type ReviewInput = {
   slug: string;
@@ -10,9 +12,10 @@ export type ReviewInput = {
   rating: number;
   comment?: string | null;
   employeeId?: string | null;
+  guestToken?: string;
 };
 
-export async function createPublicReview(tenantId: string, input: ReviewInput) {
+export async function createPublicReview(tenantId: string, input: ReviewInput, auth?: { userId?: string | null; guestToken?: string }) {
   const rating = Number(input.rating);
   if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
     throw new ValidationAppError("Rating must be between 1 and 5");
@@ -37,12 +40,17 @@ export async function createPublicReview(tenantId: string, input: ReviewInput) {
   if (!appointmentId) throw new ValidationAppError("A completed visit is required");
 
   const [appt] = await db
-    .select({ id: appointments.id, customerId: appointments.customerId, status: appointments.status })
+    .select({ id: appointments.id, customerId: appointments.customerId, status: appointments.status, tenantId: appointments.tenantId })
     .from(appointments)
     .where(and(eq(appointments.id, appointmentId), eq(appointments.tenantId, tenantId)))
     .limit(1);
   if (!appt) throw new NotFoundError("Appointment not found");
   if (appt.status !== "completed") throw new ValidationAppError("Appointment is not complete yet");
+  // if auth/guest context provided, ensure caller owns this booking
+  const token = readGuestBookingToken(auth?.guestToken ?? input.guestToken);
+  if (auth?.userId || token) {
+    await assertManageAccess({ appointmentId, userId: auth?.userId, tokenPayload: token, tenantId });
+  }
   customerId = customerId ?? appt.customerId ?? null;
 
   const [created] = await db
