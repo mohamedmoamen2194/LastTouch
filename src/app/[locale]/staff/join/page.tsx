@@ -48,7 +48,7 @@ export default async function StaffJoinPage({
         />
       </div>
       <p className="mt-4 text-center text-xs text-[#45474c]">
-        Secure team access · Powered by LastTouch
+        {locale === "ar" ? "دخول آمن للفريق · بدعم من LastTouch" : "Secure team access · Powered by LastTouch"}
       </p>
     </main>
   );

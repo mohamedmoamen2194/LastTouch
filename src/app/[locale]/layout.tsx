@@ -1,4 +1,5 @@
 import { setRequestLocale, getMessages } from "next-intl/server";
+import type { Viewport } from "next";
 import { IBM_Plex_Sans_Arabic, Inter, Space_Grotesk } from "next/font/google";
 import { notFound } from "next/navigation";
 import { routing } from "@/i18n/routing";
@@ -27,6 +28,14 @@ export function generateStaticParams() {
 
 export const metadata = {
   icons: { icon: "/logo.svg", apple: "/logo.svg" },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover",
 };
 
 const dirs: Record<string, string> = { en: "ltr", ar: "rtl" };

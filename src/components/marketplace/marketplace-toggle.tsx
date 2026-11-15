@@ -3,10 +3,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Store } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 /** Owner toggle: appear (or hide) this store on the public marketplace. */
 export function MarketplaceToggle({ slug, initial }: { slug: string; initial: boolean }) {
   const router = useRouter();
+  const t = useTranslations("marketplace");
   const [on, setOn] = useState(initial);
   const [busy, setBusy] = useState(false);
 
@@ -39,9 +41,9 @@ export function MarketplaceToggle({ slug, initial }: { slug: string; initial: bo
       <span className="flex min-w-0 flex-1 items-center gap-2.5">
         <Store className="h-4 w-4 shrink-0 text-[#091426]" />
         <span className="min-w-0">
-          <span className="block truncate text-sm font-semibold text-[#091426]">Marketplace listing</span>
+          <span className="block truncate text-sm font-semibold text-[#091426]">{t("listing")}</span>
           <span className="block truncate text-xs text-[#45474c]">
-            {on ? "Visible to clients" : "Hidden from clients"}
+            {on ? t("visible") : t("hidden")}
           </span>
         </span>
       </span>

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import {
   CalendarCheck,
   Check,
@@ -67,19 +68,21 @@ function money(value: number, locale: string, currency: string) {
   return new Intl.NumberFormat(locale, { style: "currency", currency, maximumFractionDigits: 2 }).format(value);
 }
 
-function statusLabel(day: DayView | null) {
-  if (!day) return { label: "No data", bg: "#f0f0f0", fg: "#666" };
-  if (day.isOff) return { label: day.offApproved ? "Approved off" : "Day off", bg: "#eef0f3", fg: "#45474c" };
-  if (day.status === "no_show") return { label: "No show", bg: "#fdeaea", fg: "#a12b2b" };
-  if (day.status === "pending") return { label: "Not arrived", bg: "#fff4e5", fg: "#9a6b00" };
-  if (day.status === "late") return { label: day.lateApproved ? `Late ${day.lateMinutes}m (approved)` : `Late ${day.lateMinutes}m`, bg: "#fff4e5", fg: "#9a6b00" };
-  if (day.earlyMinutes > 0) return { label: `Early ${day.earlyMinutes}m`, bg: "#e3f2fd", fg: "#04519b" };
-  return { label: "On time", bg: "#e1f3e2", fg: "#1d6e2f" };
+function statusLabel(day: DayView | null, t: (k:string,v?:any)=>string) {
+  if (!day) return { label: t("noData"), bg: "#f0f0f0", fg: "#666" };
+  if (day.isOff) return { label: day.offApproved ? t("approvedOff") : t("dayOff"), bg: "#eef0f3", fg: "#45474c" };
+  if (day.status === "no_show") return { label: t("noShow"), bg: "#fdeaea", fg: "#a12b2b" };
+  if (day.status === "pending") return { label: t("notArrived"), bg: "#fff4e5", fg: "#9a6b00" };
+  if (day.status === "late") return { label: day.lateApproved ? t("lateApproved", { minutes: day.lateMinutes }) : t("late", { minutes: day.lateMinutes }), bg: "#fff4e5", fg: "#9a6b00" };
+  if (day.earlyMinutes > 0) return { label: t("early", { minutes: day.earlyMinutes }), bg: "#e3f2fd", fg: "#04519b" };
+  return { label: t("onTime"), bg: "#e1f3e2", fg: "#1d6e2f" };
 }
 
 export function AttendanceManager(props: Props) {
   const { slug, locale, timezone, currency, theme, dateKey, todayKey, rows, policy, requests, disputes } = props;
   const router = useRouter();
+  const t = useTranslations("attendance");
+  const tc = useTranslations("common");
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -124,7 +127,7 @@ export function AttendanceManager(props: Props) {
       },
       "settings"
     );
-    if (ok) setNotice("Attendance settings saved.");
+    if (ok) setNotice(t("settingsSaved"));
   };
 
   const resolveRequest = async (request: AdminRequest, status: "accepted" | "rejected") => {
@@ -156,8 +159,8 @@ export function AttendanceManager(props: Props) {
     <div className="space-y-5 md:space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-xl font-bold md:text-2xl" style={{ color: theme.primary }}>Attendance</h1>
-          <p className="mt-1 text-sm" style={{ color: theme.onSurfaceVariant }}>All workers · {formatDay(dateKey, locale)}</p>
+          <h1 className="text-xl font-bold md:text-2xl" style={{ color: theme.primary }}>{t("title")}</h1>
+          <p className="mt-1 text-sm" style={{ color: theme.onSurfaceVariant }}>{t("subtitleAll", { date: formatDay(dateKey, locale) })}</p>
         </div>
         <input
           type="date"
@@ -175,17 +178,17 @@ export function AttendanceManager(props: Props) {
       {/* Workers */}
       <section className="rounded-2xl border" style={{ borderColor: theme.outlineVariant, backgroundColor: theme.surfaceContainerLowest }}>
         <div className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-3" style={{ borderColor: theme.outlineVariant }}>
-          <h2 className="text-sm font-semibold" style={{ color: theme.primary }}>Workers</h2>
+          <h2 className="text-sm font-semibold" style={{ color: theme.primary }}>{t("workers")}</h2>
           <span className="text-xs" style={{ color: theme.onSurfaceVariant }}>
-            Total penalties today: <span className="font-semibold" style={{ color: totalPenalty > 0 ? "#a12b2b" : theme.primary }}>{money(totalPenalty, locale, currency)}</span>
+            {t("totalPenaltiesToday")} <span className="font-semibold" style={{ color: totalPenalty > 0 ? "#a12b2b" : theme.primary }}>{money(totalPenalty, locale, currency)}</span>
           </span>
         </div>
         <div className="divide-y" style={{ borderColor: theme.outlineVariant }}>
           {rows.length === 0 ? (
-            <p className="p-6 text-center text-sm" style={{ color: theme.onSurfaceVariant }}>No active workers.</p>
+            <p className="p-6 text-center text-sm" style={{ color: theme.onSurfaceVariant }}>{t("noActiveWorkers")}</p>
           ) : (
             rows.map(({ employee, day }) => {
-              const meta = statusLabel(day);
+              const meta = statusLabel(day, t);
               return (
                 <div key={employee.id} className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0">
@@ -218,29 +221,29 @@ export function AttendanceManager(props: Props) {
       {/* Settings */}
       <section className="rounded-2xl border p-4" style={{ borderColor: theme.outlineVariant, backgroundColor: theme.surfaceContainerLowest }}>
         <h2 className="flex items-center gap-2 text-sm font-semibold" style={{ color: theme.primary }}>
-          <Settings2 className="h-4 w-4" /> Attendance rules & penalties
+          <Settings2 className="h-4 w-4" /> {t("rulesTitle")}
         </h2>
         <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
           <label className="text-xs" style={{ color: theme.onSurfaceVariant }}>
-            Earliest check-in (min before shift)
+            {t("earliestCheckIn")}
             <input type="number" min="0" value={early} onChange={(e) => setEarly(e.target.value)} className={inputClass} style={{ borderColor: theme.outlineVariant, backgroundColor: theme.surface, color: theme.onSurfaceVariant }} />
           </label>
           <label className="text-xs" style={{ color: theme.onSurfaceVariant }}>
-            Grace period (min)
+            {t("gracePeriod")}
             <input type="number" min="0" value={grace} onChange={(e) => setGrace(e.target.value)} className={inputClass} style={{ borderColor: theme.outlineVariant, backgroundColor: theme.surface, color: theme.onSurfaceVariant }} />
           </label>
           <label className="text-xs" style={{ color: theme.onSurfaceVariant }}>
-            No-show penalty ({currency})
+            {t("noShowPenalty", { currency })}
             <input type="number" min="0" step="10" value={noShow} onChange={(e) => setNoShow(e.target.value)} className={inputClass} style={{ borderColor: theme.outlineVariant, backgroundColor: theme.surface, color: theme.onSurfaceVariant }} />
           </label>
         </div>
 
         <div className="mt-4">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide" style={{ color: theme.secondary }}>Late penalty tiers</p>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide" style={{ color: theme.secondary }}>{t("latePenaltyTiers")}</p>
           <div className="space-y-2">
             {tiers.map((tier, index) => (
               <div key={index} className="flex items-center gap-2">
-                <span className="text-xs" style={{ color: theme.onSurfaceVariant }}>Late ≥</span>
+                <span className="text-xs" style={{ color: theme.onSurfaceVariant }}>{t("lateAtLeast")}</span>
                 <input
                   type="number"
                   min="0"
@@ -249,7 +252,7 @@ export function AttendanceManager(props: Props) {
                   className="w-20 rounded-lg border px-2 py-1.5 text-sm outline-none"
                   style={{ borderColor: theme.outlineVariant, backgroundColor: theme.surface, color: theme.onSurfaceVariant }}
                 />
-                <span className="text-xs" style={{ color: theme.onSurfaceVariant }}>min →</span>
+                <span className="text-xs" style={{ color: theme.onSurfaceVariant }}>{t("minArrow")}</span>
                 <input
                   type="number"
                   min="0"
@@ -273,7 +276,7 @@ export function AttendanceManager(props: Props) {
               className="inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs font-semibold"
               style={{ borderColor: theme.outlineVariant, color: theme.onSurfaceVariant }}
             >
-              <Plus className="h-3.5 w-3.5" /> Add tier
+              <Plus className="h-3.5 w-3.5" /> {t("addTier")}
             </button>
             <button
               type="button"
@@ -282,11 +285,11 @@ export function AttendanceManager(props: Props) {
               className="ml-auto inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold disabled:opacity-50"
               style={{ backgroundColor: theme.primary, color: theme.onPrimary }}
             >
-              <Save className="h-3.5 w-3.5" /> {busy === "settings" ? "Saving…" : "Save settings"}
+              <Save className="h-3.5 w-3.5" /> {busy === "settings" ? t("saving") : t("saveSettings")}
             </button>
           </div>
           <p className="mt-2 text-[11px]" style={{ color: theme.secondary }}>
-            The highest tier reached applies. Example: tiers 30→50, 60→100; a 45-minute late is penalised 50.
+            {t("tiersHint")}
           </p>
         </div>
       </section>
@@ -295,26 +298,26 @@ export function AttendanceManager(props: Props) {
       <section className="rounded-2xl border" style={{ borderColor: theme.outlineVariant, backgroundColor: theme.surfaceContainerLowest }}>
         <div className="flex items-center justify-between border-b px-4 py-3" style={{ borderColor: theme.outlineVariant }}>
           <h2 className="flex items-center gap-2 text-sm font-semibold" style={{ color: theme.primary }}>
-            <CalendarCheck className="h-4 w-4" /> Requests
+            <CalendarCheck className="h-4 w-4" /> {t("requests")}
           </h2>
-          <span className="text-xs" style={{ color: theme.onSurfaceVariant }}>{pendingRequests.length} pending</span>
+          <span className="text-xs" style={{ color: theme.onSurfaceVariant }}>{t("pendingCount", { count: pendingRequests.length })}</span>
         </div>
         <div className="divide-y" style={{ borderColor: theme.outlineVariant }}>
           {requests.length === 0 ? (
-            <p className="p-6 text-center text-sm" style={{ color: theme.onSurfaceVariant }}>No requests.</p>
+            <p className="p-6 text-center text-sm" style={{ color: theme.onSurfaceVariant }}>{t("noRequests")}</p>
           ) : (
             requests.map((request) => (
               <div key={request.id} className="px-4 py-3">
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="text-sm font-semibold" style={{ color: theme.primary }}>
-                      {request.employeeName} · {request.type === "day_off" ? "Day off" : `Late arrival${request.lateTime ? ` at ${request.lateTime}` : ""}`}
+                      {request.employeeName} • {request.type === "day_off" ? t("requestDayOff") : request.lateTime ? t("requestLateAt", { time: request.lateTime }) : t("requestLateArrival")}
                     </p>
                     <p className="text-xs" style={{ color: theme.onSurfaceVariant }}>
                       {formatDay(request.dateKey, locale)}
                       {request.reason ? ` · ${request.reason}` : ""}
                     </p>
-                    {request.ownerNote && <p className="text-[11px]" style={{ color: theme.secondary }}>Note: {request.ownerNote}</p>}
+                    {request.ownerNote && <p className="text-[11px]" style={{ color: theme.secondary }}>{t("ownerNote", { note: request.ownerNote })}</p>}
                   </div>
                   <span className="rounded-full px-2.5 py-1 text-[11px] font-semibold capitalize" style={{ backgroundColor: theme.surfaceContainerHigh, color: theme.onSurfaceVariant }}>{request.status}</span>
                 </div>
@@ -325,7 +328,7 @@ export function AttendanceManager(props: Props) {
                         type="number"
                         min="0"
                         step="10"
-                        placeholder={`Penalty ${currency} (optional)`}
+                        placeholder={t("penaltyPlaceholder", { currency })}
                         value={penaltyDrafts[request.id] ?? ""}
                         onChange={(e) => setPenaltyDrafts((prev) => ({ ...prev, [request.id]: e.target.value }))}
                         className="w-40 rounded-lg border px-2 py-1.5 text-xs outline-none"
@@ -333,17 +336,17 @@ export function AttendanceManager(props: Props) {
                       />
                     )}
                     <input
-                      placeholder="Owner note (optional)"
+                      placeholder={t("ownerNotePlaceholder")}
                       value={noteDrafts[request.id] ?? ""}
                       onChange={(e) => setNoteDrafts((prev) => ({ ...prev, [request.id]: e.target.value }))}
                       className="min-w-0 flex-1 rounded-lg border px-2 py-1.5 text-xs outline-none"
                       style={{ borderColor: theme.outlineVariant, backgroundColor: theme.surface, color: theme.onSurfaceVariant }}
                     />
                     <button type="button" onClick={() => void resolveRequest(request, "accepted")} disabled={busy !== null} className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold disabled:opacity-50" style={{ backgroundColor: "#e1f3e2", color: "#1d6e2f" }}>
-                      <Check className="h-3.5 w-3.5" /> Accept
+                      <Check className="h-3.5 w-3.5" /> {t("accept")}
                     </button>
                     <button type="button" onClick={() => void resolveRequest(request, "rejected")} disabled={busy !== null} className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold disabled:opacity-50" style={{ backgroundColor: "#fdeaea", color: "#a12b2b" }}>
-                      <X className="h-3.5 w-3.5" /> Reject
+                      <X className="h-3.5 w-3.5" /> {t("reject")}
                     </button>
                   </div>
                 )}
@@ -357,13 +360,13 @@ export function AttendanceManager(props: Props) {
       <section className="rounded-2xl border" style={{ borderColor: theme.outlineVariant, backgroundColor: theme.surfaceContainerLowest }}>
         <div className="flex items-center justify-between border-b px-4 py-3" style={{ borderColor: theme.outlineVariant }}>
           <h2 className="flex items-center gap-2 text-sm font-semibold" style={{ color: theme.primary }}>
-            <Clock3 className="h-4 w-4" /> Disputes
+            <Clock3 className="h-4 w-4" /> {t("disputes")}
           </h2>
-          <span className="text-xs" style={{ color: theme.onSurfaceVariant }}>{pendingDisputes.length} pending</span>
+          <span className="text-xs" style={{ color: theme.onSurfaceVariant }}>{t("pendingCount", { count: pendingDisputes.length })}</span>
         </div>
         <div className="divide-y" style={{ borderColor: theme.outlineVariant }}>
           {disputes.length === 0 ? (
-            <p className="p-6 text-center text-sm" style={{ color: theme.onSurfaceVariant }}>No disputes.</p>
+            <p className="p-6 text-center text-sm" style={{ color: theme.onSurfaceVariant }}>{t("noDisputes")}</p>
           ) : (
             disputes.map((dispute) => (
               <div key={dispute.id} className="px-4 py-3">
@@ -371,24 +374,24 @@ export function AttendanceManager(props: Props) {
                   <div className="min-w-0">
                     <p className="text-sm font-semibold" style={{ color: theme.primary }}>{dispute.employeeName} · {formatDay(dispute.dateKey, locale)}</p>
                     <p className="text-xs" style={{ color: theme.onSurfaceVariant }}>{dispute.note}</p>
-                    {dispute.ownerNote && <p className="text-[11px]" style={{ color: theme.secondary }}>Note: {dispute.ownerNote}</p>}
+                    {dispute.ownerNote && <p className="text-[11px]" style={{ color: theme.secondary }}>{t("ownerNote", { note: dispute.ownerNote })}</p>}
                   </div>
                   <span className="rounded-full px-2.5 py-1 text-[11px] font-semibold capitalize" style={{ backgroundColor: theme.surfaceContainerHigh, color: theme.onSurfaceVariant }}>{dispute.status}</span>
                 </div>
                 {dispute.status === "pending" && (
                   <div className="mt-2 flex flex-wrap items-center gap-2">
                     <input
-                      placeholder="Owner note (optional)"
+                      placeholder={t("ownerNotePlaceholder")}
                       value={noteDrafts[dispute.id] ?? ""}
                       onChange={(e) => setNoteDrafts((prev) => ({ ...prev, [dispute.id]: e.target.value }))}
                       className="min-w-0 flex-1 rounded-lg border px-2 py-1.5 text-xs outline-none"
                       style={{ borderColor: theme.outlineVariant, backgroundColor: theme.surface, color: theme.onSurfaceVariant }}
                     />
                     <button type="button" onClick={() => void resolveDispute(dispute, "accepted")} disabled={busy !== null} className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold disabled:opacity-50" style={{ backgroundColor: "#e1f3e2", color: "#1d6e2f" }}>
-                      <Check className="h-3.5 w-3.5" /> Accept
+                      <Check className="h-3.5 w-3.5" /> {t("accept")}
                     </button>
                     <button type="button" onClick={() => void resolveDispute(dispute, "rejected")} disabled={busy !== null} className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold disabled:opacity-50" style={{ backgroundColor: "#fdeaea", color: "#a12b2b" }}>
-                      <X className="h-3.5 w-3.5" /> Reject
+                      <X className="h-3.5 w-3.5" /> {t("reject")}
                     </button>
                   </div>
                 )}

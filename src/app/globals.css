@@ -26,6 +26,16 @@
     @apply bg-background text-foreground font-inter antialiased;
   }
 
+  /* Prevent iOS/Android browsers from auto-zooming when focusing inputs with
+     font-size < 16px on mobile. */
+  @media screen and (max-width: 767px) {
+    input,
+    select,
+    textarea {
+      font-size: 16px !important;
+    }
+  }
+
   h1,
   h2,
   h3,

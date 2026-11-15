@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { CheckCircle2, Clock3, KeyRound, ShieldX } from "lucide-react";
 
 type Props = {
@@ -22,11 +23,7 @@ type Props = {
   invalidCode: boolean;
 };
 
-const ROLE_LABELS: Record<string, string> = {
-  manager: "Manager",
-  cashier: "Cashier",
-  employee: "Worker",
-};
+const ROLE_KEYS: Record<string, string> = { manager: "manager", cashier: "cashier", employee: "employee" };
 
 function homePath(locale: string, slug: string, role: string) {
   if (role === "cashier") return `/${locale}/desk/${slug}`;
@@ -36,6 +33,8 @@ function homePath(locale: string, slug: string, role: string) {
 
 export function JoinInvite({ locale, initialCode, signedIn, preview, invalidCode }: Props) {
   const router = useRouter();
+  const t = useTranslations("staffJoin");
+  const tc = useTranslations("common");
   const [code, setCode] = useState(initialCode);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -57,11 +56,11 @@ export function JoinInvite({ locale, initialCode, signedIn, preview, invalidCode
         body: JSON.stringify({ code: initialCode }),
       });
       const json = await res.json();
-      if (!json.success) throw new Error(json.message ?? "Could not accept invite");
+      if (!json.success) throw new Error(json.message ?? t("acceptError"));
       router.replace(homePath(locale, json.data.tenantSlug, json.data.role));
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not accept invite");
+      setError(err instanceof Error ? err.message : t("acceptError"));
       setBusy(false);
     }
   };
@@ -72,13 +71,13 @@ export function JoinInvite({ locale, initialCode, signedIn, preview, invalidCode
     <div className="w-full max-w-md rounded-3xl border border-[#c5c6cd]/60 bg-white p-5 shadow-sm md:p-6">
       <div className="flex items-center gap-2 text-[#091426]">
         <KeyRound className="h-5 w-5" />
-        <h1 className="text-xl font-bold">Staff invite</h1>
+        <h1 className="text-xl font-bold">{t("title")}</h1>
       </div>
 
       {invalidCode || !initialCode ? (
         <>
           <p className="mt-2 text-sm text-[#45474c]">
-            Enter the invite code your manager shared with you.
+            {t("enterCode")}
           </p>
           <form onSubmit={submitCode} className="mt-4 space-y-3">
             <input
@@ -94,22 +93,22 @@ export function JoinInvite({ locale, initialCode, signedIn, preview, invalidCode
               disabled={!code.trim()}
               className="w-full rounded-full bg-[#091426] px-5 py-3 text-sm font-semibold text-white disabled:opacity-40"
             >
-              Continue
+              {t("continue")}
             </button>
           </form>
         </>
       ) : preview?.state === "valid" ? (
         <>
           <p className="mt-2 text-sm text-[#45474c]">
-            You have been invited to join
+            {t("invitedToJoin")}
           </p>
           <p className="mt-1 text-lg font-semibold text-[#091426]">{preview.tenantName}</p>
           <div className="mt-3 rounded-2xl border border-[#c5c6cd]/60 bg-[#f7f7f5] px-4 py-3">
             <p className="text-sm font-medium text-[#091426]">{preview.employeeName}</p>
             <p className="text-xs text-[#45474c]">
-              {preview.employeeRole ?? ROLE_LABELS[preview.accessRole] ?? "Team member"}
+              {preview.employeeRole ?? ({manager:"Manager",cashier:"Cashier",employee:"Worker"})[preview.accessRole] ?? "Team member"}
               {" · "}
-              {ROLE_LABELS[preview.accessRole] ?? preview.accessRole} panel
+              {({manager:"Manager",cashier:"Cashier",employee:"Worker"})[preview.accessRole] ?? preview.accessRole} panel
             </p>
           </div>
 
@@ -125,7 +124,7 @@ export function JoinInvite({ locale, initialCode, signedIn, preview, invalidCode
               className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-[#091426] px-5 py-3 text-sm font-semibold text-white disabled:opacity-50"
             >
               <CheckCircle2 className="h-4 w-4" />
-              {busy ? "Joining…" : "Accept invite"}
+              {busy ? t("joining") : t("accept")}
             </button>
           ) : (
             <div className="mt-4 space-y-2">
@@ -133,34 +132,34 @@ export function JoinInvite({ locale, initialCode, signedIn, preview, invalidCode
                 href={`/${locale}/auth/sign-up?redirect_url=${encodeURIComponent(redirectUrl)}`}
                 className="block w-full rounded-full bg-[#091426] px-5 py-3 text-center text-sm font-semibold text-white"
               >
-                Create an account to join
+                {t("createAccount")}
               </Link>
               <Link
                 href={`/${locale}/auth/sign-in?redirect_url=${encodeURIComponent(redirectUrl)}`}
                 className="block w-full rounded-full border border-[#c5c6cd] px-5 py-3 text-center text-sm font-semibold text-[#091426]"
               >
-                I already have an account
+                {t("haveAccount")}
               </Link>
             </div>
           )}
           <p className="mt-3 text-center text-xs text-[#45474c]">
-            This link can be used once and expires in 7 days.
+            {t("inviteExpiry")}
           </p>
         </>
       ) : preview?.state === "expired" ? (
         <div className="mt-3 flex items-start gap-3 rounded-2xl bg-[#fff4e5] px-4 py-3 text-sm text-[#7a4100]">
           <Clock3 className="mt-0.5 h-5 w-5 shrink-0" />
-          <p>This invite has expired. Ask your manager for a new link.</p>
+          <p>{t("expired")}</p>
         </div>
       ) : preview?.state === "used" ? (
         <div className="mt-3 flex items-start gap-3 rounded-2xl bg-[#eef1f5] px-4 py-3 text-sm text-[#45474c]">
           <ShieldX className="mt-0.5 h-5 w-5 shrink-0" />
-          <p>This invite has already been used. Sign in to open your workspace.</p>
+          <p>{t("used")}</p>
         </div>
       ) : (
         <div className="mt-3 flex items-start gap-3 rounded-2xl bg-[#ffdad6] px-4 py-3 text-sm text-[#93000a]">
           <ShieldX className="mt-0.5 h-5 w-5 shrink-0" />
-          <p>We could not find this invite. Check the link and try again.</p>
+          <p>{t("notFound")}</p>
         </div>
       )}
 
@@ -169,7 +168,7 @@ export function JoinInvite({ locale, initialCode, signedIn, preview, invalidCode
           href={`/${locale}/auth/sign-in?redirect_url=${encodeURIComponent(homePath(locale, preview.tenantSlug, preview.accessRole))}`}
           className="mt-4 block w-full rounded-full bg-[#091426] px-5 py-3 text-center text-sm font-semibold text-white"
         >
-          Sign in
+          {t("signIn")}
         </Link>
       )}
     </div>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import {
   CalendarOff,
   CheckCircle2,
@@ -119,26 +120,28 @@ function geoErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : "Could not get your location";
 }
 
-function statusMeta(day: DayView, theme: ThemeTokens) {
+function statusMeta(day: DayView, theme: ThemeTokens, t: (k: string, v?: any) => string) {
   if (day.isOff) {
-    return { label: day.offApproved ? "Approved day off" : "Day off", bg: theme.surfaceContainerHigh, fg: theme.secondary };
+    return { label: day.offApproved ? t("approvedDayOff") : t("dayOff"), bg: theme.surfaceContainerHigh, fg: theme.secondary };
   }
-  if (day.status === "no_show") return { label: "No show", bg: "#fdeaea", fg: "#a12b2b" };
-  if (day.status === "pending") return { label: "Awaiting arrival", bg: "#fff4e5", fg: "#9a6b00" };
+  if (day.status === "no_show") return { label: t("noShow"), bg: "#fdeaea", fg: "#a12b2b" };
+  if (day.status === "pending") return { label: t("awaitingArrival"), bg: "#fff4e5", fg: "#9a6b00" };
   if (day.status === "late") {
     return {
-      label: day.lateApproved ? `Late ${day.lateMinutes}m · approved` : `Late by ${day.lateMinutes}m`,
+      label: day.lateApproved ? t("lateApprovedLabel", { minutes: day.lateMinutes }) : t("lateBy", { minutes: day.lateMinutes }),
       bg: "#fff4e5",
       fg: "#9a6b00",
     };
   }
-  if (day.earlyMinutes > 0) return { label: `Early by ${day.earlyMinutes}m`, bg: "#e3f2fd", fg: "#04519b" };
-  return { label: "On time", bg: "#e1f3e2", fg: "#1d6e2f" };
+  if (day.earlyMinutes > 0) return { label: t("earlyBy", { minutes: day.earlyMinutes }), bg: "#e3f2fd", fg: "#04519b" };
+  return { label: t("onTime"), bg: "#e1f3e2", fg: "#1d6e2f" };
 }
 
 export function WorkerAttendancePanel(props: Props) {
   const { slug, locale, timezone, currency, theme, linked, employeeName, employeeRole, clockedIn, lastLogAt, locationName, today, canPunch, todayKey, history, requests, disputes, earlyCheckInMinutes } = props;
   const router = useRouter();
+  const t = useTranslations("attendance");
+  const tc = useTranslations("common");
   const [busy, setBusy] = useState<"arrive" | "leave" | "refresh" | "request" | "dispute" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [now, setNow] = useState<number | null>(null);
@@ -248,20 +251,20 @@ export function WorkerAttendancePanel(props: Props) {
           <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full" style={{ backgroundColor: "#fef2f2", color: "#b91c1c" }}>
             <LogIn className="h-8 w-8" />
           </span>
-          <h1 className="mt-3 text-xl font-bold" style={{ color: theme.primary }}>Worker profile not linked</h1>
-          <p className="mt-1 text-sm" style={{ color: theme.onSurfaceVariant }}>Ask the business owner to link your account to a staff member in the Team panel.</p>
+          <h1 className="mt-3 text-xl font-bold" style={{ color: theme.primary }}>{t("workerProfileNotLinked")}</h1>
+          <p className="mt-1 text-sm" style={{ color: theme.onSurfaceVariant }}>{t("workerProfileNotLinkedHint")}</p>
         </section>
       </div>
     );
   }
 
   const shiftDuration = clockedIn && lastLogAt && now ? formatDuration(now - new Date(lastLogAt).getTime()) : null;
-  const meta = today ? statusMeta(today, theme) : null;
+  const meta = today ? statusMeta(today, theme, t) : null;
 
   const inputClass = "w-full rounded-lg border px-3 py-2 text-sm outline-none";
 
   const downloadReport = () => {
-    const header = ["Date", "Shift", "Arrived", "Left", "Status", "Late (min)", "Early (min)", "Early leave (min)", "Penalty", "Request", "Dispute"];
+    const header = [t("date"), t("shift"), t("arrived"), t("left"), t("status"), t("lateMinutes"), t("earlyMinutes"), t("earlyLeaveMinutes"), t("penalty"), t("request"), t("dispute")];
     const rows = history.map((day) => [
       day.dateKey,
       day.shift ? `${day.shift.startTime}-${day.shift.endTime}` : "Day off",
@@ -290,7 +293,7 @@ export function WorkerAttendancePanel(props: Props) {
   return (
     <div className="space-y-5 md:space-y-6">
       <div>
-        <h1 className="text-xl font-bold md:text-2xl" style={{ color: theme.primary }}>Attendance</h1>
+        <h1 className="text-xl font-bold md:text-2xl" style={{ color: theme.primary }}>{t("title")}</h1>
         <p className="mt-1 text-sm" style={{ color: theme.onSurfaceVariant }}>
           {employeeName}{employeeRole ? ` · ${employeeRole}` : ""}
         </p>
@@ -307,7 +310,7 @@ export function WorkerAttendancePanel(props: Props) {
             <div className="flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center gap-1.5 text-sm font-semibold" style={{ color: theme.primary }}>
                 <Clock3 className="h-4 w-4" />
-                {today?.shift ? `${today.shift.startTime} – ${today.shift.endTime}` : "No shift today"}
+                {today?.shift ? `${today.shift.startTime} - ${today.shift.endTime}` : t("noShiftToday")}
               </span>
               {meta && (
                 <span className="rounded-full px-2.5 py-1 text-xs font-semibold" style={{ backgroundColor: meta.bg, color: meta.fg }}>
@@ -317,23 +320,23 @@ export function WorkerAttendancePanel(props: Props) {
             </div>
             {today?.arrivalAt && (
               <p className="mt-1.5 text-xs" style={{ color: theme.onSurfaceVariant }}>
-                Arrived {formatTime(today.arrivalAt, locale, timezone)}
-                {today.leaveAt ? ` · Left ${formatTime(today.leaveAt, locale, timezone)}` : ""}
-                {today.earlyLeaveMinutes ? ` · left ${today.earlyLeaveMinutes}m early` : ""}
+                {t("arrivedAt", { time: formatTime(today.arrivalAt, locale, timezone) })}
+                {today.leaveAt ? ` • ${t("leftAt", { time: formatTime(today.leaveAt, locale, timezone) })}` : ""}
+                {today.earlyLeaveMinutes ? ` • ${t("leftEarly", { minutes: today.earlyLeaveMinutes })}` : ""}
               </p>
             )}
             {clockedIn && lastLogAt && (
               <p className="mt-1 text-xs font-medium" style={{ color: theme.secondary }}>
-                On shift since {formatTime(lastLogAt, locale, timezone)}{shiftDuration ? ` · ${shiftDuration}` : ""}
+                {t("onShiftSince", { time: formatTime(lastLogAt, locale, timezone) })}{shiftDuration ? ` • ${shiftDuration}` : ""}
               </p>
             )}
             <p className="mt-1 flex items-center gap-1 text-[11px]" style={{ color: theme.secondary }}>
               <MapPin className="h-3 w-3" />
-              {locationName ?? "Store location not set"}
+              {locationName ?? t("locationNotSet")}
             </p>
             {today?.shift && !clockedIn && (
               <p className="mt-1 text-[11px]" style={{ color: theme.secondary }}>
-                You can arrive up to {earlyCheckInMinutes} min before your shift starts.
+                {t("earlyCheckInHint", { minutes: earlyCheckInMinutes })}
               </p>
             )}
           </div>
@@ -349,7 +352,7 @@ export function WorkerAttendancePanel(props: Props) {
                   style={{ backgroundColor: "#b3261e" }}
                 >
                   <LogOut className="h-4 w-4" />
-                  {busy === "leave" ? "Checking location…" : "Leave work"}
+                  {busy === "leave" ? t("checkingLocation") : t("leaveWork")}
                 </button>
               ) : (
                 <button
@@ -360,7 +363,7 @@ export function WorkerAttendancePanel(props: Props) {
                   style={{ backgroundColor: theme.primary, color: theme.onPrimary }}
                 >
                   <LogIn className="h-4 w-4" />
-                  {busy === "arrive" ? "Checking location…" : "Arrive at work"}
+                  {busy === "arrive" ? t("checkingLocation") : t("arriveAtWork")}
                 </button>
               )
             ) : null}
@@ -372,7 +375,7 @@ export function WorkerAttendancePanel(props: Props) {
               style={{ borderColor: theme.outlineVariant, color: theme.onSurfaceVariant }}
             >
               <RefreshCw className={`h-4 w-4 ${busy === "refresh" ? "animate-spin" : ""}`} />
-              Refresh
+              {t("refresh")}
             </button>
           </div>
         </div>
@@ -386,9 +389,9 @@ export function WorkerAttendancePanel(props: Props) {
       {/* Tabs */}
       <div className="flex gap-1 rounded-xl border p-1" style={{ borderColor: theme.outlineVariant, backgroundColor: theme.surface }}>
         {([
-          { key: "history", label: "History", icon: Clock3 },
-          { key: "requests", label: "Requests", icon: CalendarOff },
-          { key: "disputes", label: "Disputes", icon: FileWarning },
+          { key: "history", label: t("history"), icon: Clock3 },
+          { key: "requests", label: t("requests"), icon: CalendarOff },
+          { key: "disputes", label: t("disputes"), icon: FileWarning },
         ] as const).map((item) => {
           const Icon = item.icon;
           const active = tab === item.key;
@@ -410,7 +413,7 @@ export function WorkerAttendancePanel(props: Props) {
       {tab === "history" && (
         <section className="space-y-2">
           <div className="flex items-center justify-between">
-            <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: theme.secondary }}>Last 30 days</p>
+            <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: theme.secondary }}>{t("last30Days")}</p>
             <button
               type="button"
               onClick={downloadReport}
@@ -418,14 +421,14 @@ export function WorkerAttendancePanel(props: Props) {
               className="inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold disabled:opacity-50"
               style={{ borderColor: theme.outlineVariant, color: theme.onSurfaceVariant }}
             >
-              <Download className="h-3.5 w-3.5" /> Download report
+              <Download className="h-3.5 w-3.5" /> {t("downloadReport")}
             </button>
           </div>
           {history.length === 0 ? (
-            <p className="rounded-xl border border-dashed p-8 text-center text-sm" style={{ borderColor: theme.outlineVariant, color: theme.onSurfaceVariant }}>No attendance yet.</p>
+            <p className="rounded-xl border border-dashed p-8 text-center text-sm" style={{ borderColor: theme.outlineVariant, color: theme.onSurfaceVariant }}>{t("noAttendanceYet")}</p>
           ) : (
             history.map((day) => {
-              const m = statusMeta(day, theme);
+              const m = statusMeta(day, theme, t);
               return (
                 <div key={day.dateKey} className="rounded-xl border p-3" style={{ borderColor: theme.outlineVariant, backgroundColor: theme.surfaceContainerLowest }}>
                   <div className="flex flex-wrap items-center justify-between gap-2">
@@ -433,8 +436,8 @@ export function WorkerAttendancePanel(props: Props) {
                       <p className="text-sm font-semibold" style={{ color: theme.primary }}>{formatDay(day.dateKey, locale)}</p>
                       <p className="text-xs" style={{ color: theme.onSurfaceVariant }}>
                         {day.shift ? `${day.shift.startTime} – ${day.shift.endTime}` : "Day off"}
-                        {day.arrivalAt ? ` · in ${formatTime(day.arrivalAt, locale, timezone)}` : ""}
-                        {day.leaveAt ? ` · out ${formatTime(day.leaveAt, locale, timezone)}` : ""}
+                        {day.arrivalAt ? ` • ${t("in")} ${formatTime(day.arrivalAt, locale, timezone)}` : ""}
+                        {day.leaveAt ? ` • ${t("out")} ${formatTime(day.leaveAt, locale, timezone)}` : ""}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
@@ -449,7 +452,7 @@ export function WorkerAttendancePanel(props: Props) {
                   <div className="mt-2 flex flex-wrap items-center gap-2">
                     {day.dispute ? (
                       <span className="text-[11px]" style={{ color: theme.secondary }}>
-                        Dispute: {day.dispute.status}{day.dispute.ownerNote ? ` · ${day.dispute.ownerNote}` : ""}
+                        {t("disputePrefix", { status: day.dispute.status })}{day.dispute.ownerNote ? ` • ${day.dispute.ownerNote}` : ""}
                       </span>
                     ) : (
                       <button
@@ -458,12 +461,12 @@ export function WorkerAttendancePanel(props: Props) {
                         className="inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-[11px] font-semibold"
                         style={{ borderColor: theme.outlineVariant, color: theme.onSurfaceVariant }}
                       >
-                        <FileWarning className="h-3 w-3" /> Raise dispute
+                        <FileWarning className="h-3 w-3" /> {t("raiseDispute")}
                       </button>
                     )}
                     {day.request && (
                       <span className="text-[11px]" style={{ color: theme.secondary }}>
-                        {day.request.type === "day_off" ? "Day off" : "Late arrival"} request: {day.request.status}
+                        {day.request.type === "day_off" ? t("requestDayOff") : t("requestLateArrival")} {t("requestLabel", { status: day.request.status })}
                       </span>
                     )}
                   </div>
@@ -477,22 +480,22 @@ export function WorkerAttendancePanel(props: Props) {
       {tab === "requests" && (
         <section className="space-y-3">
           <div className="rounded-xl border p-4" style={{ borderColor: theme.outlineVariant, backgroundColor: theme.surfaceContainerLowest }}>
-            <h2 className="text-sm font-semibold" style={{ color: theme.primary }}>New request</h2>
+            <h2 className="text-sm font-semibold" style={{ color: theme.primary }}>{t("newRequest")}</h2>
             <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
               <label className="text-xs" style={{ color: theme.onSurfaceVariant }}>
-                Type
+                {t("type")}
                 <select
                   value={reqType}
                   onChange={(e) => setReqType(e.target.value as "day_off" | "late_arrival")}
                   className={inputClass}
                   style={{ borderColor: theme.outlineVariant, backgroundColor: theme.surface, color: theme.onSurfaceVariant }}
                 >
-                  <option value="day_off">Day off</option>
-                  <option value="late_arrival">Late arrival</option>
+                  <option value="day_off">{t("requestDayOff")}</option>
+                  <option value="late_arrival">{t("requestLateArrival")}</option>
                 </select>
               </label>
               <label className="text-xs" style={{ color: theme.onSurfaceVariant }}>
-                Date
+                {t("date")}
                 <input
                   type="date"
                   min={todayKey}
@@ -504,7 +507,7 @@ export function WorkerAttendancePanel(props: Props) {
               </label>
               {reqType === "late_arrival" && (
                 <label className="text-xs" style={{ color: theme.onSurfaceVariant }}>
-                  I will arrive at
+                  {t("willArriveAt")}
                   <input
                     type="time"
                     value={reqLateTime}
@@ -515,7 +518,7 @@ export function WorkerAttendancePanel(props: Props) {
                 </label>
               )}
               <label className={`text-xs ${reqType === "late_arrival" ? "" : "sm:col-span-2"}`} style={{ color: theme.onSurfaceVariant }}>
-                Reason (optional)
+                {t("reasonOptional")}
                 <input
                   value={reqReason}
                   onChange={(e) => setReqReason(e.target.value)}
@@ -532,15 +535,15 @@ export function WorkerAttendancePanel(props: Props) {
               style={{ backgroundColor: theme.primary, color: theme.onPrimary }}
             >
               <Send className="h-3.5 w-3.5" />
-              {busy === "request" ? "Sending…" : "Submit request"}
+              {busy === "request" ? t("sending") : t("submitRequest")}
             </button>
             <p className="mt-2 text-[11px]" style={{ color: theme.secondary }}>
-              If the owner rejects it — or it is still pending — and you do not arrive, it counts as a no-show.
+              {t("noShowWarning")}
             </p>
           </div>
 
           {requests.length === 0 ? (
-            <p className="rounded-xl border border-dashed p-6 text-center text-sm" style={{ borderColor: theme.outlineVariant, color: theme.onSurfaceVariant }}>No requests yet.</p>
+            <p className="rounded-xl border border-dashed p-6 text-center text-sm" style={{ borderColor: theme.outlineVariant, color: theme.onSurfaceVariant }}>{t("noRequestsYet")}</p>
           ) : (
             requests.map((request) => (
               <div key={request.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border p-3" style={{ borderColor: theme.outlineVariant, backgroundColor: theme.surfaceContainerLowest }}>
@@ -549,7 +552,7 @@ export function WorkerAttendancePanel(props: Props) {
                     {request.type === "day_off" ? "Day off" : `Late arrival${request.lateTime ? ` · ${request.lateTime}` : ""}`} · {formatDay(request.dateKey, locale)}
                   </p>
                   {request.reason && <p className="truncate text-xs" style={{ color: theme.onSurfaceVariant }}>{request.reason}</p>}
-                  {request.ownerNote && <p className="text-[11px]" style={{ color: theme.secondary }}>Owner: {request.ownerNote}</p>}
+                  {request.ownerNote && <p className="text-[11px]" style={{ color: theme.secondary }}>{t("ownerLabel", { note: request.ownerNote })}</p>}
                 </div>
                 <span className="rounded-full px-2.5 py-1 text-[11px] font-semibold capitalize" style={{ backgroundColor: theme.surfaceContainerHigh, color: theme.onSurfaceVariant }}>{request.status}</span>
               </div>
@@ -561,7 +564,7 @@ export function WorkerAttendancePanel(props: Props) {
       {tab === "disputes" && (
         <section className="space-y-2">
           {disputes.length === 0 ? (
-            <p className="rounded-xl border border-dashed p-8 text-center text-sm" style={{ borderColor: theme.outlineVariant, color: theme.onSurfaceVariant }}>No disputes raised.</p>
+            <p className="rounded-xl border border-dashed p-8 text-center text-sm" style={{ borderColor: theme.outlineVariant, color: theme.onSurfaceVariant }}>{t("noDisputesRaised")}</p>
           ) : (
             disputes.map((dispute) => (
               <div key={dispute.id} className="rounded-xl border p-3" style={{ borderColor: theme.outlineVariant, backgroundColor: theme.surfaceContainerLowest }}>
@@ -570,7 +573,7 @@ export function WorkerAttendancePanel(props: Props) {
                   <span className="rounded-full px-2.5 py-1 text-[11px] font-semibold capitalize" style={{ backgroundColor: theme.surfaceContainerHigh, color: theme.onSurfaceVariant }}>{dispute.status}</span>
                 </div>
                 <p className="mt-1 text-xs" style={{ color: theme.onSurfaceVariant }}>{dispute.note}</p>
-                {dispute.ownerNote && <p className="mt-1 text-[11px]" style={{ color: theme.secondary }}>Owner: {dispute.ownerNote}</p>}
+                {dispute.ownerNote && <p className="mt-1 text-[11px]" style={{ color: theme.secondary }}>{t("ownerLabel", { note: dispute.ownerNote })}</p>}
               </div>
             ))
           )}
@@ -583,12 +586,12 @@ export function WorkerAttendancePanel(props: Props) {
             <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full" style={{ backgroundColor: "#fff4e5", color: "#9a6b00" }}>
               <LogOut className="h-6 w-6" />
             </span>
-            <h3 className="mt-3 text-base font-semibold" style={{ color: theme.primary }}>Leave early?</h3>
+            <h3 className="mt-3 text-base font-semibold" style={{ color: theme.primary }}>{t("leaveEarlyTitle")}</h3>
             <p className="mt-1 text-sm" style={{ color: theme.onSurfaceVariant }}>
-              Your shift ends at {earlyLeave.shiftEnd}. You are leaving {earlyLeave.minutesEarly} minutes early. Confirm?
+              {t("leaveEarlyBody", { time: earlyLeave.shiftEnd, minutes: earlyLeave.minutesEarly })}
             </p>
             <div className="mt-5 flex justify-center gap-2">
-              <button type="button" onClick={() => setEarlyLeave(null)} className="rounded-full px-4 py-2 text-sm font-semibold" style={{ color: theme.onSurfaceVariant }}>Cancel</button>
+              <button type="button" onClick={() => setEarlyLeave(null)} className="rounded-full px-4 py-2 text-sm font-semibold" style={{ color: theme.onSurfaceVariant }}>{tc("cancel")}</button>
               <button
                 type="button"
                 onClick={() => void punch("leave", true)}
@@ -596,7 +599,7 @@ export function WorkerAttendancePanel(props: Props) {
                 className="rounded-full px-5 py-2 text-sm font-semibold text-white disabled:opacity-50"
                 style={{ backgroundColor: "#b3261e" }}
               >
-                {busy === "leave" ? "Saving…" : "Confirm leave"}
+                {busy === "leave" ? t("saving") : t("confirmLeave")}
               </button>
             </div>
           </div>
@@ -607,19 +610,19 @@ export function WorkerAttendancePanel(props: Props) {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-md rounded-2xl border bg-white p-5 shadow-xl" style={{ borderColor: theme.outlineVariant }}>
             <div className="flex items-center justify-between">
-              <h3 className="text-base font-semibold" style={{ color: theme.primary }}>Dispute {formatDay(disputeDate, locale)}</h3>
+              <h3 className="text-base font-semibold" style={{ color: theme.primary }}>{t("disputeTitle", { date: formatDay(disputeDate, locale) })}</h3>
               <button type="button" onClick={() => setDisputeDate(null)} style={{ color: theme.onSurfaceVariant }}><X className="h-5 w-5" /></button>
             </div>
             <textarea
               value={disputeNote}
               onChange={(e) => setDisputeNote(e.target.value)}
               rows={4}
-              placeholder="Explain the attendance issue for this day…"
+              placeholder={t("disputePlaceholder")}
               className={`${inputClass} mt-3`}
               style={{ borderColor: theme.outlineVariant, backgroundColor: theme.surface, color: theme.onSurfaceVariant }}
             />
             <div className="mt-4 flex justify-end gap-2">
-              <button type="button" onClick={() => setDisputeDate(null)} className="rounded-full px-4 py-2 text-sm font-semibold" style={{ color: theme.onSurfaceVariant }}>Cancel</button>
+              <button type="button" onClick={() => setDisputeDate(null)} className="rounded-full px-4 py-2 text-sm font-semibold" style={{ color: theme.onSurfaceVariant }}>{tc("cancel")}</button>
               <button
                 type="button"
                 onClick={() => void submitDispute()}
@@ -628,7 +631,7 @@ export function WorkerAttendancePanel(props: Props) {
                 style={{ backgroundColor: theme.primary, color: theme.onPrimary }}
               >
                 <CheckCircle2 className="h-4 w-4" />
-                {busy === "dispute" ? "Sending…" : "Send to owner"}
+                {busy === "dispute" ? t("sending") : t("sendToOwner")}
               </button>
             </div>
           </div>
