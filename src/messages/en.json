@@ -419,7 +419,31 @@
     "emptyState": "No data yet",
     "homeVisits": "Home visits",
     "homeVisit": "Home visit",
-    "homeVisitsHint": "This worker can be booked for home-visit services. Assign home-visit services below."
+    "homeVisitsHint": "This worker can be booked for home-visit services. Assign home-visit services below.",
+    "permissionLabels": {
+      "appointments.read": "View appointments",
+      "appointments.create": "Add appointments",
+      "appointments.confirm": "Confirm appointments",
+      "appointments.update": "Reschedule / edit",
+      "appointments.complete": "Complete / no-show",
+      "customers.read": "View customers",
+      "customers.create": "Add customers",
+      "inventory.read": "View inventory",
+      "inventory.manage": "Manage inventory",
+      "sales.create": "Sell products",
+      "sales.read": "View sales",
+      "attendance.use": "Arrive / leave",
+      "attendance.read": "View attendance history",
+      "attendance.request": "Request day off / late arrival",
+      "attendance.manage": "Manage all attendance",
+      "services.read": "View services",
+      "reviews.read": "View ratings"
+    },
+    "status_pending": "Pending",
+    "status_confirmed": "Confirmed",
+    "status_completed": "Completed",
+    "status_cancelled": "Cancelled",
+    "status_no_show": "No-show"
   },
   "settings": {
     "title": "Settings",
@@ -1222,7 +1246,10 @@
     "earlyMinutes": "Early (min)",
     "earlyLeaveMinutes": "Early leave (min)",
     "penalty": "Penalty",
-    "request": "Request"
+    "request": "Request",
+    "statusPending": "Pending",
+    "statusAccepted": "Accepted",
+    "statusRejected": "Rejected"
   },
   "staffJoin": {
     "title": "Staff invite",

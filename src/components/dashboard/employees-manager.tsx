@@ -891,7 +891,7 @@ export function EmployeesManager({ slug, locale, theme, employees: initial, serv
                                     className="h-3.5 w-3.5"
                                     style={{ accentColor: theme.primary }}
                                   />
-                                  <span>{permission.label}</span>
+                                  <span>{t(`permissionLabels.${permission.key}` as any)}</span>
                                 </label>
                               ))}
                             </div>
@@ -1078,7 +1078,7 @@ export function EmployeesManager({ slug, locale, theme, employees: initial, serv
                       <li key={a.id} className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2 text-sm" style={{ borderColor: theme.outlineVariant }}>
                         <div className="min-w-0">
                           <p className="truncate font-medium" style={{ color: theme.onSurfaceVariant }}>
-                            {formatNiceDay(a.appointmentDate)} · {a.startTime}–{a.endTime}
+                            {formatNiceDay(a.appointmentDate, locale)} · {a.startTime}–{a.endTime}
                           </p>
                           <p className="truncate text-xs" style={{ color: theme.secondary }}>
                             {a.customerName ?? t("emptyState")}
@@ -1096,8 +1096,8 @@ export function EmployeesManager({ slug, locale, theme, employees: initial, serv
                             </ul>
                           )}
                         </div>
-                        <span className="shrink-0 rounded-md px-2 py-1 text-xs font-medium capitalize" style={{ backgroundColor: theme.surfaceContainerHigh, color: theme.secondary }}>
-                          {a.status.replace("_", " ")}
+                        <span className="shrink-0 rounded-md px-2 py-1 text-xs font-medium" style={{ backgroundColor: theme.surfaceContainerHigh, color: theme.secondary }}>
+                          {t(`status_${a.status}` as any) !== `status_${a.status}` ? t(`status_${a.status}` as any) : a.status.replace("_", " ")}
                         </span>
                       </li>
                     ))}
@@ -1121,7 +1121,7 @@ export function EmployeesManager({ slug, locale, theme, employees: initial, serv
                   <ul className="space-y-1.5">
                     {overview.monthly.map((m) => (
                       <li key={m.date} className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2 text-sm" style={{ borderColor: theme.outlineVariant }}>
-                        <span style={{ color: theme.onSurfaceVariant }}>{formatShortDay(m.date)}</span>
+                        <span style={{ color: theme.onSurfaceVariant }}>{formatShortDay(m.date, locale)}</span>
                         <span className="shrink-0 rounded-md px-2 py-0.5 text-xs font-semibold" style={{ backgroundColor: theme.surfaceContainerHigh, color: theme.primary }}>
                           {t("worksCount", { count: m.count })}
                         </span>
@@ -1269,14 +1269,14 @@ function AccordionItem({ icon, label, open, onToggle, theme, badge, children }: 
   );
 }
 
-function formatNiceDay(ymd: string) {
+function formatNiceDay(ymd: string, locale: string) {
   if (!ymd) return "";
   const d = new Date(`${ymd}T00:00:00`);
-  return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+  return d.toLocaleDateString(locale, { weekday: "short", month: "short", day: "numeric" });
 }
 
-function formatShortDay(ymd: string) {
+function formatShortDay(ymd: string, locale: string) {
   if (!ymd) return "";
   const d = new Date(`${ymd}T00:00:00`);
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return d.toLocaleDateString(locale, { month: "short", day: "numeric" });
 }

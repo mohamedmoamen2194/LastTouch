@@ -319,7 +319,7 @@ export function AttendanceManager(props: Props) {
                     </p>
                     {request.ownerNote && <p className="text-[11px]" style={{ color: theme.secondary }}>{t("ownerNote", { note: request.ownerNote })}</p>}
                   </div>
-                  <span className="rounded-full px-2.5 py-1 text-[11px] font-semibold capitalize" style={{ backgroundColor: theme.surfaceContainerHigh, color: theme.onSurfaceVariant }}>{request.status}</span>
+                  <span className="rounded-full px-2.5 py-1 text-[11px] font-semibold" style={{ backgroundColor: theme.surfaceContainerHigh, color: theme.onSurfaceVariant }}>{t(request.status === "accepted" ? "statusAccepted" : request.status === "rejected" ? "statusRejected" : "statusPending" as any)}</span>
                 </div>
                 {request.status === "pending" && (
                   <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -376,7 +376,7 @@ export function AttendanceManager(props: Props) {
                     <p className="text-xs" style={{ color: theme.onSurfaceVariant }}>{dispute.note}</p>
                     {dispute.ownerNote && <p className="text-[11px]" style={{ color: theme.secondary }}>{t("ownerNote", { note: dispute.ownerNote })}</p>}
                   </div>
-                  <span className="rounded-full px-2.5 py-1 text-[11px] font-semibold capitalize" style={{ backgroundColor: theme.surfaceContainerHigh, color: theme.onSurfaceVariant }}>{dispute.status}</span>
+                  <span className="rounded-full px-2.5 py-1 text-[11px] font-semibold" style={{ backgroundColor: theme.surfaceContainerHigh, color: theme.onSurfaceVariant }}>{t(dispute.status === "accepted" ? "statusAccepted" : dispute.status === "rejected" ? "statusRejected" : "statusPending" as any)}</span>
                 </div>
                 {dispute.status === "pending" && (
                   <div className="mt-2 flex flex-wrap items-center gap-2">

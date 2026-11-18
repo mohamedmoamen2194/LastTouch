@@ -452,7 +452,7 @@ export function WorkerAttendancePanel(props: Props) {
                   <div className="mt-2 flex flex-wrap items-center gap-2">
                     {day.dispute ? (
                       <span className="text-[11px]" style={{ color: theme.secondary }}>
-                        {t("disputePrefix", { status: day.dispute.status })}{day.dispute.ownerNote ? ` • ${day.dispute.ownerNote}` : ""}
+                        {t("disputePrefix", { status: t(day.dispute.status === "accepted" ? "statusAccepted" : day.dispute.status === "rejected" ? "statusRejected" : "statusPending" as any) })}{day.dispute.ownerNote ? ` • ${day.dispute.ownerNote}` : ""}
                       </span>
                     ) : (
                       <button
@@ -466,7 +466,7 @@ export function WorkerAttendancePanel(props: Props) {
                     )}
                     {day.request && (
                       <span className="text-[11px]" style={{ color: theme.secondary }}>
-                        {day.request.type === "day_off" ? t("requestDayOff") : t("requestLateArrival")} {t("requestLabel", { status: day.request.status })}
+                        {day.request.type === "day_off" ? t("requestDayOff") : t("requestLateArrival")} {t("requestLabel", { status: t(day.request.status === "accepted" ? "statusAccepted" : day.request.status === "rejected" ? "statusRejected" : "statusPending" as any) })}
                       </span>
                     )}
                   </div>
@@ -554,7 +554,7 @@ export function WorkerAttendancePanel(props: Props) {
                   {request.reason && <p className="truncate text-xs" style={{ color: theme.onSurfaceVariant }}>{request.reason}</p>}
                   {request.ownerNote && <p className="text-[11px]" style={{ color: theme.secondary }}>{t("ownerLabel", { note: request.ownerNote })}</p>}
                 </div>
-                <span className="rounded-full px-2.5 py-1 text-[11px] font-semibold capitalize" style={{ backgroundColor: theme.surfaceContainerHigh, color: theme.onSurfaceVariant }}>{request.status}</span>
+                <span className="rounded-full px-2.5 py-1 text-[11px] font-semibold" style={{ backgroundColor: theme.surfaceContainerHigh, color: theme.onSurfaceVariant }}>{t(request.status === "accepted" ? "statusAccepted" : request.status === "rejected" ? "statusRejected" : "statusPending" as any)}</span>
               </div>
             ))
           )}
@@ -570,7 +570,7 @@ export function WorkerAttendancePanel(props: Props) {
               <div key={dispute.id} className="rounded-xl border p-3" style={{ borderColor: theme.outlineVariant, backgroundColor: theme.surfaceContainerLowest }}>
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="text-sm font-semibold" style={{ color: theme.primary }}>{formatDay(dispute.dateKey, locale)}</p>
-                  <span className="rounded-full px-2.5 py-1 text-[11px] font-semibold capitalize" style={{ backgroundColor: theme.surfaceContainerHigh, color: theme.onSurfaceVariant }}>{dispute.status}</span>
+                  <span className="rounded-full px-2.5 py-1 text-[11px] font-semibold" style={{ backgroundColor: theme.surfaceContainerHigh, color: theme.onSurfaceVariant }}>{t(dispute.status === "accepted" ? "statusAccepted" : dispute.status === "rejected" ? "statusRejected" : "statusPending" as any)}</span>
                 </div>
                 <p className="mt-1 text-xs" style={{ color: theme.onSurfaceVariant }}>{dispute.note}</p>
                 {dispute.ownerNote && <p className="mt-1 text-[11px]" style={{ color: theme.secondary }}>{t("ownerLabel", { note: dispute.ownerNote })}</p>}
