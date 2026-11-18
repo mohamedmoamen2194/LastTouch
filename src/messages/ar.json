@@ -439,11 +439,11 @@
       "services.read": "عرض الخدمات",
       "reviews.read": "عرض التقييمات"
     },
-    "status_pending": "??? ????????",
-    "status_confirmed": "????",
-    "status_completed": "?????",
-    "status_cancelled": "????",
-    "status_no_show": "?? ????"
+    "status_pending": "قيد الانتظار",
+    "status_confirmed": "مؤكد",
+    "status_completed": "مكتمل",
+    "status_cancelled": "ملغي",
+    "status_no_show": "لم يحضر"
   },
   "settings": {
     "title": "الإعدادات",
@@ -1247,9 +1247,9 @@
     "earlyLeaveMinutes": "انصراف بدري (د)",
     "penalty": "الخصم",
     "request": "الطلب",
-    "statusPending": "??? ????????",
-    "statusAccepted": "?????",
-    "statusRejected": "?????"
+    "statusPending": "قيد الانتظار",
+    "statusAccepted": "مقبول",
+    "statusRejected": "مرفوض"
   },
   "staffJoin": {
     "title": "دعوة فريق العمل",
