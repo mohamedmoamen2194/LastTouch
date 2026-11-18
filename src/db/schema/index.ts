@@ -454,6 +454,8 @@ export const packages = pgTable(
     description: text("description"),
     descriptionAr: text("description_ar"),
     price: numeric("price", { precision: 12, scale: 2 }).default("0").notNull(),
+    /** When true, this package is delivered at the client's home. */
+    homeVisit: boolean("home_visit").default(false).notNull(),
     active: boolean("active").default(true).notNull(),
     createdAt,
     updatedAt,

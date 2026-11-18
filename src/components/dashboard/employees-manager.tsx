@@ -891,7 +891,7 @@ export function EmployeesManager({ slug, locale, theme, employees: initial, serv
                                     className="h-3.5 w-3.5"
                                     style={{ accentColor: theme.primary }}
                                   />
-                                  <span>{t(`permissionLabels.${permission.key}` as any)}</span>
+                                  <span>{(t.raw("permissionLabels") as Record<string, string> | undefined)?.[permission.key] ?? permission.key}</span>
                                 </label>
                               ))}
                             </div>

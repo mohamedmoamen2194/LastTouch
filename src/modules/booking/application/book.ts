@@ -315,19 +315,8 @@ function addMinutes(hhmm: string, minutes: number): string {
 export async function createBooking(input: CreateBookingInput) {
   const appointmentDate = parseBookingDay(input.appointmentDate);
 
-  const availability = await validateBookingAvailability({
-    tenantId: input.tenantId,
-    serviceIds: input.serviceIds,
-    employeeId: input.employeeId,
-    employeeAssignments: input.employeeAssignments,
-    appointmentDate,
-    startTime: input.startTime,
-    homeVisit: input.homeVisit,
-  });
-
-  // A package is priced as a bundle, never as the sum of its services.
-  // Also ensure the client cannot swap in services outside the package.
   let packagePrice: string | null = null;
+  let packageHomeVisit: boolean | null = null;
   if (input.packageId) {
     const resolved = await resolvePackageForBooking(input.tenantId, input.packageId);
     const expected = [...new Set(resolved.services.map((s) => s.id))].sort();
@@ -336,6 +325,25 @@ export async function createBooking(input: CreateBookingInput) {
       throw new ValidationAppError("Selected services do not match this package");
     }
     packagePrice = String(resolved.package.price);
+    packageHomeVisit = resolved.package.homeVisit;
+  }
+
+  const availability = await validateBookingAvailability({
+    tenantId: input.tenantId,
+    serviceIds: input.serviceIds,
+    employeeId: input.employeeId,
+    employeeAssignments: input.employeeAssignments,
+    appointmentDate,
+    startTime: input.startTime,
+    homeVisit: packageHomeVisit !== null ? packageHomeVisit : input.homeVisit,
+  });
+
+  if (packageHomeVisit !== null && availability.homeVisit !== packageHomeVisit) {
+    throw new ValidationAppError(
+      packageHomeVisit
+        ? "This package is for home visits"
+        : "This package is not available for home visits"
+    );
   }
 
   const price = packagePrice ?? availability.price;

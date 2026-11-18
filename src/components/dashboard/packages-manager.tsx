@@ -13,12 +13,14 @@ export type ManagedPackage = {
   descriptionAr: string | null;
   price: string;
   active: boolean;
+  homeVisit: boolean;
   serviceIds: string[];
 };
 
 export type ManagedServiceRef = {
   id: string;
   name: string;
+  homeVisit: boolean;
 };
 
 type Props = {
@@ -37,6 +39,7 @@ type FormState = {
   descriptionAr: string;
   price: string;
   active: boolean;
+  homeVisit: boolean;
   serviceIds: string[];
 };
 
@@ -47,6 +50,7 @@ const EMPTY_FORM: FormState = {
   descriptionAr: "",
   price: "",
   active: true,
+  homeVisit: false,
   serviceIds: [],
 };
 
@@ -74,6 +78,7 @@ export function PackagesManager({ slug, locale, theme, packages: initial, servic
   };
 
   const openEdit = (p: ManagedPackage) => {
+    const homeVisit = p.homeVisit ?? false;
     setForm({
       id: p.id,
       name: p.name,
@@ -82,7 +87,10 @@ export function PackagesManager({ slug, locale, theme, packages: initial, servic
       descriptionAr: p.descriptionAr ?? "",
       price: Number(p.price).toString(),
       active: p.active,
-      serviceIds: p.serviceIds,
+      homeVisit,
+      serviceIds: p.serviceIds.filter((id) =>
+        services.some((s) => s.id === id && (homeVisit ? s.homeVisit : !s.homeVisit))
+      ),
     });
     setEditingId(p.id);
     setError(null);
@@ -113,6 +121,7 @@ export function PackagesManager({ slug, locale, theme, packages: initial, servic
         descriptionAr: form.descriptionAr,
         price: form.price,
         active: form.active,
+        homeVisit: form.homeVisit,
         serviceIds: form.serviceIds,
       });
       const full: ManagedPackage = {
@@ -123,6 +132,7 @@ export function PackagesManager({ slug, locale, theme, packages: initial, servic
         descriptionAr: form.descriptionAr.trim() || null,
         price: form.price === "" ? "0" : form.price,
         active: result.active,
+        homeVisit: form.homeVisit,
         serviceIds: form.serviceIds,
       };
       if (isEdit) {
@@ -159,6 +169,8 @@ export function PackagesManager({ slug, locale, theme, packages: initial, servic
         ? f.serviceIds.filter((s) => s !== id)
         : [...f.serviceIds, id],
     }));
+
+  const filteredServices = services.filter((s) => (form.homeVisit ? s.homeVisit : !s.homeVisit));
 
   const inputClass = "w-full rounded-lg border px-3 py-2.5 text-sm outline-none focus:border-[#091426]";
 
@@ -225,9 +237,16 @@ export function PackagesManager({ slug, locale, theme, packages: initial, servic
             >
               <div className="flex items-start justify-between gap-3">
                 <h3 className="min-w-0 truncate text-base font-semibold md:text-lg" style={{ color: theme.primary }}>{p.name}</h3>
-                <span className="shrink-0 rounded-full px-2.5 py-1 text-xs font-medium" style={{ backgroundColor: theme.surfaceContainerHigh, color: theme.onSurfaceVariant }}>
-                  {p.active ? t("active") : t("inactive")}
-                </span>
+                <div className="flex shrink-0 flex-wrap justify-end gap-1.5">
+                  {p.homeVisit && (
+                    <span className="rounded-full px-2.5 py-1 text-[11px] font-semibold" style={{ backgroundColor: "#e3f2fd", color: "#04519b" }}>
+                      {t("homeVisit")}
+                    </span>
+                  )}
+                  <span className="rounded-full px-2.5 py-1 text-xs font-medium" style={{ backgroundColor: theme.surfaceContainerHigh, color: theme.onSurfaceVariant }}>
+                    {p.active ? t("active") : t("inactive")}
+                  </span>
+                </div>
               </div>
               {p.description && (
                 <p className="mt-2 text-sm leading-relaxed" style={{ color: theme.onSurfaceVariant }}>{p.description}</p>
@@ -354,15 +373,36 @@ export function PackagesManager({ slug, locale, theme, packages: initial, servic
                 />
               </div>
 
+              <label className="flex items-center gap-2 text-sm" style={{ color: theme.onSurfaceVariant }}>
+                <input
+                  type="checkbox"
+                  checked={form.homeVisit}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setForm((f) => ({
+                      ...f,
+                      homeVisit: checked,
+                      serviceIds: f.serviceIds.filter((id) =>
+                        services.some((s) => s.id === id && (checked ? s.homeVisit : !s.homeVisit))
+                      ),
+                    }));
+                  }}
+                  className="h-4 w-4"
+                  style={{ accentColor: theme.primary }}
+                />
+                {t("homeVisit")}
+              </label>
+              <p className="-mt-2 text-[11px]" style={{ color: theme.secondary }}>{t("homeVisitHint")}</p>
+
               <div>
                 <label className="mb-2 block text-xs font-medium" style={{ color: theme.onSurfaceVariant }}>{t("services")}</label>
-                {services.length === 0 ? (
+                {filteredServices.length === 0 ? (
                   <p className="rounded-lg border border-dashed px-4 py-4 text-center text-sm" style={{ borderColor: theme.outlineVariant, color: theme.onSurfaceVariant }}>
                     {t("noServicesHint")}
                   </p>
                 ) : (
                   <div className="grid max-h-48 grid-cols-1 gap-2 overflow-y-auto rounded-lg border p-3 sm:grid-cols-2" style={{ borderColor: theme.outlineVariant }}>
-                    {services.map((s) => {
+                    {filteredServices.map((s) => {
                       const checked = form.serviceIds.includes(s.id);
                       return (
                         <label

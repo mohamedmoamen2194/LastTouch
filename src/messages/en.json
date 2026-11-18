@@ -294,7 +294,9 @@
     "active": "Active",
     "inactive": "Inactive",
     "emptyTitle": "No packages yet",
-    "emptyBody": "Create a package to offer bundled services at a fixed price."
+    "emptyBody": "Create a package to offer bundled services at a fixed price.",
+    "homeVisit": "Home visit",
+    "homeVisitHint": "Delivered at the client's home — clients must add their address when booking."
   },
   "ai": {
     "insightsTitle": "AI Insights",

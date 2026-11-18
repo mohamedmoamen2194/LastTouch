@@ -19,6 +19,7 @@ type WidgetPackage = {
   name: string;
   description: string | null;
   price: string;
+  homeVisit?: boolean;
   serviceIds: string[];
   serviceNames: string[];
 };
@@ -44,6 +45,7 @@ type Slot = { start: string; end: string; available: boolean };
 
 type PersistedBooking = {
   step?: number;
+  visitMode?: "in_store" | "home";
   serviceId?: string | null;
   packageId?: string | null;
   customServices?: string[];
@@ -173,20 +175,27 @@ export function BookingWidget({ tenant, themeId, services, packages = [], employ
   );
 
   const hasHomeVisitServices = useMemo(() => services.some((s) => s.homeVisit), [services]);
+  const hasHomeVisitOptions = useMemo(
+    () => services.some((s) => s.homeVisit) || packages.some((p) => p.homeVisit),
+    [services, packages]
+  );
   const inStoreServices = useMemo(() => services.filter((s) => !s.homeVisit), [services]);
   const homeVisitServices = useMemo(() => services.filter((s) => s.homeVisit), [services]);
   const visibleServices = visitMode === "home" ? homeVisitServices : inStoreServices;
+  const inStorePackages = useMemo(() => packages.filter((p) => !p.homeVisit), [packages]);
+  const homeVisitPackages = useMemo(() => packages.filter((p) => p.homeVisit), [packages]);
+  const visiblePackages = visitMode === "home" ? homeVisitPackages : inStorePackages;
   const isHomeVisitBooking = visitMode === "home";
   // A package / custom bundle uses the grouped team-selection flow.
   const multiSelection = pkg !== null || customServices.length > 0;
 
   // Workers who can take a given service (general / unmapped workers qualify).
-  // Home-visit services additionally require a home-visit capable worker.
+  // Home-visit bookings/services require a home-visit capable worker.
   const coversService = (e: WidgetEmployee, sid: string) => {
     const base = e.isGeneral || e.serviceIds.length === 0 || e.serviceIds.includes(sid);
     if (!base) return false;
     const svc = services.find((s) => s.id === sid);
-    if (svc?.homeVisit && !e.homeVisit) return false;
+    if ((isHomeVisitBooking || svc?.homeVisit) && !e.homeVisit) return false;
     return true;
   };
 
@@ -217,6 +226,7 @@ export function BookingWidget({ tenant, themeId, services, packages = [], employ
       if (raw) {
         const s = JSON.parse(raw) as Partial<PersistedBooking>;
         if (s.step) setStep(s.step as number);
+        if (s.visitMode === "in_store" || s.visitMode === "home") setVisitMode(s.visitMode);
         if (s.serviceId !== undefined) setServiceId(s.serviceId);
         if (s.packageId !== undefined) setPackageId(s.packageId);
         if (Array.isArray(s.customServices)) setCustomServices(s.customServices);
@@ -247,6 +257,7 @@ export function BookingWidget({ tenant, themeId, services, packages = [], employ
         storageKey,
         JSON.stringify({
           step,
+          visitMode,
           serviceId,
           packageId,
           customServices,
@@ -271,6 +282,7 @@ export function BookingWidget({ tenant, themeId, services, packages = [], employ
     restoredState,
     storageKey,
     step,
+    visitMode,
     serviceId,
     packageId,
     customServices,
@@ -901,7 +913,7 @@ export function BookingWidget({ tenant, themeId, services, packages = [], employ
           <div>
             <Heading title={t("selectService")} subtitle={t("subtitle")} theme={theme} />
 
-            {hasHomeVisitServices && (
+            {hasHomeVisitOptions && (
               <div className="mb-6 flex w-full max-w-sm rounded-full border p-1" style={{ borderColor: theme.outlineVariant, backgroundColor: theme.surface }}>
                 <button suppressHydrationWarning
                   type="button"
@@ -946,13 +958,13 @@ export function BookingWidget({ tenant, themeId, services, packages = [], employ
               </p>
             )}
 
-            {visitMode === "in_store" && packages.length > 0 && (
+            {visiblePackages.length > 0 && (
               <div className="mb-8">
                 <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide" style={{ color: theme.secondary }}>
                   {t("packages")}
                 </h3>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
-                  {packages.map((p) => {
+                  {visiblePackages.map((p) => {
                     const selected = packageId === p.id;
                     return (
                       <button suppressHydrationWarning key={p.id} type="button" onClick={() => pickPackage(p.id)} className="relative flex flex-col gap-2 rounded-lg border p-3 text-start transition-all sm:gap-3 sm:p-4 md:p-5" style={{ borderColor: selected ? theme.primary : theme.outlineVariant, boxShadow: selected ? `0 4px 20px -5px ${theme.primary}` : "none" }}>
@@ -963,7 +975,7 @@ export function BookingWidget({ tenant, themeId, services, packages = [], employ
                         <div className="min-w-0">
                           <h3 className="line-clamp-2 break-words text-sm font-semibold leading-snug sm:text-base" style={{ color: theme.primary }}>{p.name}</h3>
                           {p.description && <p className="mt-0.5 line-clamp-2 break-words text-xs leading-relaxed sm:mt-1 sm:text-sm" style={{ color: theme.onSurfaceVariant }}>{p.description}</p>}
-                          {p.serviceNames.length > 0 && (<p className="mt-1 truncate text-xs" style={{ color: theme.secondary }}>{p.serviceNames.join(" • ")}</p>)}
+                          {p.serviceNames.length > 0 && (<p className="mt-1 truncate text-xs" style={{ color: theme.secondary }}>{p.serviceNames.join("  ")}</p>)}
                         </div>
                         <div className="mt-auto flex items-center justify-between border-t pt-2 text-sm" style={{ borderColor: theme.surfaceContainerHigh }}>
                           <span className="text-xs" style={{ color: theme.secondary }}>{p.serviceIds.length} {t("services")}</span>
@@ -973,27 +985,29 @@ export function BookingWidget({ tenant, themeId, services, packages = [], employ
                     );
                   })}
 
-                  <button suppressHydrationWarning type="button" onClick={() => (customizeOpen ? closeCustomize() : openCustomize())} className="relative flex flex-col gap-2 rounded-lg border border-dashed p-3 text-start transition-all sm:gap-3 sm:p-4 md:p-5" style={{ borderColor: customizeOpen ? theme.primary : theme.outlineVariant, boxShadow: customizeOpen ? `0 4px 20px -5px ${theme.primary}` : "none" }}>
-                    <div className="flex items-start justify-between gap-2">
-                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold sm:h-10 sm:w-10" style={{ backgroundColor: customizeOpen ? theme.primary : theme.primaryContainer, color: customizeOpen ? theme.onPrimary : theme.onSurfaceVariant }}>{customizeOpen ? "−" : "+"}</span>
-                      <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2" style={{ borderColor: customizeOpen ? theme.primary : theme.outlineVariant }}>{customizeOpen && <span className="block h-2 w-2 rounded-full" style={{ backgroundColor: theme.primary }} />}</span>
-                    </div>
-                    <div className="min-w-0">
-                      <h3 className="line-clamp-2 break-words text-sm font-semibold leading-snug sm:text-base" style={{ color: theme.primary }}>{t("customizePackage")}</h3>
-                      <p className="mt-0.5 hidden text-xs sm:mt-1 sm:block sm:text-sm" style={{ color: theme.onSurfaceVariant }}>{t("customizeHint")}</p>
-                    </div>
-                    <div className="mt-auto flex items-center justify-between border-t pt-2 text-sm" style={{ borderColor: theme.surfaceContainerHigh }}>
-                      <span className="text-xs" style={{ color: theme.secondary }}>{customServices.length} {t("services")}</span>
-                      <span className="whitespace-nowrap text-xs font-semibold tabular-nums sm:text-sm" style={{ color: theme.primary }}>{customServices.length > 0 ? formatMoney(customPrice(customServices), tenant.currency, numTag) : t("buildYours")}</span>
-                    </div>
-                  </button>
+                  {visibleServices.length > 0 && (
+                    <button suppressHydrationWarning type="button" onClick={() => (customizeOpen ? closeCustomize() : openCustomize())} className="relative flex flex-col gap-2 rounded-lg border border-dashed p-3 text-start transition-all sm:gap-3 sm:p-4 md:p-5" style={{ borderColor: customizeOpen ? theme.primary : theme.outlineVariant, boxShadow: customizeOpen ? `0 4px 20px -5px ${theme.primary}` : "none" }}>
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold sm:h-10 sm:w-10" style={{ backgroundColor: customizeOpen ? theme.primary : theme.primaryContainer, color: customizeOpen ? theme.onPrimary : theme.onSurfaceVariant }}>{customizeOpen ? "-" : "+"}</span>
+                        <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2" style={{ borderColor: customizeOpen ? theme.primary : theme.outlineVariant }}>{customizeOpen && <span className="block h-2 w-2 rounded-full" style={{ backgroundColor: theme.primary }} />}</span>
+                      </div>
+                      <div className="min-w-0">
+                        <h3 className="line-clamp-2 break-words text-sm font-semibold leading-snug sm:text-base" style={{ color: theme.primary }}>{t("customizePackage")}</h3>
+                        <p className="mt-0.5 hidden text-xs sm:mt-1 sm:block sm:text-sm" style={{ color: theme.onSurfaceVariant }}>{t("customizeHint")}</p>
+                      </div>
+                      <div className="mt-auto flex items-center justify-between border-t pt-2 text-sm" style={{ borderColor: theme.surfaceContainerHigh }}>
+                        <span className="text-xs" style={{ color: theme.secondary }}>{customServices.length} {t("services")}</span>
+                        <span className="whitespace-nowrap text-xs font-semibold tabular-nums sm:text-sm" style={{ color: theme.primary }}>{customServices.length > 0 ? formatMoney(customPrice(customServices), tenant.currency, numTag) : t("buildYours")}</span>
+                      </div>
+                    </button>
+                  )}
                 </div>
 
-                {customizeOpen && (
+                {customizeOpen && visibleServices.length > 0 && (
                   <div className="mt-4 rounded-xl border p-4 sm:p-5" style={{ borderColor: theme.outlineVariant, backgroundColor: theme.surface }}>
                     <p className="mb-3 text-sm font-medium" style={{ color: theme.primary }}>{t("customizePick")}</p>
                     <div className="grid max-h-72 grid-cols-1 gap-2 overflow-y-auto sm:grid-cols-2">
-                      {services.map((s) => {
+                      {visibleServices.map((s) => {
                         const checked = customServices.includes(s.id);
                         return (
                           <button suppressHydrationWarning key={s.id} type="button" onClick={() => toggleCustomService(s.id)} className="flex items-center gap-3 rounded-lg border p-3 text-start transition-all" style={{ borderColor: checked ? theme.primary : theme.outlineVariant, boxShadow: checked ? `0 2px 10px -3px ${theme.primary}` : "none", backgroundColor: checked ? theme.surfaceContainerLowest : "transparent" }}>
@@ -1013,7 +1027,7 @@ export function BookingWidget({ tenant, themeId, services, packages = [], employ
               <>
                 <div className="mb-4 flex items-center justify-between">
                   <h3 className="text-sm font-semibold uppercase tracking-wide" style={{ color: theme.secondary }}>{visitMode === "home" ? t("homeVisits") : t("services")}</h3>
-                  {visitMode === "in_store" && packages.length > 0 && <span className="text-xs" style={{ color: theme.onSurfaceVariant }}>{t("pickOne")}</span>}
+                  {visiblePackages.length > 0 && <span className="text-xs" style={{ color: theme.onSurfaceVariant }}>{t("pickOne")}</span>}
                 </div>
                 {visibleServices.length === 0 ? (
                   <p className="rounded-lg border border-dashed p-6 text-center text-sm" style={{ borderColor: theme.outlineVariant, color: theme.onSurfaceVariant }}>

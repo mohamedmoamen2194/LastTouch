@@ -13,6 +13,7 @@ export type PackageInput = {
   descriptionAr?: string | null;
   price: number | string;
   active?: boolean;
+  homeVisit?: boolean;
   serviceIds?: string[];
 };
 
@@ -24,6 +25,7 @@ export type ManagedPackage = {
   descriptionAr: string | null;
   price: string;
   active: boolean;
+  homeVisit: boolean;
   serviceIds: string[];
 };
 
@@ -56,6 +58,7 @@ export async function listTenantPackages(ctx: TenantContext): Promise<ManagedPac
     descriptionAr: p.descriptionAr ?? null,
     price: String(p.price),
     active: p.active,
+    homeVisit: p.homeVisit,
     serviceIds: byPackage.get(p.id) ?? [],
   }));
 }
@@ -82,6 +85,7 @@ export async function createPackage(ctx: TenantContext, input: PackageInput) {
       descriptionAr: input.descriptionAr?.trim() || null,
       price: String(input.price),
       active: input.active ?? true,
+      homeVisit: input.homeVisit ?? false,
     })
     .returning();
 
@@ -115,6 +119,7 @@ export async function updatePackage(ctx: TenantContext, id: string, input: Packa
       descriptionAr: input.descriptionAr?.trim() || null,
       price: String(input.price),
       active: input.active ?? existing.active,
+      homeVisit: input.homeVisit ?? existing.homeVisit,
       updatedAt: new Date(),
     })
     .where(eq(packages.id, id))
@@ -179,6 +184,7 @@ export function validatePackageInput(input: unknown): PackageInput {
     descriptionAr: descriptionAr || null,
     price,
     active: typeof v.active === "boolean" ? v.active : true,
+    homeVisit: typeof (v as { homeVisit?: unknown }).homeVisit === "boolean" ? (v as { homeVisit: boolean }).homeVisit : undefined,
     serviceIds,
   };
 }
@@ -190,6 +196,7 @@ export type PublicPackage = {
   description: string | null;
   descriptionAr: string | null;
   price: string;
+  homeVisit: boolean;
   serviceIds: string[];
   serviceNames: string[];
 };
@@ -238,6 +245,7 @@ export async function listActivePackagesForBooking(tenantId: string): Promise<Pu
         description: p.description ?? null,
         descriptionAr: p.descriptionAr ?? null,
         price: String(p.price),
+        homeVisit: p.homeVisit,
         serviceIds,
         serviceNames: serviceIds.map((id) => nameById.get(id) ?? ""),
       };

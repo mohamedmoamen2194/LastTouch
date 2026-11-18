@@ -42,6 +42,7 @@ export default async function ServicesPage({
   const serviceRefs = services.map((s) => ({
     id: s.id,
     name: s.name,
+    homeVisit: s.homeVisit,
   }));
 
   return (

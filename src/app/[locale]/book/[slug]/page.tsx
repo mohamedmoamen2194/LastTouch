@@ -258,6 +258,7 @@ export default async function BookingPage({
                     name: pick(p.name, p.nameAr ?? null),
                     description: p.descriptionAr && locale === "ar" ? p.descriptionAr : p.description,
                     price: p.price,
+                    homeVisit: p.homeVisit,
                     serviceIds: p.serviceIds,
                     serviceNames: p.serviceNames,
                   }))}
